@@ -16,7 +16,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
-(define-module (gnu packages smt)
+(define-module (more packages smt)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix build-system gnu)
@@ -55,3 +55,54 @@
     (synopsis "SMT solver library")
     (description "Z3 is a theorem prover from Microsoft Research.")
     (license license:expat)))
+
+;; Not reproducible and tests fail.
+(define-public python-z3-solver
+  (package
+    (inherit z3-solver)
+    (name "python-z3-solver")
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("z3" ,z3-solver)))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'prepare
+           (lambda* (#:key inputs #:allow-other-keys)
+             (system* "python" "scripts/mk_make.py")
+             (copy-file "build/python/z3/z3core.py" "src/api/python/z3/z3core.py")
+             (copy-file "build/python/z3/z3consts.py" "src/api/python/z3/z3consts.py")
+             (chdir "src/api/python")
+             (substitute* "z3/z3core.py"
+               (("_dirs = \\[")
+                (string-append "_dirs = ['" (assoc-ref inputs "z3")
+                                            "/lib', ")))
+             (substitute* "MANIFEST.in"
+               ((".*") ""))
+             (substitute* "setup.py"
+               (("self.execute\\(.*") "\n")
+               (("scripts=.*") "\n")))))))))
+
+(define-public python2-z3-solver
+  (package-with-python2 python-z3-solver))
+ 
+(define-public python-claripy
+  (package
+    (name "python-claripy")
+    (version "6.7.1.13.post2")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "claripy" version))
+              (sha256
+               (base32
+                "0qcp6c7shyl4hs14yhnymcanr87i8hbp6af35avzphjq7jw33rrc"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("ana" ,python-ana)))
+    (home-page "https://github.com/angr/claripy")
+    (synopsis "Claripy is a abstracted constraint-solving wrapper")
+    (description "Claripy is a abstracted constraint-solving wrapper.")
+    (license license:bsd-2)))
+
+(define-public python2-claripy
+  (package-with-python2 python-claripy))
