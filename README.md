@@ -26,3 +26,8 @@ Games
 -----
 
 * _lugaru_: A third-person action game
+
+Video
+-----
+
+* _aegisub_: A subtitle editor
