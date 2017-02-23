@@ -23,7 +23,8 @@
   #:use-module (guix build-system python)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
-  #:use-module (gnu packages python))
+  #:use-module (gnu packages python)
+  #:use-module (more packages python))
 
 (define-public z3-solver
   (package
@@ -89,16 +90,17 @@
 (define-public python-claripy
   (package
     (name "python-claripy")
-    (version "6.7.1.13.post2")
+    (version "6.7.1.31")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "claripy" version))
               (sha256
                (base32
-                "0qcp6c7shyl4hs14yhnymcanr87i8hbp6af35avzphjq7jw33rrc"))))
+                "0jpnqggx40kfj9cc48aylxsaqy61isl2yb3agib8nqh9v4j1rwqa"))))
     (build-system python-build-system)
     (propagated-inputs
-     `(("ana" ,python-ana)))
+     `(("ana" ,python-ana)
+       ("z3" ,python-z3-solver)))
     (home-page "https://github.com/angr/claripy")
     (synopsis "Claripy is a abstracted constraint-solving wrapper")
     (description "Claripy is a abstracted constraint-solving wrapper.")

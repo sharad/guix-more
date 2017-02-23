@@ -19,4 +19,4 @@ Binary analysis software
 
 * _capstone_: A disassembler framework with a lot of supported architectures
 * _z3_: A constraint solver
-* _angr_: A binary analysis tool, not yet complete
+* _angr_: A binary analysis tool

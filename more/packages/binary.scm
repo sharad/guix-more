@@ -369,6 +369,7 @@ loaded by the OS's loader.")
      `(#:python ,python-2))
     (propagated-inputs
      `(("cle" ,python2-cle)
+       ("capstone" ,python2-capstone)
        ("six" ,python2-six)
        ("utils" ,python2-utils)
        ("mulpyplexer" ,python2-mulpyplexer)
