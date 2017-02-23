@@ -21,6 +21,7 @@ Binary analysis software
 * _z3_: A constraint solver
 * _angr_: A binary analysis tool
 * _radare2_: A disassembler and analysis tool
+* _bap_: A binary analysis platform
 
 Games
 -----
