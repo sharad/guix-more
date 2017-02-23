@@ -19,16 +19,16 @@
 (define-module (more packages python)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages compression)
+  #:use-module (gnu packages databases)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages tls)
+  #:use-module (gnu packages zip)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix utils)
-  #:use-module (guix build-system gnu)
-  #:use-module (guix build-system cmake)
-  #:use-module (guix build-system python)
-  #:use-module (guix build-system trivial)
-  #:use-module (srfi srfi-1))
+  #:use-module (guix build-system python))
 
 (define-public python-setuptools-scm
   (package
@@ -294,3 +294,314 @@ object every time you need to send it.")
 ;; Not reproducible.
 (define-public python2-ana
   (package-with-python2 python-ana))
+
+(define-public python-webassets
+  (package
+    (name "python-webassets")
+    (version "0.12.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "webassets" version))
+       (sha256
+        (base32
+         "1nrqkpb7z46h2b77xafxihqv3322cwqv6293ngaky4j3ff4cing7"))))
+    (build-system python-build-system)
+    (home-page "http://github.com/miracle2k/webassets")
+    (synopsis "Media asset management")
+    (description "Merges, minifies and compresses Javascript and CSS files,
+supporting a variety of different filters, including YUI, jsmin, jspacker or
+CSS tidy.  Also supports URL rewriting in CSS files.")
+    (license license:bsd-2)))
+
+
+(define-public python-sphinx-me
+  (package
+    (name "python-sphinx-me")
+    (version "0.3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "sphinx-me" version))
+       (sha256
+        (base32
+         "06jzgp213zihnvpcy2y5jy3ykid3apc2ncp2pg6a2g05lhiziglq"))))
+    (build-system python-build-system)
+    (home-page "https://github.com/stephenmcd/sphinx-me")
+    (synopsis "Create a Sphinx documentation shell")
+    (description
+      "Create a Sphinx documentation shell for your project and include the
+README file as the documentation index.  It handles extracting the required
+meta data such as the project name, author and version from your project for
+use in your Sphinx docs.")
+    (license license:bsd-2)))
+
+(define-public python2-sphinx-me
+  (package-with-python2 python-sphinx-me))
+
+(define-public python-rq
+  (package
+    (name "python-rq")
+    (version "0.7.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "rq" version))
+       (sha256
+        (base32 "0gaq5pnh0zy46r8jvygi0ifbvz3pq6i7xla78ijcgjw0x77qzsdh"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-click" ,python-click)
+       ("python-redis" ,python-redis)))
+    (home-page "http://python-rq.org/")
+    (synopsis "Simple job queues for Python")
+    (description
+     "RQ (Redis Queue) is a simple Python library for queueing jobs and
+processing them in the background with workers.  It is backed by Redis and it
+is designed to have a low barrier to entry.")
+    (license license:bsd-2)))
+
+(define-public python2-rq
+  (package-with-python2 python-rq))
+
+(define-public python-cssmin
+  (package
+    (name "python-cssmin")
+    (version "0.2.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "cssmin" version))
+        (sha256
+         (base32
+          "1dk723nfm2yf8cp4pj785giqlwv42l0kj8rk40kczvq1hk6g04p0"))))
+    (build-system python-build-system)
+    (home-page "https://github.com/zacharyvoase/cssmin")
+    (synopsis "Python port of the YUI CSS Compressor")
+    (description "Python port of the YUI CSS Compressor.")
+    (license (list license:expat license:bsd-3))))
+
+(define-public python2-cssmin
+  (package-with-python2 python-cssmin))
+ 
+(define-public python-diff-match-patch
+  (package
+    (name "python-diff-match-patch")
+    (version "20121119")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "diff-match-patch" version))
+        (sha256
+         (base32
+          "0k1f3v8nbidcmmrk65m7h8v41jqi37653za9fcs96y7jzc8mdflx"))))
+    (build-system python-build-system)
+    (home-page "https://code.google.com/p/google-diff-match-patch")
+    (synopsis "Synchronize plain text")
+    (description "Diff Match and Patch libraries offer robust algorithms to
+perform the operations required for synchronizing plain text.")
+    (license license:asl2.0)))
+
+(define-public python2-diff-match-patch
+  (package-with-python2 python-diff-match-patch))
+ 
+(define-public python-dirsync
+  (package
+    (name "python-dirsync")
+    (version "2.2.2")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append
+               "https://pypi.python.org/packages/15/7c/2d4986c0bd927fcc496d1c19"
+               "3fdd2c0aafbd30ba8928ec92b79f3abf2bd7/dirsync-" version ".zip"))
+        (sha256
+         (base32
+          "1hcdvmkwd5512zbxpin0k7bx5bkgzy3swjx7d0kj1y45af6r75v2"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (propagated-inputs
+     `(("six" ,python-six)))
+    (home-page "https://bitbucket.org/tkhyn/dirsync")
+    (synopsis "Advanced directory tree synchronisation tool")
+    (description "Advanced directory tree synchronisation tool.")
+    (license license:expat)))
+
+(define-public python2-dirsync
+  (package-with-python2 python-dirsync))
+ 
+(define-public python-elasticsearch
+  (package
+    (name "python-elasticsearch")
+    (version "1.0.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "elasticsearch" version))
+        (sha256
+         (base32
+          "1sdw1r05cw7ihnmng8ra9v968fj7bq6sji8i1dikymsnkcpgc69g"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("urllib3" ,python-urllib3)))
+    (home-page "https://github.com/elastic/elasticsearch-py")
+    (synopsis "Low-level client for Elasticsearch")
+    (description "Official low-level client for Elasticsearch.  Its goal is to
+provide common ground for all Elasticsearch-related code in Python; because of
+this it tries to be opinion-free and very extendable.")
+    (license license:expat)))
+
+(define-public python2-elasticsearch
+  (package-with-python2 python-elasticsearch))
+
+(define-public python-dateutil-2
+  (package
+    (name "python-dateutil")
+    (version "2.6.0")
+    (source
+     (origin
+      (method url-fetch)
+      (uri (pypi-uri "python-dateutil" version))
+      (sha256
+       (base32
+        "1lhq0hxjc3cfha101q02ld5ijlpfyjn2w1yh7wvpiy367pgzi8k2"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-six" ,python-six)))
+    (home-page "https://dateutil.readthedocs.io/en/stable/")
+    (synopsis "Extensions to the standard datetime module")
+    (description
+     "The dateutil module provides powerful extensions to the standard
+datetime module, available in Python 2.3+.")
+    (license license:bsd-3)))
+
+(define-public python2-dateutil-2
+  (package-with-python2 python-dateutil-2))
+ 
+(define-public python-levenshtein
+  (package
+    (name "python-levenshtein")
+    (version "0.12.0")
+    (source
+     (origin
+      (method url-fetch)
+      (uri (pypi-uri "python-Levenshtein" version))
+      (sha256
+       (base32
+        "1c9ybqcja31nghfcc8xxbbz9h60s9qi12b9hr4jyl69xbvg12fh3"))))
+    (build-system python-build-system)
+    (home-page "https://github.com/ztane/python-Levenshtein")
+    (synopsis "Fast computation of Levenshtein distance and string similarity")
+    (description
+     "The Levenshtein Python C extension module contains functions for fast computation of
+@enumerate
+@item Levenshtein (edit) distance, and edit operations
+@item string similarity
+@item approximate median strings, and generally string averaging
+@item string sequence and set similarity
+@end enumerate
+It supports both normal and Unicode strings.")
+    (license license:gpl2+)))
+
+(define-public python2-levenshtein
+  (package-with-python2 python-levenshtein))
+ 
+(define-public python-scandir
+  (package
+    (name "python-scandir")
+    (version "1.4")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "scandir" version))
+       (sha256
+        (base32 "0yjrgp0mxp3d8bjkq2m1ac2ys8n76wykksvgyjrnil9gr3fx7a5d"))))
+    (build-system python-build-system)
+    (home-page "https://github.com/benhoyt/scandir")
+    (synopsis "Directory iteration function")
+    (description
+     "Directory iteration function like os.listdir(), except that instead of
+returning a list of bare filenames, it yields DirEntry objects that include
+file type and stat information along with the name.  Using scandir() increases
+the speed of os.walk() by 2-20 times (depending on the platform and file
+system) by avoiding unnecessary calls to os.stat() in most cases.")
+    (license license:bsd-3)))
+
+(define-public python2-scandir
+  (package-with-python2 python-scandir))
+ 
+(define-public python-stemming
+  (package
+    (name "python-stemming")
+    (version "1.0.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "stemming" version))
+       (sha256
+        (base32 "0ldwa24gnnxhniv0fhygkpc2mwgd93q10ag8rvzayv6hw418frsr"))))
+    (build-system python-build-system)
+    (home-page "https://bitbucket.org/mchaput/stemming/overview")
+    (synopsis "Python implementations of various stemming algorithms")
+    (description
+     "Python implementations of the Porter, Porter2, Paice-Husk, and Lovins
+stemming algorithms for English. These implementations are straightforward and
+efficient, unlike some Python versions of the same algorithms available on the
+Web. This package is an extraction of the stemming code included in the Whoosh
+search engine.")
+    (license license:public-domain)))
+
+(define-public python2-stemming
+  (package-with-python2 python-stemming))
+ 
+(define-public python-translate-toolkit
+  (package
+    (name "python-translate-toolkit")
+    (version "2.0.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "translate-toolkit" version ".tar.bz2"))
+       (sha256
+        (base32 "1648y76sxg11m31hvvnsps1yvmiz51dnn8ir24q9mjfw1qarx3wp"))))
+    (build-system python-build-system)
+    (home-page "http://toolkit.translatehouse.org")
+    (synopsis "Tools and API for translation and localization engineering")
+    (description
+     "Tools and API for translation and localization engineering.  It contains
+several utilities, as well as an API for building localization tools.")
+    (license license:gpl2+)))
+
+(define-public python2-translate-toolkit
+  (package-with-python2 python-translate-toolkit))
+
+(define-public python-mysqlclient
+  (package
+    (name "python-mysqlclient")
+    (version "1.3.9")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "mysqlclient" version))
+       (sha256
+        (base32
+         "16ccq9hvsrc6nf0nakn19dqncr913kf97j8ip28s5f8m3wgcy34r"))))
+    (build-system python-build-system)
+    (inputs
+     `(("mysql" ,mysql)
+       ("libz" ,zlib)
+       ("openssl" ,openssl)))
+    (home-page "https://github.com/PyMySQL/mysqlclient-python")
+    (synopsis "MySQLdb is an interface to the popular MySQL database server for Python")
+    (description "MySQLdb is an interface to the popular MySQL database server
+for Python.  The design goals are:
+@enumerate
+@item Compliance with Python database API version 2.0 [PEP-0249],
+@item Thread-safety,
+@item Thread-friendliness (threads will not block each other).
+@end enumerate")
+    (license license:gpl2)))
+
+(define-public python2-mysqlclient
+  (package-with-python2 python-mysqlclient))

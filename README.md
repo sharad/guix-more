@@ -31,3 +31,8 @@ Video
 -----
 
 * _aegisub_: A subtitle editor
+
+Webservices
+-----------
+
+* _pootle_: A community translation server
