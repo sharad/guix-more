@@ -37,3 +37,13 @@ Webservices
 -----------
 
 * _pootle_: A community translation server
+
+Current work
+============
+
+Using skia with icecat
+----------------------
+
+Currently working on this. I have a recipe for google-gn, a tool required by
+skia to be built. It is contained in the chromium source code, so I may as
+well add chromium on the way.
