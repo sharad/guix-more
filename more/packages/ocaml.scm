@@ -193,9 +193,24 @@ variant types.")
         (inherit (janestreet-origin "ppx_assert" version
                    "1k5kxmqkibp5fk25pgz81f3c1r4mgvb5byzf6bnmxd24y60wn46p"))
         (modules '((guix build utils)))
-        (snippet `(substitute* "install.ml"
-                               (("lib/ppx_assert")
-                                "lib/ocaml/site-lib/ppx_assert")))))
+        (snippet
+         (let ((pattern (string-append "lib/" name)))
+           `(begin
+              ;; install.ml contains an invalid reference to the ppx file and
+              ;; propagates this error to the generated META file.  It
+              ;; looks for it in the "lib" directory, but it is installed in
+              ;; "lib/ocaml/site-lib/package".  This substitute does not change
+              ;; this file for non ppx packages.
+              (substitute* "install.ml"
+                ((,pattern) (string-append "lib/ocaml/site-lib/" ,name)))
+              ;; The standard Makefile would try to install janestreet modules
+              ;; in OCaml's directory in the store, which is read-only.
+              (substitute* "Makefile"
+                (("--prefix")
+                 "--libdir $(LIBDIR) --prefix"))
+              (substitute* "install.ml"
+                           (("lib/ppx_assert")
+                            "lib/ocaml/site-lib/ppx_assert")))))))
     (build-system ocaml-build-system)
     (native-inputs
      `(("js-build-tools" ,ocaml-js-build-tools)
