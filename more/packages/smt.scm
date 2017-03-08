@@ -57,16 +57,16 @@
     (description "Z3 is a theorem prover from Microsoft Research.")
     (license license:expat)))
 
-;; Not reproducible and tests fail.
-(define-public python-z3-solver
+(define-public python2-z3-solver
   (package
     (inherit z3-solver)
-    (name "python-z3-solver")
+    (name "python2-z3-solver")
     (build-system python-build-system)
     (propagated-inputs
      `(("z3" ,z3-solver)))
     (arguments
-     `(#:phases
+     `(#:python ,python-2
+       #:phases
        (modify-phases %standard-phases
          (add-before 'build 'prepare
            (lambda* (#:key inputs #:allow-other-keys)
@@ -84,27 +84,27 @@
                (("self.execute\\(.*") "\n")
                (("scripts=.*") "\n")))))))))
 
-(define-public python2-z3-solver
-  (package-with-python2 python-z3-solver))
- 
-(define-public python-claripy
+(define-public python2-claripy
   (package
-    (name "python-claripy")
+    (name "python2-claripy")
     (version "6.7.1.31")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "claripy" version))
               (sha256
                (base32
-                "0jpnqggx40kfj9cc48aylxsaqy61isl2yb3agib8nqh9v4j1rwqa"))))
+                "0jpnqggx40kfj9cc48aylxsaqy61isl2yb3agib8nqh9v4j1rwqa"))
+              (modules '((guix build utils)))
+              (snippet
+               `(substitute* "setup.py"
+                  (("angr-only-z3-custom==9002") "z3-solver")))))
     (build-system python-build-system)
     (propagated-inputs
-     `(("ana" ,python-ana)
-       ("z3" ,python-z3-solver)))
+     `(("ana" ,python2-ana)
+       ("z3" ,python2-z3-solver)))
+    (arguments
+     `(#:python ,python-2))
     (home-page "https://github.com/angr/claripy")
     (synopsis "Claripy is a abstracted constraint-solving wrapper")
     (description "Claripy is a abstracted constraint-solving wrapper.")
     (license license:bsd-2)))
-
-(define-public python2-claripy
-  (package-with-python2 python-claripy))

@@ -20,14 +20,18 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix utils)
+  #:use-module (guix build-system gnu)
   #:use-module (guix build-system ocaml)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages emacs)
   #:use-module (gnu packages llvm)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages ocaml)
-  #:use-module (gnu packages protobuf))
+  #:use-module (gnu packages perl)
+  #:use-module (gnu packages protobuf)
+  #:use-module (gnu packages texinfo))
 
 ;; Janestreet packages are found in a similar way and all need the same patch.
 (define (janestreet-origin name version hash)
@@ -1248,3 +1252,85 @@ sensitive completion, colors, and more.
 
 It integrates with the tuareg mode in Emacs.")
     (license license:bsd-3)))
+
+(define-public proof-general2
+  (package
+    (name "proof-general2")
+    (version "4.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://github.com/ProofGeneral/PG/archive/v"
+                    version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0zif2fv6mm4pv75nh10q3p37n293495rvx470bx7ma382zc3d8hv"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("which" ,which)
+       ("emacs" ,emacs-minimal)
+       ("texinfo" ,texinfo)))
+    (inputs
+     `(("host-emacs" ,emacs)
+       ("perl" ,perl)
+       ("coq" ,coq)))
+    (arguments
+     `(#:tests? #f  ; no check target
+       #:make-flags (list (string-append "PREFIX=" %output)
+                          (string-append "DEST_PREFIX=" %output)
+                          "-j1")
+       #:modules ((guix build gnu-build-system)
+                  (guix build utils)
+                  (guix build emacs-utils))
+       #:imported-modules (,@%gnu-build-system-modules
+                           (guix build emacs-utils))
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-after 'unpack 'disable-byte-compile-error-on-warn
+                    (lambda _
+                      (substitute* "Makefile"
+                        (("\\(setq byte-compile-error-on-warn t\\)")
+                         "(setq byte-compile-error-on-warn nil)"))
+                      #t))
+         (add-after 'unpack 'patch-hardcoded-paths
+                    (lambda* (#:key inputs outputs #:allow-other-keys)
+                      (let ((out   (assoc-ref outputs "out"))
+                            (coq   (assoc-ref inputs "coq"))
+                            (emacs (assoc-ref inputs "host-emacs")))
+                        (define (coq-prog name)
+                          (string-append coq "/bin/" name))
+                        (substitute* "pgshell/pgshell.el"
+                          (("/bin/sh") (which "sh")))
+                        ;(emacs-substitute-variables "coq/coq.el"
+                        ;  ("coq-prog-name"           (coq-prog "coqtop"))
+                        ;  ("coq-compiler"            (coq-prog "coqc"))
+                        ;  ("coq-dependency-analyzer" (coq-prog "coqdep")))
+                        (substitute* "Makefile"
+                          (("/sbin/install-info") "install-info"))
+                        (substitute* "bin/proofgeneral"
+                          (("^PGHOMEDEFAULT=.*" all)
+                           (string-append all
+                                          "PGHOME=$PGHOMEDEFAULT\n"
+                                          "EMACS=" emacs "/bin/emacs")))
+                        #t))))))
+         ;(add-after 'unpack 'clean
+         ;           (lambda _
+         ;             ;; Delete the pre-compiled elc files for Emacs 23.
+         ;             (zero? (system* "make" "clean"))))
+         ;(add-after 'install 'install-doc
+         ;           (lambda* (#:key make-flags #:allow-other-keys)
+         ;             ;; XXX FIXME avoid building/installing pdf files,
+         ;             ;; due to unresolved errors building them.
+         ;             (substitute* "Makefile"
+         ;               ((" [^ ]*\\.pdf") ""))
+         ;             (zero? (apply system* "make" "install-doc"
+         ;                           make-flags)))))))
+    (home-page "http://proofgeneral.inf.ed.ac.uk/")
+    (synopsis "Generic front-end for proof assistants based on Emacs")
+    (description
+     "Proof General is a major mode to turn Emacs into an interactive proof
+assistant to write formal mathematical proofs using a variety of theorem
+provers.")
+    (license license:gpl2+)))

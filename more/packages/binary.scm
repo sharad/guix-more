@@ -48,6 +48,10 @@
                (base32
                 "1iw47b20brg0ah86s9a2dn1f70qfmdv20p04q131vmnwa9g066f4"))))
     (build-system python-build-system)
+    (native-inputs
+     `(("utils" ,python-utils)))
+    (arguments
+     `(#:tests? #f))
     (home-page "https://github.com/eliben/pyelftools")
     (synopsis "Parsing and analyzing ELF files and DWARF debugging information")
     (description
@@ -55,7 +59,12 @@
     (license license:public-domain)))
 
 (define-public python2-pyelftools
-  (package-with-python2 python-pyelftools))
+  (package
+    (inherit (package-with-python2 python-pyelftools))
+    (arguments
+     `(#:tests? #t
+       #:python ,python-2))))
+    
 
 (define-public capstone
   (package
@@ -124,6 +133,8 @@ bindings for Python, Java, OCaml and more.")
          (base32
           "0ysz17ci0nhc5gi6j9si0fg87lzc7vcz3ccbi6qgfgjwbc422h7j"))))
     (build-system python-build-system)
+    (arguments
+     `(#:tests? #f)); no test
     (home-page "https://github.com/erocarrera/pefile")
     (synopsis "Parse and work with Portable Executable (aka PE) files")
     (description "Pefile is a multi-platform Python module to parse and work
@@ -138,9 +149,9 @@ convenience will depart from that convention.")
 (define-public python2-pefile
   (package-with-python2 python-pefile))
 
-(define-public python-archinfo
+(define-public python2-archinfo
   (package
-    (name "python-archinfo")
+    (name "python2-archinfo")
     (version "6.7.1.13")
     (source (origin
               (method url-fetch)
@@ -149,15 +160,14 @@ convenience will depart from that convention.")
                (base32
                 "0x896mk98r6g9h3rxpqq9ri0s6v9n937jx0fzn7i61zn61n7whzw"))))
     (build-system python-build-system)
+    (arguments
+     `(#:python ,python-2))
     (home-page "https://github.com/angr/archinfo")
     (synopsis "Collection of classes that contain architecture-specific information")
     (description "Archinfo is a collection of classes that contain
 architecture-specific information.  It is useful for cross-architecture tools
 (such as pyvex).")
     (license license:bsd-2)))
-
-(define-public python2-archinfo
-  (package-with-python2 python-archinfo))
 
 (define-public angr-vex
   (package
@@ -198,13 +208,13 @@ valgrind.org) for use with PyVEX.")
 (define-public python2-pyvex
   (package
     (name "python2-pyvex")
-    (version "6.7.1.13.post2")
+    (version "6.7.1.31")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "pyvex" version))
               (sha256
                (base32
-                "1x9s88hgrw9xz8v9x9njjz0jq4fxkwyn479074bg4wbqjsp9n7qd"))))
+                "0wwz1jqrjbkg8j7mr3wrgw84aaph7h9v2r7j4q035rn7b38n5x54"))))
     (build-system python-build-system)
     (inputs `(("angr-vex" ,angr-vex)))
     (propagated-inputs
@@ -291,7 +301,6 @@ CPU emulator framework.")
      `(("unicorn" ,unicorn)
        ("pyvex" ,python2-pyvex)))))
 
-;; TODO: Requires dpkt-fix for testing
 (define-public python2-simuvex
   (package
     (name "python2-simuvex")
@@ -301,10 +310,15 @@ CPU emulator framework.")
               (uri (pypi-uri "simuvex" version))
               (sha256
                (base32
-                "150jwf55pib7ndz7bjb4fxifqqgdxx7n1f5qa87mz6349qvi1xji"))))
+                "150jwf55pib7ndz7bjb4fxifqqgdxx7n1f5qa87mz6349qvi1xji"))
+              (modules '((guix build utils)))
+              (snippet
+               '(substitute* "setup.py"
+                  (("dpkt-fix") "dpkt")))))
     (build-system python-build-system)
     (native-inputs
-     `(("pkg-config" ,pkg-config)))
+     `(("pkg-config" ,pkg-config)
+       ("enum34" ,python2-enum34)))
     (propagated-inputs
      `(("pyvex" ,python2-pyvex)
        ("bintrees" ,python2-bintrees)
@@ -325,37 +339,36 @@ imports and provides an abstraction of process memory the same way as if it was
 loaded by the OS's loader.")
     (license license:bsd-2)))
 
-(define-public python-cle
+(define-public python2-cle
   (package
-    (name "python-cle")
+    (name "python2-cle")
     (version "6.7.1.31")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "cle" version))
               (sha256
                (base32
-                "0llk54f9p3b73f1pk19axlhw8yw80fdv07jkghqmqwd6xrnpnmmc"))))
+                "0llk54f9p3b73f1pk19axlhw8yw80fdv07jkghqmqwd6xrnpnmmc"))
+              (modules '((guix build utils)))
+              (snippet
+               '(substitute* "setup.py"
+                  ((", \"idalink\"") ""))))); Idalink is not acceptable
     (build-system python-build-system)
     (propagated-inputs
-     `(("pyelftools" ,python-pyelftools)
-       ("cffi" ,python-cffi)
-       ("archinfo" ,python-archinfo)
-       ("pefile" ,python-pefile)))
+     `(("pyelftools" ,python2-pyelftools)
+       ("cffi" ,python2-cffi)
+       ("archinfo" ,python2-archinfo)
+       ("future" ,python2-future)
+       ("pyvex" ,python2-pyvex)
+       ("pefile" ,python2-pefile)))
+    (arguments
+     `(#:python ,python-2))
     (home-page "https://github.com/angr/cle")
     (synopsis "Abstraction of process memory")
     (description "CLE loads binaries and their associated libraries, resolves
 imports and provides an abstraction of process memory the same way as if it was
 loaded by the OS's loader.")
     (license license:bsd-2)))
-
-(define-public python2-cle
-  (package
-    (inherit (package-with-python2 python-cle))
-    (propagated-inputs
-     `(("pyelftools" ,python2-pyelftools)
-       ("cffi" ,python2-cffi)
-       ("pefile" ,python2-pefile)
-       ("pyvex" ,python2-pyvex)))))
 
 (define-public python2-angr
   (package
@@ -377,6 +390,7 @@ loaded by the OS's loader.")
        ("utils" ,python2-utils)
        ("mulpyplexer" ,python2-mulpyplexer)
        ("rpyc" ,python2-rpyc)
+       ("enum34" ,python2-enum34)
        ("networkx" ,python2-networkx)
        ("futures" ,python2-futures)
        ("progressbar" ,python2-progressbar2)

@@ -100,7 +100,9 @@ them as the version argument or in a SCM managed file.")
                 "1zvrc1rc06n89pycg969pcy30bff4sqzhff365sxh629ybnl8pwq"))))
     (build-system python-build-system)
     (native-inputs
-     `(("pytest-runner" ,python-pytest-runner)))
+     `(("pytest-runner" ,python-pytest-runner)
+       ("pytest" ,python-pytest)
+       ("six" ,python-six)))
     (home-page "https://github.com/WoLpH/python-utils")
     (synopsis "Convenient utilities not included with the standard Python install")
     (description
@@ -122,6 +124,8 @@ make common patterns shorter and easier.")
                (base32
                 "084if0s504576nph0f6glmg3mmvijq7nbnf65hh22gwwdwrjss83"))))
     (build-system python-build-system)
+    (native-inputs
+     `(("ana" ,python-ana)))
     (home-page "https://github.com/zardus/cooldict")
     (synopsis "Some useful dict-like structures")
     (description "Some useful dict-like structures.")
@@ -185,10 +189,10 @@ drop in replacement for dicts in most cases.")
               (sha256
                (base32
                 "004qsqzg3fwkh623l1y8j62ai166hr02y192s7n1hs166kjjb5fr"))
-            (modules '((guix build utils)))
-            (snippet
-             '(substitute* "setup.py"
-                (("os.system\\('py2dsc-deb ' + sdist_file\\)") "")))))
+              (modules '((guix build utils)))
+              (snippet
+               '(substitute* "setup.py"
+                  (("os.system\\('py2dsc-deb ' + sdist_file\\)") "")))))
     (build-system python-build-system)
     (arguments
      `(#:python ,python-2))
@@ -197,10 +201,10 @@ drop in replacement for dicts in most cases.")
     (description "Fast, simple packet creation / parsing, with definitions for
 the basic TCP/IP protocols.")
     (license license:bsd-3)))
- 
-(define-public python-rpyc
+
+(define-public python2-rpyc
   (package
-    (name "python-rpyc")
+    (name "python2-rpyc")
     (version "3.3.0")
     (source (origin
               (method url-fetch)
@@ -209,6 +213,13 @@ the basic TCP/IP protocols.")
                (base32
                 "0jwbxxf5f8l05pwh7ilg380y4pqv3nxibaszbwpl9gzh2i9q9yj3"))))
     (build-system python-build-system)
+    (native-inputs
+     `(("nose" ,python2-nose)))
+    (propagated-inputs
+     `(("plumbum" ,python2-plumbum)
+       ("progressbar" ,python2-progressbar)))
+    (arguments
+     `(#:python ,python-2))
     (home-page "https://github.com/tomerfiliba/rpyc")
     (synopsis "Remote procedure call for Python")
     (description "Remote Python Call is a transparent library for symmetrical
@@ -218,8 +229,41 @@ overcome the physical boundaries between processes and computers, so that
 remote objects can be manipulated as if they were local.")
     (license license:expat)))
 
-(define-public python2-rpyc
-  (package-with-python2 python-rpyc))
+(define-public python2-progressbar
+  (package
+    (name "python2-progressbar")
+    (version "2.3")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "progressbar" version))
+              (sha256
+               (base32
+                "0m0j93yfvbd8pw8cz2vdb9hyk9d0zkkd509k69jrw545jxr8mlxj"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:python ,python-2))
+    (home-page "https://github.com/niltonvolpato/python-progressbar")
+    (synopsis "Text progress bar library for Python")
+    (description
+      "A text progress bar is typically used to display the progress of a long
+running operation, providing a visual cue that processing is underway.
+
+The ProgressBar class manages the current progress, and the format of the line
+is given by a number of widgets. A widget is an object that may display
+differently depending on the state of the progress bar. There are three types
+of widgets:
+
+@enumerate
+@item a string, which always shows itself
+@item a ProgressBarWidget, which may return a different value every time its
+update method is called
+@item a ProgressBarWidgetHFill, which is like ProgressBarWidget, except it
+expands to fill the remaining width of the line.
+@end enumerate
+
+The progressbar module is very easy to use, yet very powerful. It will also
+automatically enable features like auto-resizing when the system supports it.")
+    (license (list license:lgpl2.1+ license:bsd-3))))
 
 (define-public python-progressbar2
   (package
@@ -233,7 +277,11 @@ remote objects can be manipulated as if they were local.")
                 "16r21cpjvv0spf4mymgpy7hx6977iy11k44n2w9kipwg4lhwh02k"))))
     (build-system python-build-system)
     (native-inputs
-     `(("pytest-runner" ,python-pytest-runner)))
+     `(("pytest-runner" ,python-pytest-runner)
+       ("pytest" ,python-pytest)))
+    (propagated-inputs
+     `(("six" ,python-six)
+       ("utils" ,python-utils)))
     (home-page "https://github.com/WoLpH/python-progressbar")
     (synopsis "A text progress bar for python")
     (description "A text progress bar is typically used to display the progress
@@ -266,7 +314,6 @@ differently depending on the state of the progress bar.")
 (define-public python2-mulpyplexer
   (package-with-python2 python-mulpyplexer))
 
-;; Not reproducible.
 (define-public python-ana
   (package
     (name "python-ana")
@@ -281,6 +328,15 @@ differently depending on the state of the progress bar.")
                 "0f2wdhs0xwpnk9lznxl96b2yzcz1641wbqrh1aid7q2pm60v6dhv"))
               (file-name (string-append name "-" version))))
     (build-system python-build-system)
+    (native-inputs
+     `(("nose" ,python-nose)))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-python3-import
+           (lambda _
+             (substitute* "ana/datalayer.py"
+               (("import cPickle as pickle") "import pickle")))))))
     (home-page "https://github.com/zardus/ana")
     (synopsis "Provide easy distributed data storage for python objects")
     (description "ANA is a project to provide easy distributed data storage for
@@ -291,9 +347,11 @@ objects in some distributed system, and you'd rather not pickle the whole
 object every time you need to send it.")
     (license license:bsd-2)))
 
-;; Not reproducible.
 (define-public python2-ana
-  (package-with-python2 python-ana))
+  (package
+    (inherit (package-with-python2 python-ana))
+    (arguments
+     `(#:python ,python-2))))
 
 (define-public python-webassets
   (package
@@ -605,3 +663,29 @@ for Python.  The design goals are:
 
 (define-public python2-mysqlclient
   (package-with-python2 python-mysqlclient))
+
+(define-public python-plumbum
+  (package
+    (name "python-plumbum")
+    (version "1.6.3")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "plumbum" version))
+       (sha256
+        (base32 "083kikr1f7qzpp5jllss97dy8d6249v7ia3wg9i0a6wz8l4ffj82"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("pytest" ,python-pytest)))
+    (home-page "https://plumbum.readthedocs.io/en/latest")
+    (synopsis "Shell script-like programs in Python")
+    (description
+      "Plumbum (Latin for lead, which was used to create pipes back in the day)
+is a small yet feature-rich library for shell script-like programs in Python.
+The motto of the library is “Never write shell scripts again”, and thus it
+attempts to mimic the shell syntax (“shell combinators”) where it makes sense,
+while keeping it all Pythonic and cross-platform.")
+    (license license:expat)))
+
+(define-public python2-plumbum
+  (package-with-python2 python-plumbum))
