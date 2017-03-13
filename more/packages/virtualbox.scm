@@ -20,30 +20,51 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix svn-download)
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages)
+  #:use-module (gnu packages admin)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bison)
   #:use-module (more packages cdrom)
+  #:use-module (gnu packages curl)
   #:use-module (gnu packages flex)
+  #:use-module (gnu packages gl)
+  #:use-module (gnu packages gnome)
+  #:use-module (gnu packages image)
   #:use-module (gnu packages linux)
   #:use-module (gnu packages m4)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages python)
+  #:use-module (gnu packages qt)
+  #:use-module (gnu packages sdl)
   #:use-module (gnu packages texinfo)
-  #:use-module (gnu packages xml))
+  #:use-module (gnu packages tls)
+  #:use-module (gnu packages video)
+  #:use-module (gnu packages xml)
+  #:use-module (gnu packages xorg))
 
 (define-public kbuild
   (package
     (name "kbuild")
-    (version "0.1.5-p2")
+    (version "0.1.9998")
     (source (origin
-              (method url-fetch)
-              (uri (string-append "ftp://ftp.netlabs.org/pub/kbuild/kBuild-"
-                                  version "-src.tar.gz"))
+              ;(method url-fetch)
+              ;(uri (string-append "ftp://ftp.netlabs.org/pub/kbuild/kBuild-"
+              ;                    version "-src.tar.gz"))
+              ;(sha256
+              ; (base32
+              ;  "19j2sswdqqjzjzmg0xam8nmwmxg422iii0fl9cwzcznjfigdn1c2"))))
+              (method svn-fetch)
+              (uri (svn-reference
+                     (url "http://svn.netlabs.org/repos/kbuild/trunk")
+                     (revision 3025)))
+              (file-name (string-append name "-" version))
               (sha256
                (base32
-                "19j2sswdqqjzjzmg0xam8nmwmxg422iii0fl9cwzcznjfigdn1c2"))))
+                "1k7y2lqqhsfwfzzi7rms7a2kakimm7g46qa2gypkvzdd3drbpanj"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("autoconf" ,autoconf)
@@ -140,27 +161,55 @@ for complex tasks.")
                 "12i2kyn7svy2kd6j40fzzhy7173xfq884ygb6x9fbihpcw1bnrw2"))))
     (build-system gnu-build-system)
     (native-inputs
-     `(("kbuild" ,kbuild)
+     `(;("kbuild" ,kbuild)
+       ("pkg-config" ,pkg-config)
        ("which" ,which)))
     (inputs
-     `(("acpica-unix" ,acpica-unix); for iasl
+     `(("acpica" ,acpica); for iasl
+       ("alsa" ,alsa-lib)
+       ("curl" ,curl)
        ("cdrtools" ,cdrtools)
-       ("libxslt" ,libxslt)))
+       ("glu" ,glu)
+       ("libidl" ,libidl)
+       ("libpng" ,libpng)
+       ("libvpx" ,libvpx)
+       ("libxcursor" ,libxcursor)
+       ("libxext" ,libxext)
+       ("libxinerama" ,libxinerama)
+       ("libxml2" ,libxml2)
+       ("libxmu" ,libxmu)
+       ("libxrandr" ,libxrandr)
+       ("libxslt" ,libxslt)
+       ("lvm2" ,lvm2)
+       ("mesa" ,mesa)
+       ("python" ,python-2)
+       ("qt5" ,qt)
+       ("openssl" ,openssl)
+       ("sdl" ,sdl)))
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'remove-binaries
-           (lambda* _
+         (add-before 'configure 'fix-paths
+           (lambda* (#:key inputs #:allow-other-keys)
              (substitute* "configure"
-               (("bin/\\$OS.\\$BUILD_MACHINE") "bin"))
-             (delete-file-recursively "tools")
-             (delete-file-recursively "kBuild/bin")))
+               (("PYTHONDIR=.*")
+                (string-append "PYTHONDIR=" (assoc-ref inputs "python") "\n")))))
+         ;(add-before 'configure 'remove-binaries
+           ;(lambda* _
+             ;(substitute* "configure"
+             ;  (("bin/\\$OS.\\$BUILD_MACHINE") "bin"))
+             ;(delete-file-recursively "tools")
+             ;(delete-file-recursively "kBuild/bin")))
          (replace 'configure
            (lambda* (#:key outputs inputs #:allow-other-keys)
              (zero? (system* "./configure" "--disable-java" "--disable-pulse"
                              "--disable-vmmraw"
-                             (string-append "--with-kbuild="
-                                            (assoc-ref inputs "kbuild")))))))))
+                             (string-append "--with-makeself=" (which "echo"))))))
+                             ;(string-append "--with-kbuild="
+                             ;               (assoc-ref inputs "kbuild"))))))
+         (replace 'build
+           (lambda* _
+             (zero? (system* "kmk")))))))
     (home-page "https://www.virtualbox.org")
     (synopsis "Virtual Machine manager")
     (description
