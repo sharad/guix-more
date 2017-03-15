@@ -51,6 +51,7 @@
          (add-before 'build 'fix-compiler
            (lambda* _
              (substitute* "build.xml"
+               (("UNKNOWN") "11639")
                ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
                (("compiler=\"[^\"]*\" ") ""))))
          (replace 'install
