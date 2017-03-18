@@ -73,3 +73,140 @@
     (synopsis "OSM editor")
     (description "OSM editor.")
     (license license:gpl2+)))
+
+(define-public java-commons-cli
+  (package
+    (name "java-commons-cli")
+    (version "1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://mirrors.ircam.fr/pub/apache/commons/"
+                                  "cli/source/commons-cli-" version "-src.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "05hgi2z01fqz374y719gl1dxzqvzci5af071zm7vxrjg9vczipm1"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-cli-1.4.jar"
+       #:tests? #f))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-asm
+  (package
+    (name "java-asm")
+    (version "5.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://download.forge.ow2.org/asm/asm-"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0kxvmv5275rnjl7jv0442k3wjnq03ngkb7sghs78avf45pzm4qgr"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "asm-5.2.jar"
+       #:tests? #f))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;; Can only be built with gradle.
+(define-public groovy
+  (package
+    (name "groovy")
+    (version "2.4.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+                                  "2_4_10.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0wapzqwpx4bh2fsqpzf3haakjz6wvfjx1vd9a4spavhlrjqk2pbb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "groovy.jar"
+       #:tests? #f))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (inputs
+     `(("commons-cli" ,java-commons-cli)
+       ("asm" ,java-asm)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;; requires jline, commons-cli, javax.servlet, org.fusesource.jansi, org.livetribe,
+;;   com.thoughtworks.xstream, org.apache.ivy, bsf, org.apache.ant, junit,
+;;   asm, antlr
+(define-public groovy-1.8.9
+  (package
+    (inherit groovy)
+    (name "groovy")
+    (version "1.8.9")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+                                  "1_8_9.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "16z3jv5yw11wwwzbs6x41g83gqazhngg30ys2kpy7cpfm3rsqi71"))))))
+    ;(arguments
+    ; `(#:build-target "createJars"))))
+
+;; requires groovy 2.4.7.
+(define-public gradle
+  (package
+    (name "gradle")
+    (version "3.4.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/gradle/gradle/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32 "0fq30k51mkixg31z3d4fjq3zbnyjml4i530px6n1n947mqk3rgyl"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* _
+             (system* "sh" "-x" "gradlew" "prBuild" "-x" "integTest" "--continue"
+                      "--stacktrace"))))))
+             ;(system* "sh" "-x" "travisci_build.sh"))))))
+    (home-page "")
+    (synopsis "Build system")
+    (description "Build system")
+    (license license:asl2.0)))
+
+;; Requires gradle.
+(define-public android-anysoft-keyboard
+  (package
+    (name "android-anysoft-keyboard")
+    (version "1.8-r9")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/AnySoftKeyboard/"
+                                  "AnySoftKeyboard/archive/" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1mrin9mw1rs23d25v8yx4jprx7j05zir6756sqvk4myxbkcp8mag"))))
+    (build-system ant-build-system)
+    (home-page "https://anysoftkeyboard.github.io/")
+    (synopsis "Alternative on-screen keyboard for multiple languages")
+    (description "Alternative on-screen keyboard for multiple languages.")
+    (license license:asl2.0)))
