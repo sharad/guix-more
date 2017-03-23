@@ -23,12 +23,20 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages audio)
+  #:use-module (gnu packages boost)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages documentation)
+  #:use-module (gnu packages fontutils)
   #:use-module (gnu packages gl)
   #:use-module (gnu packages image)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages sdl)
-  #:use-module (gnu packages xiph))
+  #:use-module (gnu packages tbb)
+  #:use-module (gnu packages xiph)
+  #:use-module (gnu packages xml)
+  #:use-module (gnu packages xorg)
+  #:use-module (gnu packages zip))
 
 (define-public lugaru
   (package
@@ -65,3 +73,51 @@ the corrupt leaders of the rabbit republic and the starving wolves from a
 nearby den.  Turner takes it upon himself to fight against their plot and save
 his fellow rabbits from slavery.")
     (license (list license:gpl2+ license:cc-by-sa3.0))))
+
+(define-public ogre3d
+  (package
+    (name "ogre3d")
+    (version "1.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                     "https://bitbucket.org/sinbad/ogre/get/v"
+                     (string-map (lambda (x) (if (char=? x #\.) #\- x)) version)
+                     ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0p8gyn293qn3iyiy1smfmjd9zpnjb8h2zgvff8778fwh0ylbmlpa"))))
+    (build-system cmake-build-system)
+    (native-inputs
+     `(("doxygen" ,doxygen)))
+    (inputs
+     `(("freetype" ,freetype)
+       ("boost" ,boost)
+       ("sdl2" ,sdl2)
+       ("cppunit" ,cppunit)
+       ("freeimage" ,freeimage)
+       ("glu" ,glu)
+       ("libxt" ,libxt)
+       ("libxaw" ,libxaw)
+       ("libxxf86vm" ,libxxf86vm)
+       ("libxrandr" ,libxrandr)
+       ("mesa" ,mesa)
+       ("tbb" ,tbb)
+       ("tinyxml" ,tinyxml)
+       ("zziplib" ,zziplib)))
+    (arguments
+     `(#:tests? #f
+       #:configure-flags
+       (list (string-append "-DFREETYPE_FT2BUILD_INCLUDE_DIR="
+               (assoc-ref %build-inputs "freetype")
+               "/include"))
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'build 'build-doc
+           (lambda* _
+             (zero? (system* "make" "OgreDoc")))))))
+    (home-page "http://www.ogre3d.org")
+    (synopsis "3D graphics engine")
+    (description "3D graphics engine")
+    (license license:expat)))
