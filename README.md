@@ -38,12 +38,24 @@ Webservices
 
 * _pootle_: A community translation server
 
+Java
+----
+
+* _antlr3_: A parser generator
+* _josm_: An openstreetmap editor
+
 Current work
 ============
 
 Using skia with icecat
 ----------------------
 
-Currently working on this. I have a recipe for google-gn, a tool required by
-skia to be built. It is contained in the chromium source code, so I may as
-well add chromium on the way.
+Currently working on this. I have skia, but it requires some tricks to actually
+have icecat build with it.
+
+Adding gradle and groovy
+------------------------
+
+Gradle is partially written in groovy, which itself is partially written in
+groovy. I currently am working on some dependencies, but I don't have a clear
+plan for groovy.
