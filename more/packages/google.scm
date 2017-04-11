@@ -134,8 +134,12 @@
              (zero? (system* "ninja" "-C" "out/Shared"))))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
-              (let ((lib (string-append (assoc-ref outputs "out") "/lib")))
+              (let ((lib (string-append (assoc-ref outputs "out") "/lib"))
+                    (include (string-append (assoc-ref outputs "out")
+                                            "/include")))
                 (mkdir-p lib)
+                (mkdir-p include)
+                (copy-recursively "include" include)
                 (copy-file "out/Shared/libskia.so"
                            (string-append lib "/libskia.so"))))))))
     (native-inputs

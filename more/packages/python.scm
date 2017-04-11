@@ -646,10 +646,16 @@ several utilities, as well as an API for building localization tools.")
         (base32
          "16ccq9hvsrc6nf0nakn19dqncr913kf97j8ip28s5f8m3wgcy34r"))))
     (build-system python-build-system)
+    (native-inputs
+     `(("mariadb" ,mariadb)))
     (inputs
      `(("mysql" ,mysql)
        ("libz" ,zlib)
        ("openssl" ,openssl)))
+    (propagated-inputs
+     `(("nose" ,python-nose)
+       ("mock" ,python-mock)
+       ("py.test" ,python-pytest)))
     (home-page "https://github.com/PyMySQL/mysqlclient-python")
     (synopsis "MySQLdb is an interface to the popular MySQL database server for Python")
     (description "MySQLdb is an interface to the popular MySQL database server
