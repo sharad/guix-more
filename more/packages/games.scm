@@ -28,9 +28,15 @@
   #:use-module (gnu packages compression)
   #:use-module (gnu packages documentation)
   #:use-module (gnu packages fontutils)
+  #:use-module (gnu packages fribidi)
+  #:use-module (gnu packages games)
   #:use-module (gnu packages gl)
+  #:use-module (gnu packages gtk)
   #:use-module (gnu packages image)
+  #:use-module (gnu packages lua)
+  #:use-module (gnu packages pcre)
   #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages python)
   #:use-module (gnu packages sdl)
   #:use-module (gnu packages tbb)
   #:use-module (gnu packages xiph)
@@ -120,4 +126,49 @@ his fellow rabbits from slavery.")
     (home-page "http://www.ogre3d.org")
     (synopsis "3D graphics engine")
     (description "3D graphics engine")
+    (license license:expat)))
+
+(define-public cegui
+  (package
+    (name "cegui")
+    (version "0.8.7")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                     "http://prdownloads.sourceforge.net/crayzedsgui/cegui-"
+                     version ".tar.bz2"))
+              (sha256
+               (base32
+                "067562s71kfsnbp2zb2bmq8zj3jk96g5a4rcc5qc3n8nfyayhldk"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:tests? #f))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (inputs
+     `(("pcre" ,pcre)
+       ("gl" ,mesa)
+       ("freetype" ,freetype)
+       ("fribidi" ,fribidi)
+       ("glew" ,glew)
+       ("sdl2" ,sdl2)
+       ("irrlicht" ,irrlicht)
+       ("ogre" ,ogre3d)
+       ("epoxy" ,libepoxy)
+       ("expat" ,expat)
+       ("libxml2" ,libxml2)
+       ("freeimage" ,freeimage)
+       ("python" ,python)
+       ("lua" ,lua-5.1)
+       ("gtk" ,gtk+-2)
+       ("boost" ,boost)
+       ("minizip" ,minizip)
+       ("tinyxml" ,tinyxml)))
+    (home-page "http://cegui.org.uk/")
+    (synopsis "Crazy Eddie's GUI system")
+    (description "Crazy Eddie's GUI System is a free library providing windowing
+and widgets for graphics APIs / engines where such functionality is not natively
+available, or severely lacking.  The library is object-oriented, written in C++,
+cross-platform, and targeted at game and application developers.  Additionally,
+it offers a WYSIWYG editor for creating layouts and imagesets.")
     (license license:expat)))
