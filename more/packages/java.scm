@@ -160,9 +160,11 @@
        #:tests? #f))
     (native-inputs
      `(("junit" ,java-junit)))
-    (home-page "")
-    (synopsis "")
-    (description "")
+    (home-page "https://commons.apache.org/proper/commons-cli")
+    (synopsis "Java API for parsing command line options passed to programs")
+    (description "Apache Commons CLI library provides an API for parsing command
+line options passed to programs. It's also able to print help messages detailing
+the options available for a command line tool.")
     (license license:asl2.0)))
 
 (define-public java-asm
