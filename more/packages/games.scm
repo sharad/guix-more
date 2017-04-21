@@ -47,14 +47,14 @@
 (define-public lugaru
   (package
     (name "lugaru")
-    (version "1.1")
+    (version "1.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://bitbucket.org/osslugaru/lugaru/downloads/"
                                   name "-" version ".tar.xz"))
               (sha256
                (base32
-                "0b5q73kwbiqin00iizjwzzwijrl45drq0da4cxn94mqqc7ygc02y"))))
+                "15zgcshy22q51rm72zi6y9z7qlgnz5iw3gczjdlir4bqmxy4gspk"))))
     (build-system cmake-build-system)
     (arguments
      `(#:configure-flags
