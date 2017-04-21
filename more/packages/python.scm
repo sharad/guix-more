@@ -30,28 +30,6 @@
   #:use-module (guix utils)
   #:use-module (guix build-system python))
 
-(define-public python-setuptools-scm
-  (package
-    (name "python-setuptools-scm")
-    (version "1.15.0")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "setuptools_scm" version))
-              (sha256
-               (base32
-                "0bwyc5markib0i7i2qlyhdzxhiywzxbkfiapldma8m91m82jvwfs"))))
-    (build-system python-build-system)
-    (home-page "https://github.com/pypa/setuptools_scm/")
-    (synopsis "Manage Python package versions in SCM metadata")
-    (description
-     "Setuptools_scm handles managing your Python package versions in
-@dfn{software configuration management} (SCM) metadata instead of declaring
-them as the version argument or in a SCM managed file.")
-    (license license:expat)))
-
-(define-public python2-setuptools-scm
-  (package-with-python2 python-setuptools-scm))
-
 (define-public python-pytest-runner
   (package
     (name "python-pytest-runner")
@@ -513,6 +491,7 @@ this it tries to be opinion-free and very extendable.")
 (define-public python2-elasticsearch
   (package-with-python2 python-elasticsearch))
 
+;; TODO: python-dateutil in guix/packages/python.scm
 (define-public python-dateutil-2
   (package
     (name "python-dateutil")

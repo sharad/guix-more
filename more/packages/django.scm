@@ -28,40 +28,6 @@
   #:use-module (more packages python))
 
 
-(define-public python-django-allauth
-  (package
-    (name "python-django-allauth")
-    (version "0.30.0")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "django-allauth" version))
-              (sha256
-               (base32
-                "1fslqc5qqb0b66yscvkyjwfv8cnbfx5nlkpnwimyb3pf1nc1w7r3"))))
-    (build-system python-build-system)
-    (propagated-inputs
-     `(("python-django" ,python-django)
-       ("python-mock" ,python-mock)
-       ("python-openid" ,python-openid)
-       ("python-requests" ,python-requests)
-       ("python-requests-oauthlib" ,python-requests-oauthlib)))
-    (home-page "http://www.intenct.nl/projects/django-allauth")
-    (synopsis "Reusable Django app for local and social authentication")
-    (description
-      "django-allauth is a reusable Django app that allows for both local and
-social authentication, with flows that just work.")
-    (license license:expat)))
-
-(define-public python2-django-allauth
-  (package
-    (inherit (package-with-python2 python-django-allauth))
-    (propagated-inputs
-     `(("python-django" ,python2-django)
-       ("python-mock" ,python2-mock)
-       ("python-openid" ,python2-openid)
-       ("python-requests" ,python2-requests)
-       ("python-requests-oauthlib" ,python2-requests-oauthlib)))))
-
 (define-public python-django-assets
   (package
     (name "python-django-assets")
