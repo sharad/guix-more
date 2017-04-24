@@ -350,7 +350,6 @@ supporting a variety of different filters, including YUI, jsmin, jspacker or
 CSS tidy.  Also supports URL rewriting in CSS files.")
     (license license:bsd-2)))
 
-
 (define-public python-sphinx-me
   (package
     (name "python-sphinx-me")
