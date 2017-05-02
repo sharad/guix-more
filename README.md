@@ -44,6 +44,11 @@ Java
 * _antlr3_: A parser generator
 * _josm_: An openstreetmap editor
 
+Non-free
+--------
+
+* _compcert_: A certified C compiler
+
 Current work
 ============
 

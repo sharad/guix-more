@@ -1133,3 +1133,36 @@ It integrates with the tuareg mode in Emacs.")
 assistant to write formal mathematical proofs using a variety of theorem
 provers.")
     (license license:gpl2+)))
+
+(define-public compcert
+  (package
+    (name "compcert")
+    (version "3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://compcert.inria.fr/release/compcert-"
+                                  version ".tgz"))
+              (sha256
+               (base32
+                "03fxf01acvy0akzb1czk33jsfmv2rka0m0jc1a2gmzs9i192rr7m"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (zero? (system* "./configure" "x86_64-linux" "-prefix"
+                             (assoc-ref outputs "out"))))))
+       #:tests? #f))
+    (native-inputs
+     `(("ocaml" ,ocaml)
+       ("coq" ,coq)))
+    (inputs
+     `(("menhir" ,ocaml-menhir)))
+    (home-page "http://compcert.inria.fr")
+    (synopsis "Certified C compiler")
+    (description "CompCert is a certified (with coq) C compiler.  Warning: this
+package is not free software!")
+    ;; actually the "INRIA Non-Commercial License Agreement"
+    ;; a non-free license.
+    (license (license:non-copyleft "file:///LICENSE"))))
