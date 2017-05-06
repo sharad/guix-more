@@ -34,7 +34,7 @@
 (define-public josm
   (package
     (name "josm")
-    (version "c86ae64ca82a5bb9dd1972c7023797eb9a2577f5")
+    (version "d977155fb5b1f54ab76140345633356475f7beee")
     (source (origin
               (method git-fetch)
               (uri (git-reference
@@ -42,7 +42,7 @@
                     (commit version)))
               (sha256
                (base32
-                "07z2q4csq9gdpg4lp1zpvcl5z5sqn0fnqah94ya3sirm6bh4k74j"))
+                "17ih97kf6g6ly8gz6dbc3jzh22gamra4anbwcsxivhq7dw5z3a6n"))
               (file-name (string-append name "-" version))))
     (build-system ant-build-system)
     (arguments
@@ -53,8 +53,15 @@
        (modify-phases %standard-phases
          (add-before 'build 'fix-compiler
            (lambda* _
+             (with-output-to-file "REVISION.XML"
+               (lambda _
+                 (display
+                   (string-append "<info><entry><commit revision=\"11885\">"
+                                  "<date>1970-01-01 00:00:00 +0000</date>"
+                                  "</commit></entry></info>"))))
              (substitute* "build.xml"
-               (("UNKNOWN") "11639")
+               (("UNKNOWN") "11885")
+               (("<touch.*epsg.output.*") "<mkdir dir="${epsg.output}/.." /><touch file="${epsg.output}"/>\n")
                ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
                (("compiler=\"[^\"]*\" ") ""))))
          (replace 'install
