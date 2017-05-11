@@ -22,6 +22,7 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
+  #:use-module (guix svn-download)
   #:use-module (guix utils)
   #:use-module (guix build-system ant)
   #:use-module (guix build-system gnu)
@@ -34,15 +35,19 @@
 (define-public josm
   (package
     (name "josm")
-    (version "d977155fb5b1f54ab76140345633356475f7beee")
+    (version "12039")
     (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                    (url "https://github.com/openstreetmap/josm.git")
-                    (commit version)))
+              (method svn-fetch)
+              ;;(uri (git-reference
+              ;;      (url "https://github.com/openstreetmap/josm.git")
+              ;;      (commit version)))
+              (uri (svn-reference
+                    (url "https://svn.openstreetmap.org/applications/editors/josm")
+                    (revision 12039)))
               (sha256
                (base32
-                "17ih97kf6g6ly8gz6dbc3jzh22gamra4anbwcsxivhq7dw5z3a6n"))
+                ;;"17ih97kf6g6ly8gz6dbc3jzh22gamra4anbwcsxivhq7dw5z3a6n"))
+                "1sq35askhvg85ghj7q34adxny7dwacz7xx6sbc1l5g0khcck7vql"))
               (file-name (string-append name "-" version))))
     (build-system ant-build-system)
     (arguments
@@ -56,16 +61,16 @@
              (with-output-to-file "REVISION.XML"
                (lambda _
                  (display
-                   (string-append "<info><entry><commit revision=\"11885\">"
+                   (string-append "<info><entry><commit revision=\"" ,version "\">"
                                   "<date>1970-01-01 00:00:00 +0000</date>"
                                   "</commit></entry></info>"))))
              (substitute* "build.xml"
-               (("UNKNOWN") "11885")
-               (("<touch.*epsg.output.*") "<mkdir dir="${epsg.output}/.." /><touch file="${epsg.output}"/>\n")
+               (("UNKNOWN") ,version)
+               (("<touch.*epsg.output.*") "<mkdir dir=\"${epsg.output}/..\" /><touch file=\"${epsg.output}\"/>\n")
                ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
                (("compiler=\"[^\"]*\" ") ""))))
          (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
+           (lambda* (#:key outputs inputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
                     (bin (string-append out "/bin"))
                     (lib (string-append out "/lib/josm")))
@@ -77,7 +82,8 @@
                  (lambda _
                    (display
                      (string-append "#!/bin/sh\n"
-                                    "java -jar " lib "/josm.jar"))))
+                                    (assoc-ref inputs "jdk") "/bin/java"
+                                    " -jar " lib "/josm.jar"))))
                (chmod (string-append bin "/josm") #o755)))))))
     (home-page "https://josm.openstreetmap.de")
     (synopsis "OSM editor")
