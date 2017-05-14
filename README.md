@@ -33,15 +33,14 @@ Video
 
 * _aegisub_: A subtitle editor
 
-Webservices
------------
+Image
+-----
 
-* _pootle_: A community translation server
+* _gpick_: A color picker
 
 Java
 ----
 
-* _antlr3_: A parser generator
 * _josm_: An openstreetmap editor
 
 Non-free
