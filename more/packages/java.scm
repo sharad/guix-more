@@ -321,10 +321,13 @@ the options available for a command line tool.")
     (license license:asl2.0)))
     
 
-;; https://github.com/KengoTODA/java-diff-utils ?
 ;; com.sun.tools.javac.code.Scope.LookupKind.NON_RECURSIVE
 ;; com.sun.source.tree.PackageTree
 ;; com.sun.tools.javac.tree.JCTree.JCPackageDecl
+
+;; TODO: error-prone depends on java9 at least from version 2.0.13 which is the
+;; earliest version that guava can use.
+;; Fortunately, java7 can be used for -annotations.
 (define-public java-error-prone
   (package
     (name "java-error-prone")
@@ -356,24 +359,42 @@ the options available for a command line tool.")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-error-prone-check-api
-  (package
-    (inherit java-error-prone)
-    (name "java-error-prone-check-api")
-    (version (package-version java-error-prone))
-    (arguments
-     `(#:tests? #f
-       #:jdk ,icedtea-8
-       #:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "check_api/src/main/java"))
-    (propagated-inputs
-     `(("java-error-prone-annotations" ,java-error-prone-annotations)
-       ("java-error-prone-annotation" ,java-error-prone-annotation)
-       ("java-jsr305" ,java-jsr305)
-       ("java-diff-utils" ,java-diff-utils)
-       ("java-auto-value" ,java-auto-value)
-       ("java-checker-framework" ,java-checker-framework)
-       ("java-guava" ,java-guava)))))
+;(define-public java-error-prone-check-api
+;  (package
+;    (inherit java-error-prone)
+;    (name "java-error-prone-check-api")
+;    (version (package-version java-error-prone))
+;    (arguments
+;     `(#:tests? #f
+;       #:jdk ,icedtea-8
+;       #:jar-name (string-append ,name "-" ,version ".jar")
+;       #:source-dir "check_api/src/main/java"))
+;    (propagated-inputs
+;     `(("java-error-prone-annotations" ,java-error-prone-annotations)
+;       ("java-error-prone-annotation" ,java-error-prone-annotation)
+;       ("java-jsr305" ,java-jsr305)
+;       ("java-diff-utils" ,java-diff-utils)
+;       ("java-auto-value" ,java-auto-value)
+;       ("java-checker-framework" ,java-checker-framework)
+;       ("java-guava" ,java-guava)))))
+
+;(define-public java-error-prone-core
+;  (package
+;    (inherit java-error-prone)
+;    (name "java-error-prone-core")
+;    (version (package-version java-error-prone))
+;    (arguments
+;     `(#:tests? #f
+;       #:jdk ,icedtea-8
+;       #:jar-name (string-append ,name "-" ,version ".jar")
+;       #:source-dir "core/src/main/java"))
+;    (propagated-inputs
+;     `(("java-error-prone-annotations" ,java-error-prone-annotations)
+;       ("java-error-prone-annotation" ,java-error-prone-annotation)
+;       ("java-jsr305" ,java-jsr305)
+;       ("java-auto-value" ,java-auto-value)
+;       ("java-checker-framework" ,java-checker-framework)
+;       ("java-guava" ,java-guava)))))
 
 (define-public java-error-prone-annotation
   (package
@@ -400,36 +421,28 @@ the options available for a command line tool.")
     (propagated-inputs
      `(("java-jsr305" ,java-jsr305)))))
 
-(define-public java-j2objc
+;; Java-j2objc is for OS X, but the annotations sub-project is used by other
+;; packages here, such as guava.
+(define-public java-j2objc-annotations
   (package
-    (name "java-j2objc")
+    (name "java-j2objc-annotations")
     (version "1.3.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/google/j2objc/archive/"
                                   version ".tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
-              (patches (search-patches "java-j2objc-add-build.xml.patch"))
               (sha256
                (base32
                 "0d5spbr1whw2afg6mknyr7ifm6xivn3bbvnzjxva2zzkyq944hv0"))))
     (build-system ant-build-system)
     (arguments
-     `(#:tests? #f))
-    (home-page "http://j2objc.org")
+     `(#:tests? #f
+       #:jar-name (string-append ,name "-" ,version ".jar")
+       #:source-dir "annotations/src/main/java"))
     (synopsis "")
     (description "")
     (license license:asl2.0)))
-
-(define-public java-j2objc-annotations
-  (package
-    (inherit java-j2objc)
-    (name "java-j2objc-annotations")
-    (version "1.3.1")
-    (arguments
-     `(#:tests? #f
-       #:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "annotations/src/main/java"))))
 
 ;; TODO: animal-sniffer-enforcer-rule and animal-sniffer-maven-plugin depend
 ;; on maven.
