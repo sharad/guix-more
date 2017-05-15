@@ -96,7 +96,7 @@
     (version "58.2")
     (source (origin
               (method url-fetch)
-              (uri (string-append 
+              (uri (string-append
                      "http://download.icu-project.org/files/icu4j/" version
                      "/icu4j-"
                      (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
@@ -131,7 +131,7 @@
     (version "1.0.3")
     (source (origin
               (method url-fetch)
-              (uri (string-append 
+              (uri (string-append
                      "https://github.com/abego/treelayout/archive/v" version
                      ".tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
@@ -156,6 +156,7 @@
     (description "")
     (license license:bsd-3)))
 
+; propose update
 (define-public java-commons-cli
   (package
     (name "java-commons-cli")
@@ -181,29 +182,7 @@ line options passed to programs. It's also able to print help messages detailing
 the options available for a command line tool.")
     (license license:asl2.0)))
 
-(define-public java-asm
-  (package
-    (name "java-asm")
-    (version "5.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "http://download.forge.ow2.org/asm/asm-"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0kxvmv5275rnjl7jv0442k3wjnq03ngkb7sghs78avf45pzm4qgr"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "asm-5.2.jar"
-       #:tests? #f))
-    (native-inputs
-     `(("junit" ,java-junit)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
+; propose update
 (define-public java-jsr305
   (package
     (name "java-jsr305")
@@ -396,8 +375,17 @@ the options available for a command line tool.")
                (base32
                 "1350yl003y1fjzdwis0dg5jhi5kggk2sxnkv9821z5janw4p986m"))))
     (build-system ant-build-system)
+    (propagated-inputs
+     `(("asm" ,java-asm)))
     (arguments
-     `(#:tests? #f))
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* (#:key outputs #:allow-other-keys)
+             (default-build.xml "animal-sniffer.jar"
+                                (string-append (assoc-ref outputs "out")
+                                      "/share/java")))))))
     (home-page "http://www.mojohaus.org/animal-sniffer")
     (synopsis "")
     (description "")
@@ -709,7 +697,7 @@ import org.antlr.grammar.v3.ANTLRTreePrinter;"))
 
 ;; javax.json.*
 ;; org.abego.treelayout.*
-;; com.ibm.icu.* 
+;; com.ibm.icu.*
 (define-public antlr4
   (package
     (name "antlr4")
@@ -752,7 +740,7 @@ import org.antlr.grammar.v3.ANTLRTreePrinter;"))
     (synopsis "")
     (description "")
     (license license:bsd-3)))
-    
+
 
 ;; requires groovy 2.4.7.
 ;(define-public gradle
