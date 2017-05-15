@@ -278,6 +278,49 @@ the options available for a command line tool.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-diff-utils
+  (package
+    (name "java-diff-utils")
+    (version "1.5.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/KengoTODA/java-diff-utils/archive/"
+                                  "diffutils-" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "107bkk542cgpk8sqgc41j0ljarb6zs9p59m3phvvv9rln6rwnmjc"))))
+    (arguments
+     `(#:build-target "all"
+       #:tests? #f; I don't know how to run src/test
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'fix-build.xml
+           (lambda _
+             (substitute* "build.xml"
+               (("1.5") "1.7")
+               (("1.3.0-SNAPSHOT") ,version))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (mkdir-p (string-append (assoc-ref outputs "out") "/share/java"))
+             (with-directory-excursion "dist"
+               (for-each (lambda (file)
+                           (copy-file file
+                                      (string-append (assoc-ref outputs "out")
+                                                     "/share/java/" file)))
+                 (find-files "." ".*.jar"))))))))
+    (propagated-inputs
+     `(("guava" ,java-guava)
+       ("java-jsr305" ,java-jsr305)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (build-system ant-build-system)
+    (home-page "https://github.com/KengoTODA/java-diff-utils")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+    
+
 ;; https://github.com/KengoTODA/java-diff-utils ?
 ;; com.sun.tools.javac.code.Scope.LookupKind.NON_RECURSIVE
 ;; com.sun.source.tree.PackageTree
@@ -291,14 +334,14 @@ the options available for a command line tool.")
               (uri (string-append "https://github.com/google/error-prone/archive/v"
                                   version ".tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
-              (patches (search-patches "java-error-prone-add-build.xml.patch"))
               (sha256
                (base32
                 "00igy7a6aylswxdcklj9021g2s8bvsvrysagqyd8cibm4pimxrnk"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
-       #:jdk ,icedtea-8
+       #:jar-name "error-prone.jar"
+       #:source-dir "check_api/src/main/java"
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-internal
@@ -307,26 +350,54 @@ the options available for a command line tool.")
              (copy-file
                "core/src/main/java/com/google/errorprone/internal/NonDelegatingClassLoader.java"
                "ant/src/main/java/com/google/errorprone/internal/NonDelegatingClassLoader.java"))))))
-    (inputs
-     `(("java-jsr305" ,java-jsr305)
-       ("java-auto-value" ,java-auto-value)
-       ("java-checker-framework" ,java-checker-framework)
-       ("java-guava" ,java-guava)))
+    (propagated-inputs '())
     (home-page "https://github.com/google/guava")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-error-prone-check-api
+  (package
+    (inherit java-error-prone)
+    (name "java-error-prone-check-api")
+    (version (package-version java-error-prone))
+    (arguments
+     `(#:tests? #f
+       #:jdk ,icedtea-8
+       #:jar-name (string-append ,name "-" ,version ".jar")
+       #:source-dir "check_api/src/main/java"))
+    (propagated-inputs
+     `(("java-error-prone-annotations" ,java-error-prone-annotations)
+       ("java-error-prone-annotation" ,java-error-prone-annotation)
+       ("java-jsr305" ,java-jsr305)
+       ("java-diff-utils" ,java-diff-utils)
+       ("java-auto-value" ,java-auto-value)
+       ("java-checker-framework" ,java-checker-framework)
+       ("java-guava" ,java-guava)))))
+
+(define-public java-error-prone-annotation
+  (package
+    (inherit java-error-prone)
+    (name "java-error-prone-annotation")
+    (version (package-version java-error-prone))
+    (arguments
+     `(#:tests? #f
+       #:jar-name (string-append ,name "-" ,version ".jar")
+       #:source-dir "annotation/src/main/java"))
+    (propagated-inputs
+     `(("java-jsr305" ,java-jsr305)
+       ("java-guava" ,java-guava)))))
+
 (define-public java-error-prone-annotations
   (package
     (inherit java-error-prone)
     (name "java-error-prone-annotations")
-    (version "2.0.19")
+    (version (package-version java-error-prone))
     (arguments
      `(#:tests? #f
        #:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "annotations/src"))
-    (inputs
+       #:source-dir "annotations/src/main/java"))
+    (propagated-inputs
      `(("java-jsr305" ,java-jsr305)))))
 
 (define-public java-j2objc
