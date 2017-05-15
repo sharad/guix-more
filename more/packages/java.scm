@@ -199,7 +199,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "ri/src/main/java"
+       #:source-dir "ri/src/main/java"
        #:tests? #f))
     (home-page "https://github.com/amaembo/jsr-305")
     (synopsis "")
@@ -221,7 +221,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "dataflow/src:javacutil/src"
+       #:source-dir "dataflow/src:javacutil/src"
        #:jdk ,icedtea-8
        #:tests? #f))
     (home-page "https://checkerframework.org")
@@ -244,7 +244,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "src/main/java"
+       #:source-dir "src/main/java"
        #:jdk ,icedtea-8
        #:tests? #f))
     (home-page "https://github.com/square/javapoet")
@@ -267,7 +267,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "value/src/main/java:common/src/main/java:service/src/main/java"
+       #:source-dir "value/src/main/java:common/src/main/java:service/src/main/java"
        #:jdk ,icedtea-8
        #:tests? #f))
     (inputs
@@ -325,7 +325,7 @@ the options available for a command line tool.")
     (arguments
      `(#:tests? #f
        #:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "annotations/src"))
+       #:source-dir "annotations/src"))
     (inputs
      `(("java-jsr305" ,java-jsr305)))))
 
@@ -358,8 +358,10 @@ the options available for a command line tool.")
     (arguments
      `(#:tests? #f
        #:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "annotations/src/main/java"))))
+       #:source-dir "annotations/src/main/java"))))
 
+;; TODO: animal-sniffer-enforcer-rule and animal-sniffer-maven-plugin depend
+;; on maven.
 (define-public java-animal-sniffer
   (package
     (name "java-animal-sniffer")
@@ -369,7 +371,6 @@ the options available for a command line tool.")
               (uri (string-append "https://github.com/mojohaus/animal-sniffer/"
                                   "archive/animal-sniffer-parent-"
                                   version ".tar.gz"))
-              (patches (search-patches "java-animal-sniffer-add-build.xml.patch"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
@@ -379,13 +380,8 @@ the options available for a command line tool.")
      `(("asm" ,java-asm)))
     (arguments
      `(#:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'build
-           (lambda* (#:key outputs #:allow-other-keys)
-             (default-build.xml "animal-sniffer.jar"
-                                (string-append (assoc-ref outputs "out")
-                                      "/share/java")))))))
+       #:jar-name (string-append ,name "-" ,version ".jar")
+       #:source-dir "animal-sniffer/src/main/java"))
     (home-page "http://www.mojohaus.org/animal-sniffer")
     (synopsis "")
     (description "")
@@ -395,11 +391,35 @@ the options available for a command line tool.")
   (package
     (inherit java-animal-sniffer)
     (name "java-animal-sniffer-annotations")
-    (version "1.15")
+    (version (package-version java-animal-sniffer))
+    (propagated-inputs '())
     (arguments
      `(#:tests? #f
        #:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "animal-sniffer-annotations/src/main/java"))))
+       #:source-dir "animal-sniffer-annotations/src/main/java"))))
+
+(define-public java-animal-sniffer-ant-tasks
+  (package
+    (inherit java-animal-sniffer)
+    (name "java-animal-sniffer-ant-tasks")
+    (version (package-version java-animal-sniffer))
+    (propagated-inputs
+     `(("animal-sniffer" ,java-animal-sniffer)))
+    (arguments
+     `(#:tests? #f
+       #:jar-name (string-append ,name "-" ,version ".jar")
+       #:source-dir "animal-sniffer-ant-tasks/src/main/java"))))
+
+(define-public java-boot-classpath-detector
+  (package
+    (inherit java-animal-sniffer)
+    (name "java-boot-classpath-detector")
+    (version (package-version java-animal-sniffer))
+    (propagated-inputs '())
+    (arguments
+     `(#:tests? #f
+       #:jar-name (string-append ,name "-" ,version ".jar")
+       #:source-dir "java-boot-classpath-detector/src/main/java"))))
 
 (define-public java-guava
   (package
@@ -416,7 +436,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "guava/src"
+       #:source-dir "guava/src"
        #:tests? #f))
     (inputs
      `(("java-jsr305" ,java-jsr305)
@@ -443,7 +463,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "src/main/java"
+       #:source-dir "src/main/java"
        #:tests? #f))
     (inputs
      `(("java-google-collect" ,java-google-collect)))
@@ -469,7 +489,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "src/main/java"
+       #:source-dir "src/main/java"
        #:tests? #f))
     (inputs
      `(("java-joda-convert" ,java-joda-convert)))
@@ -497,7 +517,7 @@ the options available for a command line tool.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:tests? #f
-       #:src-dir "xstream/src/java"))
+       #:source-dir "xstream/src/java"))
     (native-inputs
      `(("unzip" ,unzip)))
     (home-page "https://x-stream.github.io")
@@ -522,7 +542,7 @@ the options available for a command line tool.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:tests? #f
-       #:src-dir "api/src"))
+       #:source-dir "api/src"))
     (home-page "https://jsonp.java.net")
     (synopsis "")
     (description "")
@@ -577,7 +597,7 @@ the options available for a command line tool.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:tests? #f
-       #:src-dir "src/main"))))
+       #:source-dir "src/main"))))
 
 
 (define-public antlr3-3.4
@@ -595,7 +615,7 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "tool/src/main/java:runtime/Java/src/main/java:tool/src/main/antlr3"
+       #:source-dir "tool/src/main/java:runtime/Java/src/main/java:tool/src/main/antlr3"
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
@@ -713,7 +733,7 @@ import org.antlr.grammar.v3.ANTLRTreePrinter;"))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:src-dir "runtime/Java/src:tool/src"
+       #:source-dir "runtime/Java/src:tool/src"
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-grammar
