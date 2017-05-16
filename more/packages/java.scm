@@ -442,6 +442,7 @@ the options available for a command line tool.")
        #:source-dir "annotations/src/main/java"))
     (synopsis "")
     (description "")
+    (home-page "https://github.com/google/j2objc")
     (license license:asl2.0)))
 
 ;; TODO: animal-sniffer-enforcer-rule and animal-sniffer-maven-plugin depend
@@ -609,6 +610,7 @@ the options available for a command line tool.")
     (description "")
     (license license:x11)))
 
+;; vanished from the face of the earth :/
 (define-public java-jsonp
   (package
     (name "java-jsonp")
@@ -660,7 +662,9 @@ the options available for a command line tool.")
     (home-page "")
     (synopsis "")
     (description "")
-    (license license:asl2.0)))
+    (license (list license:gpl2
+                   ;; actually CDDL 1.1
+                   license:cddl1.0))))
 
 ;; requires jline, javax.servlet, org.fusesource.jansi, org.livetribe,
 ;;   com.thoughtworks.xstream, org.apache.ivy, bsf
@@ -799,12 +803,43 @@ import org.antlr.grammar.v3.ANTLRTreePrinter;"))
              (system* "libtoolize")
              (system* "autoreconf" "-fiv"))))))))
 
-;; javax.json.*
-;; org.abego.treelayout.*
-;; com.ibm.icu.*
-(define-public antlr4
+(define-public java-json
   (package
-    (name "antlr4")
+    (name "java-json")
+    (version "1.1.0-M2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://repo1.maven.org/maven2/javax/json/"
+                                  "javax.json-api/" version "/javax.json-api-"
+                                  version "-sources.jar"))
+              (file-name (string-append name "-" version ".jar"))
+              (sha256
+               (base32
+                "0gam8w52xjbmfc1inviyajk36jnj3lg4bzwhw05iq52kadycy6v0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name (string-append ,name "-" ,version ".jar")
+       #:tests? #f
+       #:jdk ,icedtea-8
+       #:source-dir "src"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'remove-module-info
+           (lambda _
+             (format #t "~a\n" (getcwd))
+             (delete-file "src/module-info.java"))))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;; We still need one file to be generated with ST4.
+;; tool/src/org/antlr/v4/unicode/UnicodeDataTemplateController.java
+;; See https://github.com/kevinbirch/string-template-maven-plugin
+;; We should take this and adapt to get a standalone tool.
+(define-public java-antlr4
+  (package
+    (name "java-antlr4")
     (version "4.7")
     (source (origin
               (method url-fetch)
@@ -818,33 +853,33 @@ import org.antlr.grammar.v3.ANTLRTreePrinter;"))
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "runtime/Java/src:tool/src"
+       #:jdk ,icedtea-8
+       #:tests? #f
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-grammar
            (lambda* (#:key inputs #:allow-other-keys)
-             (chdir "tool/src/org/antlr/v4/parse")
-             (for-each (lambda (file)
-                         (format #t "~a\n" file)
-                         (system* "antlr3" file))
-                       '("ANTLRLexer.g" "ANTLRParser.g" "BlockSetTransformer.g"
-                         "GrammarTreeVisitor.g" "ATNBuilder.g"
-                         "ActionSplitter.g" "LeftRecursiveRuleWalker.g"))
-             (chdir "../codegen")
-             (copy-file "../parse/ANTLRParser.tokens" "ANTLRParser.tokens")
-             (format #t "SourceGenTriggers.g\n")
-             (system* "antlr3" "SourceGenTriggers.g")
-             (chdir "../../../../../.."))))))
+             (with-directory-excursion "tool/src/org/antlr/v4/parse"
+               (for-each (lambda (file)
+                           (format #t "~a\n" file)
+                           (system* "antlr3" file))
+                         '("ANTLRLexer.g" "ANTLRParser.g" "BlockSetTransformer.g"
+                           "GrammarTreeVisitor.g" "ATNBuilder.g"
+                           "ActionSplitter.g" "LeftRecursiveRuleWalker.g")))
+             (with-directory-excursion "tool/src/org/antlr/v4/codegen"
+               (copy-file "../parse/ANTLRParser.tokens" "ANTLRParser.tokens")
+               (format #t "SourceGenTriggers.g\n")
+               (system* "antlr3" "SourceGenTriggers.g")))))))
     (inputs
      `(("antlr3" ,antlr3)
        ("icu4j" ,java-icu4j)
-       ("java-jsonp" ,java-jsonp)
+       ("java-json" ,java-json)
        ("treelayout" ,java-treelayout)
        ("stringtemplate4" ,stringtemplate4)))
     (home-page "https://antlr.org")
     (synopsis "")
     (description "")
     (license license:bsd-3)))
-
 
 ;; requires groovy 2.4.7.
 ;(define-public gradle
