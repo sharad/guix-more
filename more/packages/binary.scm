@@ -124,6 +124,56 @@ bindings for Python, Java, OCaml and more.")
 
 (define-public python2-capstone
   (package-with-python2 python-capstone))
+
+(define-public capstone-git
+  (package
+    (inherit capstone)
+    (version "3.0.5-rc2")
+    (name "capstone-git")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference (url "https://github.com/aquynh/capstone.git")
+                                  (commit "b6c4c3f5c79684b02d0672b50b4db494f6ce60f9")))
+              (file-name (string-append name "-" version))
+              (sha256
+               (base32
+                "0kqdfp0flx5czzwr490pzn9mzsxcw8qpcfz4y7bpf2cklsr4mh25"))))
+    (arguments
+     `(#:tests? #f
+       #:make-flags (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
+                          "CC=gcc")
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-before 'build 'fix-cstool
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* "cstool/Makefile"
+               (("LDFLAGS =")
+                (string-append "LDFLAGS = -Wl,-rpath=" (assoc-ref outputs "out") "/lib"))))))))))
+
+(define-public python-capstone-git
+  (package
+    (inherit capstone-git)
+    (name "python-capstone-git")
+    (propagated-inputs
+     `(("capstone" ,capstone-git)))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir-and-fix-setup-py
+           (lambda _
+             (chdir "bindings/python")
+             (substitute* "setup.py" (("   *build_libraries.*") "\n"))
+             (substitute* "capstone/__init__.py"
+               (("pkg_resources.resource_filename.*")
+                (string-append "\"" (assoc-ref %build-inputs "capstone") "/lib\",\n")))
+             #t)))))))
+
+(define-public python2-capstone-git
+  (package-with-python2 python-capstone-git))
+
  
 (define-public python-pefile
   (package
