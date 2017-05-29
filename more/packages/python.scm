@@ -75,14 +75,15 @@ function decorator.")
 (define-public python-bintrees
   (package
     (name "python-bintrees")
-    (version "2.0.4")
+    (version "2.0.7")
     (source (origin
               (method url-fetch)
-              (uri (pypi-uri "bintrees" version))
+              (uri (pypi-uri "bintrees" version ".zip"))
               (sha256
                (base32
-                "1q71md58i33qpjhwgi9ph9hpgch1dy2i6n4qljyl0x410rhikfvc"))))
+                "0w0js514awl9qwamcr71spi8mmv7q3n4mgrqrnmr9w6f09k5wrv0"))))
     (build-system python-build-system)
+    (native-inputs `(("unzip" ,unzip)))
     (home-page "https://github.com/mozman/bintrees")
     (synopsis "Provides Binary- RedBlack- and AVL-Trees written in Python and Cython/C")
     (description "This package provides Binary- RedBlack- and AVL-Trees written
@@ -99,13 +100,13 @@ drop in replacement for dicts in most cases.")
 (define-public python2-dpkt
   (package
     (name "python2-dpkt")
-    (version "1.8.8")
+    (version "1.9.1")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "dpkt" version))
               (sha256
                (base32
-                "004qsqzg3fwkh623l1y8j62ai166hr02y192s7n1hs166kjjb5fr"))
+                "0rr9ygczhxkfb61778jx0cxs0sq46zwlcj5l3wn6xmd3iy3yx9y6"))
               (modules '((guix build utils)))
               (snippet
                '(substitute* "setup.py"
@@ -185,13 +186,13 @@ automatically enable features like auto-resizing when the system supports it.")
 (define-public python-progressbar2
   (package
     (name "python-progressbar2")
-    (version "3.12.0")
+    (version "3.20.0")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "progressbar2" version))
               (sha256
                (base32
-                "16r21cpjvv0spf4mymgpy7hx6977iy11k44n2w9kipwg4lhwh02k"))))
+                "1xz5l3598bl2r1j8h6dqljbjf44f2d137ppi0l381adz4zd38vd1"))))
     (build-system python-build-system)
     (native-inputs
      `(("pytest-runner" ,python-pytest-runner)

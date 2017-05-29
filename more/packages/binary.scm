@@ -65,11 +65,11 @@
      `(#:tests? #t
        #:python ,python-2))))
     
-
+;; rc required by python2-angr
 (define-public capstone
   (package
     (name "capstone")
-    (version "3.0.4")
+    (version "3.0.5-rc2")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/aquynh/capstone/archive/"
@@ -77,15 +77,21 @@
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1whl5c8j6vqvz2j6ay2pyszx0jg8d3x8hq66cvgghmjchvsssvax"))))
+                "1cqms9r2p43aiwp5spd84zaccp16ih03r7sjhrv16nddahj0jz2q"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f
-       #:make-flags (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
+       #:make-flags (list (string-append "PREFIX=" %output)
                           "CC=gcc")
        #:phases
        (modify-phases %standard-phases
-         (delete 'configure))))
+         (delete 'configure)
+         (add-before 'build 'fix-cstool-ldflags
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* "cstool/Makefile"
+               (("LDFLAGS =")
+                (string-append "LDFLAGS = -Wl,-rpath=" (assoc-ref outputs "out")
+                               "/lib"))))))))
     (home-page "http://www.capstone-engine.org")
     (synopsis "Disassembler")
     (description
@@ -110,12 +116,10 @@ bindings for Python, Java, OCaml and more.")
          (add-after 'unpack 'chdir-and-fix-setup-py
            (lambda _
              (chdir "bindings/python")
-             (substitute* "setup.py" (("data_files=.*") ""))
+             (substitute* "setup.py" ((".*   build_libraries.*") ""))
              (substitute* "capstone/__init__.py"
-               (("_lib_path =.*")
-                (string-append "_lib_path = '"
-                               (assoc-ref %build-inputs "capstone")
-                               "/lib'\n")))
+               (("pkg_resources.resource_filename.*")
+                (string-append "'" (assoc-ref %build-inputs "capstone") "/lib',\n")))
              #t)))))))
 
 (define-public python2-capstone
@@ -152,13 +156,13 @@ convenience will depart from that convention.")
 (define-public python2-archinfo
   (package
     (name "python2-archinfo")
-    (version "6.7.1.13")
+    (version "6.7.4.12")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "archinfo" version))
               (sha256
                (base32
-                "0x896mk98r6g9h3rxpqq9ri0s6v9n937jx0fzn7i61zn61n7whzw"))))
+                "1kfc9nk73i5rr3xz8mv00cp76p7dc62h9pd8hvnda414jhx7n0pb"))))
     (build-system python-build-system)
     (arguments
      `(#:python ,python-2))
@@ -177,19 +181,22 @@ architecture-specific information.  It is useful for cross-architecture tools
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/angr/vex.git")
-                    (commit "058410ede7ee74231255f6ae77cae8476c8a3ef4")))
+                    (commit "3a620e43ecc71cb9e5470995a45bbce4a600293f")))
               (sha256
                (base32
-                "02wi1705pa0xbwfqx3jj6g7nnvzi8whgmnd29fp1i7n4qz20gcgb"))
+                "1qxpwi9961140dnys1iywm043nbm13qg2vw9xi1bjjdh80hbnfw4"))
               (file-name (string-append name "-" version))))
     (build-system gnu-build-system)
     (arguments
      `(#:make-flags
-       (list "CC=gcc")
+       (list "CC=gcc" "CC_NATIVE=gcc")
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
          (delete 'configure)
+         (add-before 'build 'get-Makefile
+           (lambda _
+             (copy-file "Makefile-gcc" "Makefile")))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
@@ -208,13 +215,13 @@ valgrind.org) for use with PyVEX.")
 (define-public python2-pyvex
   (package
     (name "python2-pyvex")
-    (version "6.7.1.31")
+    (version "6.7.4.12")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "pyvex" version))
               (sha256
                (base32
-                "0wwz1jqrjbkg8j7mr3wrgw84aaph7h9v2r7j4q035rn7b38n5x54"))))
+                "1x57aq96ka7gz6qcj9zqwdcylfks4q3iiykismyk1g0vp68qlwv9"))))
     (build-system python-build-system)
     (inputs `(("angr-vex" ,angr-vex)))
     (propagated-inputs
@@ -304,13 +311,13 @@ CPU emulator framework.")
 (define-public python2-simuvex
   (package
     (name "python2-simuvex")
-    (version "6.7.1.31")
+    (version "6.7.4.12")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "simuvex" version))
               (sha256
                (base32
-                "150jwf55pib7ndz7bjb4fxifqqgdxx7n1f5qa87mz6349qvi1xji"))
+                "03rqdk7f1ynm6p50rbl4abq6hgnfvb7qd5k26m7cyxjii09waa2x"))
               (modules '((guix build utils)))
               (snippet
                '(substitute* "setup.py"
@@ -342,13 +349,13 @@ loaded by the OS's loader.")
 (define-public python2-cle
   (package
     (name "python2-cle")
-    (version "6.7.1.31")
+    (version "6.7.4.12")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "cle" version))
               (sha256
                (base32
-                "0llk54f9p3b73f1pk19axlhw8yw80fdv07jkghqmqwd6xrnpnmmc"))
+                "1fx21jx2nmc5lbz7hgpz4p7ccvzrnrcnf0wj2fbqdyjb9s0w2sfw"))
               (modules '((guix build utils)))
               (snippet
                '(substitute* "setup.py"
@@ -373,13 +380,13 @@ loaded by the OS's loader.")
 (define-public python2-angr
   (package
     (name "python2-angr")
-    (version "6.7.1.31")
+    (version "6.7.4.12")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "angr" version))
               (sha256
                (base32
-                "19msllsjwc869824sx1qah6vnb03z22s71fph215ykbbb2843p1k"))))
+                "0cqqakh2drb593wcbdcq0vq3pcf1ckxwy486cg378667lrb4042i"))))
     (build-system python-build-system)
     (arguments
      `(#:python ,python-2))
