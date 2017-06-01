@@ -63,3 +63,8 @@ Adding gradle and groovy
 Gradle is partially written in groovy, which itself is partially written in
 groovy. I currently am working on some dependencies, but I don't have a clear
 plan for groovy.
+
+OCaml and Coq packages
+----------------------
+
+The more the better. They are being integrated.
