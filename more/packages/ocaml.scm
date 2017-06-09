@@ -618,17 +618,31 @@ assistant to write formal mathematical proofs using a variety of theorem
 provers.")
     (license license:gpl2+)))
 
+(define-public ocaml-menhir-fix
+  (package
+    (inherit ocaml-menhir)
+    (version "20170607")
+    (name "ocaml-menhir-fix")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://gallium.inria.fr/~fpottier/menhir/"
+                    "menhir-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0qffci9qxgfabzyalx851q994yykl4n9ylr4vbplsm6is1padjh0"))))))
+
 (define-public compcert
   (package
     (name "compcert")
-    (version "3.0")
+    (version "3.0.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://compcert.inria.fr/release/compcert-"
                                   version ".tgz"))
               (sha256
                (base32
-                "03fxf01acvy0akzb1czk33jsfmv2rka0m0jc1a2gmzs9i192rr7m"))))
+                "0dgrj26dzdy4n3s9b5hwc6lm54vans1v4qx9hdp1q8w1qqcdriq9"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -640,9 +654,9 @@ provers.")
        #:tests? #f))
     (native-inputs
      `(("ocaml" ,ocaml)
-       ("coq" ,coq)))
+       ("coq" ,coq-fix)))
     (inputs
-     `(("menhir" ,ocaml-menhir)))
+     `(("menhir" ,ocaml-menhir-fix)))
     (home-page "http://compcert.inria.fr")
     (synopsis "Certified C compiler")
     (description "CompCert is a certified (with coq) C compiler.  Warning: this
