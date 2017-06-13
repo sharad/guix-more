@@ -20,12 +20,14 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix build-system cmake)
+  #:use-module (guix build-system gnu)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages audio)
   #:use-module (gnu packages boost)
   #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages databases)
   #:use-module (gnu packages documentation)
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages fribidi)
@@ -34,11 +36,13 @@
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages image)
   #:use-module (gnu packages lua)
+  #:use-module (gnu packages ncurses)
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
   #:use-module (gnu packages sdl)
   #:use-module (gnu packages tbb)
+  #:use-module (more packages tcl)
   #:use-module (gnu packages xiph)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg)
@@ -136,3 +140,42 @@ available, or severely lacking.  The library is object-oriented, written in C++,
 cross-platform, and targeted at game and application developers.  Additionally,
 it offers a WYSIWYG editor for creating layouts and imagesets.")
     (license license:expat)))
+
+(define-public morji
+  (package
+    (name "morji")
+    (version "0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                     "https://bardinflor.perso.aquilenet.fr/morji/morji-"
+                     version ".tar.gz"))
+              (sha256
+               (base32
+                "18givlgh10cg0a3gs3747ihhfm4hyj056cr3x7vqhcnrx6vgy06i"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (delete 'build)
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (zero? (system* "make" "install"
+                             (string-append "PREFIX=" (assoc-ref outputs "out"))))))
+         (replace 'check
+           (lambda _
+             (zero? (system* "tclsh" "test_expect.tcl")))))))
+    (propagated-inputs
+     `(("ncurses" ,ncurses) ; TODO: this should probably be a propagated-input of tcllib.
+       ("sqlite" ,sqlite)
+       ("tcl" ,tcl-fix)
+       ("tcllib" ,tcllib-fix)))
+    (native-inputs
+     `(("expect" ,expect-fix)))
+    (home-page "https://bardinflor.perso.aquilenet.fr/morji/intro-en")
+    (synopsis "Simple flashcard program for the terminal")
+    (description "Morji is a simple flashcard program for the terminal.  It
+uses a modified version of the SM2 algorithm taking inspiration from mnemosyne
+and anki.")
+    (license license:isc)))
