@@ -54,7 +54,7 @@
       (list (search-path-specification
               (variable "TCLLIBPATH")
               (separator " ")
-              (files '("lib" ,(string-append "lib/tcllib" (package-version tcllib)))))))))
+              (files `("lib" ,(string-append "lib/tcllib" (package-version tcllib)))))))))
 
 (define-public expect-fix
   (package
