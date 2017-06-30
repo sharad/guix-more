@@ -68,3 +68,10 @@ OCaml and Coq packages
 ----------------------
 
 The more the better. They are being integrated.
+
+TODO
+====
+
+Eiffel studio -> eiffel -> AutoProof and Eve -> boogie -> z3.
+
+alt-ergo, CVC4
