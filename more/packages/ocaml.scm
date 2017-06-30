@@ -34,7 +34,8 @@
   #:use-module (gnu packages ocaml)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages protobuf)
-  #:use-module (gnu packages texinfo))
+  #:use-module (gnu packages texinfo)
+  #:use-module (more packages smt))
 
 ;; Janestreet packages are found in a similar way and all need the same patch.
 (define (janestreet-origin name version hash)
@@ -919,3 +920,42 @@ Coq proof assistant.")
       (list (search-path-specification
               (variable "COQPATH")
               (files (list "lib/coq/user-contrib")))))))
+
+(define-public cubicle
+  (package
+    (name "cubicle")
+    (version "1.1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://cubicle.lri.fr/cubicle-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1sny9c4fm14k014pk62ibpwbrjjirkx8xmhs9jg7q1hk7y7x3q2h"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("ocaml" ,ocaml)
+       ("which" ,which)))
+    (propagated-inputs
+     `(("z3" ,z3-solver)))
+    (arguments
+     `(#:configure-flags (list "--with-z3")
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'configure-for-release
+           (lambda _
+             (substitute* "Makefile.in"
+               (("SVNREV=") "#SVNREV="))))
+         (add-before 'configure 'fix-configure
+           (lambda _
+             (substitute* "configure"
+               (("/bin/sh") (which "sh")))))
+         (add-before 'configure 'fix-smt-z3wrapper.ml
+           (lambda _
+             (substitute* "Makefile.in"
+               (("\\\\n") "")))))))
+    (home-page "http://cubicle.lri.fr/")
+    (synopsis "SMT solver")
+    (description "SMT solver.")
+    (license license:asl2.0)))
