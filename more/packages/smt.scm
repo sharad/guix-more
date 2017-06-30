@@ -23,6 +23,7 @@
   #:use-module (guix build-system python)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages ocaml)
   #:use-module (gnu packages python)
   #:use-module (more packages python))
 
@@ -108,3 +109,37 @@
     (synopsis "Claripy is a abstracted constraint-solving wrapper")
     (description "Claripy is a abstracted constraint-solving wrapper.")
     (license license:bsd-2)))
+
+(define-public why3
+  (package
+    (name "why3")
+    (version "0.87.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://gforge.inria.fr/frs/download.php/file/36398/why3-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1fn9v6w1ilkrm2n4rz31w8qvjnchyvwxiqs67z3f59b5k99wb2ka"))))
+    (build-system gnu-build-system)
+    (native-inputs
+     `(("ocaml" ,ocaml)))
+    (propagated-inputs
+     `(("menhir" ,ocaml-menhir)))
+    (arguments
+     `(#:tests? #f))
+       ;#:phases
+       ;(modify-phases %standard-phases
+       ;  (replace 'check
+       ;    (lambda _
+       ;      (zero? (system* "make" ;"test-ocaml-extraction"
+       ;                      "test-runstrat" "test-coq-tactic.opt"
+       ;                      "test-coq-tactic.byte" "test-session.opt"
+       ;                      "test-session.byte" "test-api-mlw.opt"
+       ;                      "test-api-mlw.byte" "test-api-mlw-tree.opt"
+       ;                      "test-mlw-tree.byte" "test-api-logic.opt"
+       ;                      "test-api-logic.byte")))))))
+    (home-page "http://why3.lri.fr")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1)))
