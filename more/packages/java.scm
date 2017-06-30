@@ -32,63 +32,237 @@
   #:use-module (gnu packages zip)
   #:use-module (gnu packages java))
 
-(define-public josm
+(define-public java-jmapviewer
   (package
-    (name "josm")
-    (version "12039")
+    (name "java-jmapviewer")
+    (version "2.2")
     (source (origin
-              (method svn-fetch)
-              ;;(uri (git-reference
-              ;;      (url "https://github.com/openstreetmap/josm.git")
-              ;;      (commit version)))
-              (uri (svn-reference
-                    (url "https://svn.openstreetmap.org/applications/editors/josm")
-                    (revision 12039)))
+              (method url-fetch)
+              (uri (string-append "https://svn.openstreetmap.org/applications/viewer/jmapviewer/releases/"
+                                  version "/JMapViewer-" version "-Source.zip"))
               (sha256
                (base32
-                ;;"17ih97kf6g6ly8gz6dbc3jzh22gamra4anbwcsxivhq7dw5z3a6n"))
-                "1sq35askhvg85ghj7q34adxny7dwacz7xx6sbc1l5g0khcck7vql"))
-              (file-name (string-append name "-" version))))
+                "00jxqc4fzy7hpdi0007f0a84aa630brvam7vxqirdk9j4za4p0d8"))))
     (build-system ant-build-system)
+    (native-inputs
+     `(("unzip" ,unzip)))
     (arguments
-     `(#:build-target "dist"
-       #:tests? #f
+     `(#:build-target "pack"
        #:jdk ,icedtea-8
+       #:tests? #f; No tests
        #:phases
        (modify-phases %standard-phases
-         (add-before 'build 'fix-compiler
+         (add-before 'build 'clean
+           (lambda* _
+             (zero? (system* "ant" "clean"))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((dir (string-append (assoc-ref outputs "out") "/share/java/")))
+               (mkdir-p dir)
+               (copy-file "JMapViewer.jar" (string-append dir "JMapViewer.jar"))))))))
+    (home-page "https://wiki.openstreetmap.org/wiki/JMapViewer")
+    (synopsis "")
+    (description "")
+    (license license:gpl2)))
+
+(define-public java-josm
+  (package
+    (name "java-josm")
+    (version "12275")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/openstreetmap/josm.git")
+                    (commit "f190ffc3ec16835c39150476e21d08d5557ed466")))
+              ;;(uri (svn-reference
+              ;;      (url "https://svn.openstreetmap.org/applications/editors/josm")
+              ;;      (revision 12039)))
+              (sha256
+               (base32
+                "191isyn9v396s3c6888brq1yl2chzs7myl3qbk5c7d8msxi4wv49"))
+              (file-name (string-append name "-" version))))
+    (build-system ant-build-system)
+    (native-inputs
+     `(("java-javacc" ,java-javacc)))
+    (propagated-inputs
+     `(("java-jmapviewer" ,java-jmapviewer)
+       ("java-commons-compress" ,java-commons-compress)))
+    (arguments
+     `(;#:build-target "dist"
+       #:tests? #f
+       #:jdk ,icedtea-8
+       #:jar-name "josm.jar"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'rm-build.xml
+           (lambda* _
+             (delete-file "build.xml")))
+         (add-before 'build 'fix-revision
            (lambda* _
              (with-output-to-file "REVISION.XML"
                (lambda _
                  (display
                    (string-append "<info><entry><commit revision=\"" ,version "\">"
                                   "<date>1970-01-01 00:00:00 +0000</date>"
-                                  "</commit></entry></info>"))))
-             (substitute* "build.xml"
-               (("UNKNOWN") ,version)
-               (("<touch.*epsg.output.*") "<mkdir dir=\"${epsg.output}/..\" /><touch file=\"${epsg.output}\"/>\n")
-               ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
-               (("compiler=\"[^\"]*\" ") ""))))
-         (replace 'install
-           (lambda* (#:key outputs inputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (bin (string-append out "/bin"))
-                    (lib (string-append out "/lib/josm")))
-               (mkdir-p bin)
-               (mkdir-p lib)
-               (copy-file "dist/josm-custom.jar"
-                          (string-append lib "/josm.jar"))
-               (with-output-to-file (string-append bin "/josm")
-                 (lambda _
-                   (display
-                     (string-append "#!/bin/sh\n"
-                                    (assoc-ref inputs "jdk") "/bin/java"
-                                    " -jar " lib "/josm.jar"))))
-               (chmod (string-append bin "/josm") #o755)))))))
+                                  "</commit></entry></info>"))))))
+         (add-before 'build 'generate-parser
+           (lambda* _
+             (let* ((dir "src/org/openstreetmap/josm/gui/mappaint/mapcss")
+                    (out (string-append dir "/parsergen"))
+                    (file (string-append dir "/MapCSSParser.jj")))
+               (mkdir-p "src/org/openstreetmap/josm/gui/mappaint/mapcss/parsergen")
+               (zero? (system* "javacc" "-DEBUG_PARSER=false"
+                               "-DEBUG_TOKEN_MANAGER=false" "-JDK_VERSION=1.8"
+                               "-GRAMMAR_ENCODING=UTF-8" (string-append "-OUTPUT_DIRECTORY=" out)
+                               file)))))
+)))
+         ;(add-before 'build 'fix-compiler
+         ;  (lambda* _
+         ;    (substitute* "build.xml"
+         ;      (("UNKNOWN") ,version)
+         ;      (("<touch.*epsg.output.*") "<mkdir dir=\"${epsg.output}/..\" /><touch file=\"${epsg.output}\"/>\n")
+         ;      ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
+         ;      (("compiler=\"[^\"]*\" ") ""))))
+         ;(replace 'install
+         ;  (lambda* (#:key outputs inputs #:allow-other-keys)
+         ;    (let* ((out (assoc-ref outputs "out"))
+         ;           (bin (string-append out "/bin"))
+         ;           (lib (string-append out "/lib/josm")))
+         ;      (mkdir-p bin)
+         ;      (mkdir-p lib)
+         ;      (copy-file "dist/josm-custom.jar"
+         ;                 (string-append lib "/josm.jar"))
+         ;      (with-output-to-file (string-append bin "/josm")
+         ;        (lambda _
+         ;          (display
+         ;            (string-append "#!/bin/sh\n"
+         ;                           (assoc-ref inputs "jdk") "/bin/java"
+         ;                           " -jar " lib "/josm.jar"))))
+         ;      (chmod (string-append bin "/josm") #o755)))))))
     (home-page "https://josm.openstreetmap.de")
     (synopsis "OSM editor")
     (description "OSM editor.")
     (license license:gpl2+)))
+
+(define-public java-commons-collections
+  (package
+    (inherit java-commons-collections4)
+    (name "java-commons-collections")
+    (version "3.2.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/collections/source/"
+                                  "commons-collections-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "055r51a5lfc3z7rkxnxmnn1npvkvda7636hjpm4qk7cnfzz98387"))))))
+
+(define-public java-velocity
+  (package
+    (name "java-velocity")
+    (version "1.7")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/velocity/engine/"
+                                  version "/velocity-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0rk7s04hkrr2k3glccx0yrglzqzj4qbipcrxhglk46yhx92vravc"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'prepare
+           (lambda* (#:key inputs #:allow-other-keys)
+             (delete-file-recursively "lib")
+             (mkdir-p "bin/lib")
+             ;; Don't download anything
+             (substitute* "build/build.xml"
+               ((".*download.xml.*") ""))
+             (chdir "build"))))))
+    (native-inputs
+     `(("javacc" ,java-javacc)
+       ("antlr" ,antlr2)))
+    (propagated-inputs
+     `(("java-commons-collections" ,java-commons-collections)))
+    (home-page "https://velocity.apache.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-jcs
+  (package
+    (name "java-commons-jcs")
+    (version "2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/jcs/source/"
+                                  "commons-jcs-dist-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "17l78mpxx1qkgp213b91sl69wawv6xzgllr479mygbg76ygwpffv"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-jcs.jar"
+       #:source-dir "commons-jcs-core/src/main/java"))
+    (propagated-inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-velocity" ,java-velocity)))
+    (home-page "https://commons.apache.org/proper/commons-jcs/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-javacc
+  (package
+    (name "java-javacc")
+    (version "7.0.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javacc/javacc/archive/release_"
+                                  (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "0yf93993nlsk5kijazddi5621x4y2bwq3vl46j8h8f7di2z9jv2h"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:test-target "unittest"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'remove-binaries
+           (lambda* _
+             ;; Note: we cannot remove bootstrap/javacc.jar because no version of javacc comes with no bootstrap
+             (delete-file-recursively "lib")))
+         ;    (let* ((out (assoc-ref outputs "out"))
+         ;           (bin (string-append out "/bin"))
+         ;           (lib (string-append out "/lib/josm")))
+         ;      (mkdir-p bin)
+         ;      (mkdir-p lib)
+         ;      (copy-file "dist/josm-custom.jar"
+         ;                 (string-append lib "/josm.jar"))
+         (replace 'install
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (dir (string-append out "/share/java"))
+                    (bin (string-append out "/bin")))
+               (mkdir-p dir)
+               (mkdir-p bin)
+               (copy-file "target/javacc.jar" (string-append dir "/javacc.jar"))
+               (with-output-to-file (string-append bin "/javacc")
+                 (lambda _
+                   (display
+                     (string-append "#!/bin/sh\n"
+                                    (assoc-ref inputs "jdk") "/bin/java"
+                                    " -cp " dir "/javacc.jar" " javacc" " $*"))))
+               (chmod (string-append bin "/javacc") #o755)))))))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://javacc.org")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+    
 
 (define-public java-icu4j
   (package
