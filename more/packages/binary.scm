@@ -462,14 +462,14 @@ applicable to a variety of tasks.")
 (define-public radare2
   (package
     (name "radare2")
-    (version "1.4.0")
+    (version "1.5.0")
     (source (origin
               (method url-fetch)
-              (uri (string-append "http://cloud.radare.org/get/" version "/"
+              (uri (string-append "http://radare.mikelloc.com/get/" version "/"
                                   name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0gp9ngi2lcd76zgwzjii8bsgncw4449qnfsn6qwqv0nm9zcrlvmz"))
+                "1al57j62di1w70lr1yyizfsygh8015sdydf2h5a87g1pd9vzlyfg"))
               (modules '((guix build utils)))
               (snippet
                 '(begin
