@@ -127,7 +127,7 @@
     (propagated-inputs
      `(("menhir" ,ocaml-menhir)))
     (arguments
-     `(#:tests? #f))
+     `(#:tests? #f)) ;; Need Alt-Ergo
        ;#:phases
        ;(modify-phases %standard-phases
        ;  (replace 'check

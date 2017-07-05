@@ -86,6 +86,7 @@
      `(("java-javacc" ,java-javacc)))
     (propagated-inputs
      `(("java-jmapviewer" ,java-jmapviewer)
+       ("java-commons-collections" ,java-commons-collections)
        ("java-commons-compress" ,java-commons-compress)))
     (arguments
      `(;#:build-target "dist"
@@ -155,7 +156,18 @@
                                   "commons-collections-" version "-src.tar.gz"))
               (sha256
                (base32
-                "055r51a5lfc3z7rkxnxmnn1npvkvda7636hjpm4qk7cnfzz98387"))))))
+                "055r51a5lfc3z7rkxnxmnn1npvkvda7636hjpm4qk7cnfzz98387"))))
+    (arguments
+      (substitute-keyword-arguments (package-arguments java-commons-collections4)
+        ((#:phases phases)
+          `(modify-phases ,phases
+            (add-before 'build 'add-manifest
+              (lambda _
+                (call-with-output-file "MANIFEST.MF"
+                  (lambda (file)
+                    (format file "Manifest-Version: 1.0\n")
+                    (format file "Ant-Version: Apache Ant 1.9.9\n")
+                    (format file "Created-By: 1.8.0_131-b11 (Oracle Corporation)")))))))))))
 
 (define-public java-velocity
   (package

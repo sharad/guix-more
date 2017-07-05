@@ -28,86 +28,59 @@
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages bash)
+  #:use-module (gnu packages boost)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages icu4c)
   #:use-module (gnu packages python)
   #:use-module (gnu packages shells)
   #:use-module (gnu packages perl))
 
-(define-public boost
+(define-public boost-build
   (package
-    (name "boost")
-    (version "1.63.0")
+    (name "boost-build")
+    (version "2016.03")
     (source (origin
               (method url-fetch)
-              (uri (string-append
-                    "mirror://sourceforge/boost/boost/" version "/boost_"
-                    (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
-                    ".tar.bz2"))
+              (uri (string-append "https://github.com/boostorg/build/archive/"
+                                  version ".tar.gz"))
               (sha256
                (base32
-                "1c5kzhcqahnic55dxcnw7r80qvwx5sfa2sa97yzv7xjrywljbbmy"))))
+                "1sgvl8jisz73ff4vlqjkns4zgjs1yapgw18wmh4dpjp4dhx2ay8y"))))
     (build-system gnu-build-system)
     (inputs
-     `(("zlib" ,zlib)
-       ("icu" ,icu4c)))
+     `(("sh" ,bash)))
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'build
+           (lambda _
+             (begin
+               ;; TODO: we can use JAMSHELL here, but not in 'install, so
+               ;; I added a dependance on the shell here.
+               (substitute* "src/engine/execunix.c"
+                 (("/bin/sh") (which "sh")))
+               (zero? (system* "./bootstrap.sh")))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (zero? (system* "./b2" "install"
+                             (string-append "--prefix=" (assoc-ref outputs "out")))))))))
+    (home-page "http://www.boost.org/build/")
+    (synopsis "")
+    (description "")
+    (license license:boost1.0)))
+
+(define-public boost-fix
+  (package
+    (inherit boost)
+    (name "boost-fix")
     (native-inputs
      `(("perl" ,perl)
        ("python" ,python-2)
        ("tcsh" ,tcsh)
        ("which" ,which)))
-    (arguments
-     `(#:tests? #f
-       #:make-flags
-       (list "threading=multi" "link=shared"
-
-             ;; Set the RUNPATH to $libdir so that the libs find each other.
-             (string-append "linkflags=-Wl,-rpath="
-                            (assoc-ref %outputs "out") "/lib")
-
-             ;; Boost's 'context' library is not yet supported on mips64, so
-             ;; we disable it.  The 'coroutine' library depends on 'context',
-             ;; so we disable that too.
-             ,@(if (string-prefix? "mips64" (or (%current-target-system)
-                                                (%current-system)))
-                   '("--without-context"
-                     "--without-coroutine" "--without-coroutine2")
-                   '()))
-       #:phases
-       (modify-phases %standard-phases
-         (replace
-             'configure
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((out (assoc-ref outputs "out")))
-               (substitute* '("libs/config/configure"
-                              "libs/spirit/classic/phoenix/test/runtest.sh"
-                              "tools/build/doc/bjam.qbk"
-                              "tools/build/src/engine/execunix.c"
-                              "tools/build/src/engine/Jambase"
-                              "tools/build/src/engine/jambase.c")
-                 (("/bin/sh") (which "sh")))
-
-               (setenv "SHELL" (which "sh"))
-               (setenv "CONFIG_SHELL" (which "sh"))
-
-               (zero? (system* "./bootstrap.sh"
-                               (string-append "--prefix=" out)
-                               "--with-toolset=gcc" "--with-icu")))))
-         (replace
-             'build
-           (lambda* (#:key outputs make-flags #:allow-other-keys)
-             (zero? (apply system* "./b2"
-                           (format #f "-j~a" (parallel-job-count))
-                           make-flags))))
-         (replace
-             'install
-           (lambda* (#:key outputs make-flags #:allow-other-keys)
-             (zero? (apply system* "./b2" "install" make-flags)))))))
-
-    (home-page "http://boost.org")
-    (synopsis "Peer-reviewed portable C++ source libraries")
-    (description
-     "A collection of libraries intended to be widely useful, and usable
-across a broad spectrum of applications.")
-    (license (license:x11-style "http://www.boost.org/LICENSE_1_0.txt"
-                                "Some components have other similar licences."))))
+    (inputs
+     `(("zlib" ,zlib)
+       ("icu" ,icu4c)))))

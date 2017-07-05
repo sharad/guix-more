@@ -19,14 +19,18 @@
 (define-module (more packages games)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix git-download)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
+  #:use-module (guix build-system trivial)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages audio)
+  #:use-module (more packages boost)
   #:use-module (gnu packages boost)
   #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages curl)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages documentation)
   #:use-module (gnu packages fontutils)
@@ -36,6 +40,7 @@
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages image)
   #:use-module (gnu packages lua)
+  #:use-module (more packages lua)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages pkg-config)
@@ -43,6 +48,7 @@
   #:use-module (gnu packages sdl)
   #:use-module (gnu packages tbb)
   #:use-module (more packages tcl)
+  #:use-module (gnu packages tls)
   #:use-module (gnu packages xiph)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg)
@@ -67,7 +73,7 @@
      `(("doxygen" ,doxygen)))
     (inputs
      `(("freetype" ,freetype)
-       ("boost" ,boost)
+       ("boost" ,boost-fix)
        ("sdl2" ,sdl2)
        ("cppunit" ,cppunit)
        ("freeimage" ,freeimage)
@@ -129,7 +135,7 @@
        ("python" ,python)
        ("lua" ,lua-5.1)
        ("gtk" ,gtk+-2)
-       ("boost" ,boost)
+       ("boost" ,boost-fix)
        ("minizip" ,minizip)
        ("tinyxml" ,tinyxml)))
     (home-page "http://cegui.org.uk/")
@@ -179,3 +185,132 @@ it offers a WYSIWYG editor for creating layouts and imagesets.")
 uses a modified version of the SM2 algorithm taking inspiration from mnemosyne
 and anki.")
     (license license:isc)))
+
+(define-public cpptest
+  (package
+    (name "cpptest")
+    (version "1.1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/cpptest/cpptest/cpptest-"
+                                  version "/cpptest-" version ".tar.gz"))
+              (sha256
+               (base32
+                "09v070a9dv6zq6hgj4v67i31zsis3s96psrnhlq9g4vhdcaxykwy"))))
+    (build-system gnu-build-system)
+    (home-page "http://cpptest.sourceforge.net/")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1)))
+
+(define-public khanat
+  (package
+    (name "khanat")
+    (version "3.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://git.khaganat.net/khaganat/khanat-code.git")
+                     (commit "90d9f6da6c367312ea856e1b8df67ec9ef1959c7")))
+              (sha256
+               (base32
+                "0wh4k6k4213pm4bbynlsnbvpcmqiliny19v9sffgd011pzywy7cp"))))
+    (build-system cmake-build-system)
+    (inputs
+     `(("boost" ,boost-fix)
+       ("cpptest" ,cpptest)
+       ("curl" ,curl)
+       ("giflib" ,giflib)
+       ("libfreetype" ,freetype)
+       ("libjpeg" ,libjpeg)
+       ("libpng" ,libpng)
+       ("libvorbis" ,libvorbis)
+       ("libxml2" ,libxml2)
+       ("lua" ,lua-5.1)
+       ("luabind" ,luabind)
+       ("mesa" ,mesa)
+       ("openal" ,openal)
+       ("openssl" ,openssl)
+       ("zlib" ,zlib)))
+    (arguments
+     `(#:out-of-source? #t
+       #:tests? #f
+       #:configure-flags (list "-DFINAL_VERSION=ON" "-DWITH_RYZOM_SERVER=OFF"
+                               "-DWITH_RYZOM_TOOLS=OFF" "-DWITH_NEL_TESTS=OFF"
+                               "-DWITH_RYZOM_CLIENT=ON" "-DWITH_NEL_TOOLS=OFF"
+                               "-DWITH_NEL_SAMPLES=OFF" "-DWITH_STATIC=OFF"
+                               "-DWITH_STATIC_EXTERNAL=OFF")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "code"))))))
+    (home-page "https://khaganat.net/")
+    (synopsis "")
+    (description "")
+    (license license:agpl3)))
+
+(define-public khanat-assets
+  (package
+    (name "khanat-assets")
+    (version "3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://git.khaganat.net/khaganat/khanat-assets"
+                                  "/repository/archive.tar.bz2?ref="
+                                  "22abb542c6b87637ccf24bfd79ccd762b35f8f19"))
+              (file-name (string-append name "-" version ".tar.bz2"))
+              (sha256
+               (base32
+                "1f08s6682v6i909d0gp20pk599685gyhwivqxgs9cxxg6h132azz"))))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules (guix build utils))
+         (let* ((source (assoc-ref %build-inputs "source"))
+                (output (assoc-ref %outputs "out"))
+                (vardir (string-append output "/share/khanat")))
+           (chdir (string-append source "/database"))
+           (for-each
+             (lambda (file)
+               (mkdir-p (dirname (string-append vardir "/" file)))
+               (copy-file file (string-append vardir "/" file)))
+             (find-files "." "[^/]*"))))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:cc-by-sa3.0)))
+
+(define-public khanat-resources
+  (package
+    (name "khanat-resources")
+    (version "3.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://git.khaganat.net/khaganat/khanat-ressources.git")
+                     (commit "8db7ba5840ced758710696a401ee4a4246eb9b70")))
+              (sha256
+               (base32
+                "010z3wvh0bkdbar0n0rvk0pqj87nnk9srgjh8pjx7mic8p517k8j"))))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules (guix build utils))
+         (let* ((source (assoc-ref %build-inputs "source"))
+                (output (assoc-ref %outputs "out"))
+                (vardir (string-append output "/share/khanat")))
+           (chdir source)
+           (for-each
+             (lambda (file)
+               (mkdir-p (dirname (string-append vardir "/" file)))
+               (copy-file file (string-append vardir "/" file)))
+             (find-files "." "[^/]*"))))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:cc-by-sa3.0)))
