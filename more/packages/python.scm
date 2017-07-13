@@ -23,7 +23,6 @@
   #:use-module (gnu packages databases)
   #:use-module (gnu packages python)
   #:use-module (gnu packages tls)
-  #:use-module (gnu packages zip)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
@@ -296,3 +295,55 @@ while keeping it all Pythonic and cross-platform.")
 
 (define-public python2-plumbum
   (package-with-python2 python-plumbum))
+
+(define-public python2-trollius
+  (package
+    (name "python2-trollius")
+    (version "2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "trollius" version))
+              (sha256
+               (base32
+                "146c60hgcmgjkbf2hmiag52f9i3hka6shwbfybdsmlvqjnfms5nd"))))
+    (build-system python-build-system)
+    (home-page "https://github.com/haypo/trollius")
+    (propagated-inputs
+     `(("futures" ,python2-futures)
+       ("mock" ,python2-mock)
+       ("six" ,python2-six)))
+    (arguments
+     `(#:python ,python-2
+       #:tests? #f))
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public python-neovim
+  (package
+    (name "python-neovim")
+    (version "0.1.13")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "neovim" version))
+              (sha256
+               (base32
+                "0pzk5639jjjx46a6arkwy31falmk5w1061icbml8njm3rbrwwhgx"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-greenlet" ,python-greenlet)
+       ("python-msgpack" ,python-msgpack)))
+    (arguments
+     `(#:tests? #f))
+    (home-page "https://github.com/neovim/python-client")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public python2-neovim
+  (let ((parent (package-with-python2 python-neovim)))
+    (package
+      (inherit parent)
+      (propagated-inputs
+       `(("trollius" ,python2-trollius)
+         ,@(package-propagated-inputs parent))))))
