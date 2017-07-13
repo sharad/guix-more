@@ -31,7 +31,6 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
   #:use-module (gnu packages tls)
-  #:use-module (gnu packages zip)
   #:use-module (more packages python)
   #:use-module (more packages smt))
 
@@ -462,14 +461,14 @@ applicable to a variety of tasks.")
 (define-public radare2
   (package
     (name "radare2")
-    (version "1.5.0")
+    (version "1.6.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://radare.mikelloc.com/get/" version "/"
                                   name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1al57j62di1w70lr1yyizfsygh8015sdydf2h5a87g1pd9vzlyfg"))
+                "16ggsk40zz6hyvclvqj1r4bh4hb78jf0d6ppry1jk4r0j30wm7cm"))
               (modules '((guix build utils)))
               (snippet
                 '(begin

@@ -51,8 +51,7 @@
   #:use-module (gnu packages tls)
   #:use-module (gnu packages xiph)
   #:use-module (gnu packages xml)
-  #:use-module (gnu packages xorg)
-  #:use-module (gnu packages zip))
+  #:use-module (gnu packages xorg))
 
 (define-public ogre3d
   (package

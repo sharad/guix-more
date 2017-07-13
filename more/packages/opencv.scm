@@ -32,7 +32,6 @@
   #:use-module (gnu packages photo)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages video)
-  #:use-module (gnu packages zip)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system python))
 

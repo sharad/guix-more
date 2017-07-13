@@ -29,7 +29,6 @@
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
-  #:use-module (gnu packages zip)
   #:use-module (gnu packages java))
 
 (define-public java-jmapviewer
