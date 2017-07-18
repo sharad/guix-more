@@ -21,6 +21,7 @@
   #:use-module (gnu packages)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
+  #:use-module (gnu packages networking)
   #:use-module (gnu packages python)
   #:use-module (gnu packages tls)
   #:use-module (guix packages)
@@ -296,9 +297,9 @@ while keeping it all Pythonic and cross-platform.")
 (define-public python2-plumbum
   (package-with-python2 python-plumbum))
 
-(define-public python2-trollius
+(define-public python-trollius
   (package
-    (name "python2-trollius")
+    (name "python-trollius")
     (version "2.1")
     (source (origin
               (method url-fetch)
@@ -309,15 +310,16 @@ while keeping it all Pythonic and cross-platform.")
     (build-system python-build-system)
     (home-page "https://github.com/haypo/trollius")
     (propagated-inputs
-     `(("futures" ,python2-futures)
-       ("mock" ,python2-mock)
-       ("six" ,python2-six)))
+     `(("mock" ,python-mock)
+       ("six" ,python-six)))
     (arguments
-     `(#:python ,python-2
-       #:tests? #f))
+     `(#:tests? #f))
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public python2-trollius
+  (package-with-python2 python-trollius))
 
 (define-public python-neovim
   (package
@@ -347,3 +349,254 @@ while keeping it all Pythonic and cross-platform.")
       (propagated-inputs
        `(("trollius" ,python2-trollius)
          ,@(package-propagated-inputs parent))))))
+
+(define-public python-cymruwhois
+  (package
+    (name "python-cymruwhois")
+    (version "1.6")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "cymruwhois" version))
+	      (sha256
+	       (base32
+		"0m7jgpglkjd0lsyw64lfw6qxdm0fg0f54145f79kq4rk1vjqbh5n"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("python-nose" ,python-nose)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public python2-cymruwhois
+  (package-with-python2 python-cymruwhois))
+
+(define-public python-ripe-atlas-sagan
+  (package
+    (name "python-ripe-atlas-sagan")
+    (version "1.2.1")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "ripe.atlas.sagan" version))
+	      (sha256
+	       (base32
+		"0mc5f50jj61q5z92765gnqhifila2bdngaybzrh6hycz1x6lz0ra"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("cryptography" ,python-cryptography)
+       ("dateutil" ,python-dateutil)
+       ("python-nose" ,python-nose)
+       ("pytz" ,python-pytz)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
+
+(define-public python2-ripe-atlas-sagan
+  (package-with-python2 python-ripe-atlas-sagan))
+
+(define-public python-socketio-client
+  (package
+    (name "python-socketio-client")
+    (version "0.7.2")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "socketIO-client" version))
+	      (sha256
+	       (base32
+		"1hfjfhyxgql1ndda1bagg8niy8m28byd2r0yq4l7zycwlzxq9kb4"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(("websocket-client" ,python-websocket-client)
+        ("requests" ,python-requests)))
+    (native-inputs
+      `(("coverage" ,python-coverage)
+	("nose" ,python-nose)))
+    (arguments '(#:tests? #f)); requires network
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
+
+(define-public python2-socketio-client
+  (package-with-python2 python-socketio-client))
+
+(define-public python-linecache2
+  (package
+    (name "python-linecache2")
+    (version "1.0.0")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "linecache2" version))
+	      (sha256
+	       (base32
+		"0z79g3ds5wk2lvnqw0y2jpakjf32h95bd9zmnvp7dnqhf57gy9jb"))))
+    (build-system python-build-system)
+    (arguments '(#:tests? #f)); circular dependency with unittest2
+    (propagated-inputs
+      `(("pbr" ,python-pbr)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
+
+(define-public python2-linecache2
+  (package-with-python2 python-linecache2))
+
+(define-public python-traceback2
+  (package
+    (name "python-traceback2")
+    (version "1.4.0")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "traceback2" version))
+	      (sha256
+	       (base32
+		"0c1h3jas1jp1fdbn9z2mrgn3jj0hw1x3yhnkxp7jw34q15xcdb05"))))
+    (build-system python-build-system)
+    (arguments '(#:tests? #f)); circular dependency with unittest2
+    (propagated-inputs
+      `(("linecache2" ,python-linecache2)
+        ("pbr" ,python-pbr)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
+
+(define-public python2-traceback2
+  (package-with-python2 python-traceback2))
+
+(define-public python-argparse
+  (package
+    (name "python-argparse")
+    (version "1.4.0")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "argparse" version))
+	      (sha256
+	       (base32
+		"1r6nznp64j68ih1k537wms7h57nvppq0szmwsaf99n71bfjqkc32"))))
+    (build-system python-build-system)
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
+
+(define-public python2-argparse
+  (package-with-python2 python-argparse))
+
+(define-public python-unittest2-fix
+  (package
+    (inherit python-unittest2)
+    (version "1.1.0")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "unittest2" version))
+	      (sha256
+	       (base32
+		"0y855kmx7a8rnf81d3lh5lyxai1908xjp0laf4glwa4c8472m212"))))
+    (arguments
+      `(#:phases
+	(modify-phases %standard-phases
+	  (add-before 'check 'disable-failures
+	    (lambda _
+	      (substitute* "unittest2/test/test_result.py"
+		(("testGet") "dontTestGet"))
+	      (substitute* "unittest2/test/test_loader.py"
+		(("test_loadTestsFromNames__relative_malformed_name") "dontTest")
+		(("test_loadTestsFromName__relative_malformed_name") "dontTest2")))))))
+    (propagated-inputs
+      `(("traceback2" ,python-traceback2)
+	("six" ,python-six)
+	("argparse" ,python-argparse)))))
+
+(define-public python2-unittest2-fix
+  (package-with-python2 python-unittest2-fix))
+
+(define-public python-funcsigs
+  (package
+    (name "python-funcsigs")
+    (version "1.0.2")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "funcsigs" version))
+	      (sha256
+	       (base32
+		"0l4g5818ffyfmfs1a924811azhjj8ax9xd1cffr1mzd3ycn0zfx7"))))
+    (build-system python-build-system)
+    (native-inputs
+      `(("unittest2" ,python-unittest2-fix)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public python2-funcsigs
+  (package-with-python2 python-funcsigs))
+
+(define-public python-ripe-atlas-cousteau
+  (package
+    (name "python-ripe-atlas-cousteau")
+    (version "1.4")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "ripe.atlas.cousteau" version))
+	      (sha256
+	       (base32
+		"0lhaanxs3hxlw1d0ma6rpx54p91v0kxvmxa82h86r6j5whdckq21"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(("websocket-client" ,python-websocket-client)
+        ("socketIO-client" ,python-socketio-client)
+        ("dateutil" ,python-dateutil)
+        ("jsonschema" ,python-jsonschema)
+        ("requests" ,python-requests)))
+    (native-inputs
+      `(("mock" ,python-mock)
+        ("nose" ,python-nose)
+        ("funcsigs" ,python-funcsigs)
+        ("coverage" ,python-coverage)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
+
+(define-public python2-ripe-atlas-cousteau
+  (package-with-python2 python-ripe-atlas-cousteau))
+
+(define-public python-ripe-atlas-tools
+  (package
+    (name "python-ripe-atlas-tools")
+    (version "2.1")
+    (source (origin
+	      (method url-fetch)
+	      (uri (pypi-uri "ripe.atlas.tools" version))
+	      (sha256
+	       (base32
+		"07h9cjxxp0dx4p32dhf5j3cciiap7sc32hb1byljkll5lv4vm9l5"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("pyopenssl" ,python-pyopenssl)
+       ("sagan" ,python-ripe-atlas-sagan)
+       ("cousteau" ,python-ripe-atlas-cousteau)
+       ("pyaml" ,python-pyaml)
+       ("ipy" ,python-ipy)
+       ("tzlocal" ,python-tzlocal)))
+    (native-inputs
+     `(("mock" ,python-mock)
+       ("coverage" ,python-coverage)))
+    (arguments
+      `(#:tests? #f; tests can't load dependencies
+	#:phases
+	(modify-phases %standard-phases
+	  (add-before 'check 'update-dependency
+	    (lambda _
+	      (substitute* "setup.py"
+		(("==1.2") "==1.2.1")))))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
+
+(define-public python2-ripe-atlas-tools
+  (package-with-python2 python-ripe-atlas-tools))
