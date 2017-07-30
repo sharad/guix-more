@@ -50,7 +50,7 @@
      `(("gtk2" ,gtk+-2)
        ("lua" ,lua-5.2)
        ("expat" ,expat)
-       ("boost" ,boost)
+       ("boost" ,boost-fix)
        ("gettext" ,gnu-gettext)))
     (arguments
      `(#:tests? #f
