@@ -29,7 +29,92 @@
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
+  #:use-module (gnu packages compression)
   #:use-module (gnu packages java))
+
+(define-public java-tomcat
+  (package
+    (name "java-tomcat")
+    (version "8.5.16")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://download.nextag.com/apache/tomcat/tomcat-8/v"
+                                  version "/src/apache-tomcat-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "08vc859z9f0787nhikbdsj6i441d4qk5xv17c1564hxxg6bmilqd"))))
+    (build-system ant-build-system)
+    (inputs
+     `(("java-eclipse-jdt-core" ,java-eclipse-jdt-core)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (arguments
+     `(#:build-target "package"
+       ;#:test-target "test"
+       #:tests? #f; requires downloading some files.
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'properties
+           (lambda _
+             (mkdir "downloads")
+             (substitute* "build.xml"
+               (("download-compile,") ""))
+             (with-output-to-file "build.properties"
+               (lambda _
+                 (display
+                   (string-append "base.path=" (getcwd) "/downloads\n"))))))
+         (replace 'install
+           (install-jars "output/build/lib")))))
+    (home-page "https://tomcat.apache.org")
+    (synopsis "Java Servlet, JavaServer Pages, Java Expression Language and Java
+WebSocket")
+    (description "Apache Tomcat is an open source implementation of the Java
+Servlet, JavaServer Pages, Java Expression Language and Java WebSocket
+technologies. The Java Servlet, JavaServer Pages, Java Expression Language and
+Java WebSocket specifications are developed under the Java Community Process.")
+    (license license:asl2.0)))
+
+(define-public java-brotli-dec
+  (package
+    (name "java-brotli-dec")
+    (version "0.6.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/google/brotli/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "03zfr6lw6ry643l6pbg0myg52clypxd0y0igd84dslchf3svvkb9"))))
+    (build-system ant-build-system)
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (arguments
+     `(#:jar-name "brotli-dec.jar"
+       #:tests? #f; no test target
+       #:source-dir "java"))
+    (home-page "https://brotli.org")
+    (synopsis "Lossless compression algorithm")
+    (description "Brotli is a generic-purpose lossless compression algorithm
+that compresses data using a combination of a modern variant of the LZ77
+algorithm, Huffman coding and 2nd order context modeling, with a compression
+ratio comparable to the best currently available general-purpose compression
+methods.  It is similar in speed with deflate but offers more dense compression.")
+    (license license:expat)))
+
+(define-public java-commons-compress-latest
+  (package
+    (inherit java-commons-compress)
+    (version "1.14")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/compress/source/"
+                                  "commons-compress-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "1msfjbknfgx78j96fsiqk44r45plz10x9sw88flrpf3yaf4d3br1"))))
+    (inputs
+     `(("dec" ,java-brotli-dec)
+       ,@(package-inputs java-commons-compress)))))
 
 (define-public java-jmapviewer
   (package
@@ -67,26 +152,31 @@
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "12275")
+    (version "12450")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/openstreetmap/josm.git")
-                    (commit "f190ffc3ec16835c39150476e21d08d5557ed466")))
+                    (commit "61a9c27e59976805b7cce4fae5a48c8e04b19373")))
               ;;(uri (svn-reference
               ;;      (url "https://svn.openstreetmap.org/applications/editors/josm")
               ;;      (revision 12039)))
               (sha256
                (base32
-                "191isyn9v396s3c6888brq1yl2chzs7myl3qbk5c7d8msxi4wv49"))
+                "1hab27b8s6h2b1g07pghr4nkx6rx2gx75488rwppdfc0ymzpjzrp"))
               (file-name (string-append name "-" version))))
     (build-system ant-build-system)
     (native-inputs
      `(("java-javacc" ,java-javacc)))
     (propagated-inputs
      `(("java-jmapviewer" ,java-jmapviewer)
+       ("java-tomcat" ,java-tomcat)
+       ("java-brotli-dec" ,java-brotli-dec)
+       ("java-xz" ,java-xz)
+       ("java-velocity" ,java-velocity)
        ("java-commons-collections" ,java-commons-collections)
-       ("java-commons-compress" ,java-commons-compress)))
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-commons-compress" ,java-commons-compress-latest)))
     (arguments
      `(;#:build-target "dist"
        #:tests? #f
@@ -113,7 +203,8 @@
                (mkdir-p "src/org/openstreetmap/josm/gui/mappaint/mapcss/parsergen")
                (zero? (system* "javacc" "-DEBUG_PARSER=false"
                                "-DEBUG_TOKEN_MANAGER=false" "-JDK_VERSION=1.8"
-                               "-GRAMMAR_ENCODING=UTF-8" (string-append "-OUTPUT_DIRECTORY=" out)
+                               "-GRAMMAR_ENCODING=UTF-8"
+                               (string-append "-OUTPUT_DIRECTORY=" out)
                                file)))))
 )))
          ;(add-before 'build 'fix-compiler
@@ -162,11 +253,123 @@
           `(modify-phases ,phases
             (add-before 'build 'add-manifest
               (lambda _
-                (call-with-output-file "MANIFEST.MF"
+                (mkdir-p "build/conf")
+                (call-with-output-file "build/conf/MANIFEST.MF"
                   (lambda (file)
                     (format file "Manifest-Version: 1.0\n")
                     (format file "Ant-Version: Apache Ant 1.9.9\n")
-                    (format file "Created-By: 1.8.0_131-b11 (Oracle Corporation)")))))))))))
+                    (format file "Created-By: 1.8.0_131-b11 (Oracle Corporation)")))))
+            (replace 'install
+              (install-jars "build"))))))))
+
+(define-public java-jdom2
+  (package
+    (name "java-jdom")
+    (version "2.0.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/hunterhacker/jdom/archive/JDOM-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0p8n7inqq2a25wk9ljinl3ixlx1x2la9qaman8ngd75xxjb02yc1"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "package"
+       #:tests? #f; junit run with "package" target
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (install-jars "build")))))
+    (home-page "http://jdom.org/")
+    (synopsis "Access, manipulate, and output XML data")
+    (description " Java-based solution for accessing, manipulating, and
+outputting XML data from Java code.")
+    (license license:bsd-4)))
+
+(define-public java-jakarta-oro
+  (package
+    (name "java-jakarta-oro")
+    (version "2.0.8")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/jakarta/oro/"
+                                  "jakarta-oro-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0rpmnsskiwmsy8r0sckz5n5dbvh3vkxx8hpm177c754r8xy3qksc"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "package"
+       #:tests? #f; junit run with "package" target
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'remove-bin
+           (lambda _
+             (delete-file (string-append "jakarta-oro-" ,version ".jar"))))
+         (replace 'install
+           (install-jars ,(string-append "jakarta-oro-" version))))))
+    (home-page "https://jakarta.apache.org/oro/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jdom
+  (package
+    (name "java-jdom")
+    (version "1.1.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://jdom.org/dist/binary/archive/jdom-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "07wdpm3jwwc9q38kmdw40fvbmv6jzjrkrf8m0zqs58f79a672wfl"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "package"
+       #:tests? #f; junit run with "package" target
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (install-jars "build")))))
+    (home-page "http://jdom.org/")
+    (synopsis "Access, manipulate, and output XML data")
+    (description " Java-based solution for accessing, manipulating, and
+outputting XML data from Java code.")
+    (license license:bsd-4)))
+
+(define-public java-commons-logging
+  (package
+    (inherit java-commons-logging-minimal)
+    (arguments
+     `(#:tests? #f ; avoid dependency on logging frameworks
+       #:jar-name "commons-logging.jar"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'delete-adapters-and-tests
+           (lambda _
+             ;; Delete all adapters except for NoOpLog, SimpleLog, and
+             ;; LogFactoryImpl.  NoOpLog is required to build; LogFactoryImpl
+             ;; is used by applications; SimpleLog is the only actually usable
+             ;; implementation that does not depend on another logging
+             ;; framework.
+             (for-each
+              (lambda (file)
+                (delete-file (string-append
+                              "src/main/java/org/apache/commons/logging/impl/" file)))
+              (list "Jdk13LumberjackLogger.java"
+                    "WeakHashtable.java"
+                    "Log4JLogger.java"
+                    "ServletContextCleaner.java"
+                    "Jdk14Logger.java"
+                    "AvalonLogger.java"
+                    "LogKitLogger.java"))
+             (delete-file-recursively "src/test")
+             #t)))))
+    (inputs
+     `(("log4j" ,java-log4j-api)
+       ,@(package-inputs java-commons-logging-minimal)))))
 
 (define-public java-velocity
   (package
@@ -181,7 +384,8 @@
                 "0rk7s04hkrr2k3glccx0yrglzqzj4qbipcrxhglk46yhx92vravc"))))
     (build-system ant-build-system)
     (arguments
-     `(#:phases
+     `(#:source-dir "src/java"
+       #:phases
        (modify-phases %standard-phases
          (add-before 'build 'prepare
            (lambda* (#:key inputs #:allow-other-keys)
@@ -195,7 +399,13 @@
      `(("javacc" ,java-javacc)
        ("antlr" ,antlr2)))
     (propagated-inputs
-     `(("java-commons-collections" ,java-commons-collections)))
+     `(("java-commons-collections" ,java-commons-collections)
+       ("java-jakarta-oro" ,java-jakarta-oro)
+       ("java-jdom" ,java-jdom)
+       ("java-tomcat" ,java-tomcat)
+       ("java-log4j-api" ,java-log4j-api)
+       ("java-commons-logging-minimal" ,java-commons-logging)
+       ("java-commons-lang" ,java-commons-lang)))
     (home-page "https://velocity.apache.org/")
     (synopsis "")
     (description "")
