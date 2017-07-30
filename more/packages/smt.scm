@@ -23,48 +23,18 @@
   #:use-module (guix build-system python)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages maths)
   #:use-module (gnu packages ocaml)
   #:use-module (gnu packages python)
   #:use-module (more packages python))
 
-(define-public z3-solver
-  (package
-    (name "z3-solver")
-    (version "4.5.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/Z3Prover/z3/archive/z3-"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "032a5lvji2liwmc25jv52bdrhimqflvqbpg77ccaq1jykhiivbmf"))
-              (file-name (string-append name "-" version ".tar.gz"))))
-    (build-system gnu-build-system)
-    (arguments
-     `(#:phases
-       (modify-phases %standard-phases
-         (delete 'configure)
-         (add-before 'build 'generate-make
-           (lambda _
-             (system* "python" "scripts/mk_make.py")
-             (chdir "build"))))
-       #:test-target "test"
-       #:make-flags
-       (list (string-append "PREFIX=" (assoc-ref %outputs "out")))))
-    (native-inputs
-     `(("python" ,python-2)))
-    (home-page "https://github.com/Z3Prover/z3")
-    (synopsis "SMT solver library")
-    (description "Z3 is a theorem prover from Microsoft Research.")
-    (license license:expat)))
-
 (define-public python2-z3-solver
   (package
-    (inherit z3-solver)
+    (inherit z3)
     (name "python2-z3-solver")
     (build-system python-build-system)
     (propagated-inputs
-     `(("z3" ,z3-solver)))
+     `(("z3" ,z3)))
     (arguments
      `(#:python ,python-2
        #:phases
