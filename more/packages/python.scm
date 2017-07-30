@@ -19,6 +19,7 @@
 (define-module (more packages python)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages audio)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages networking)
@@ -600,3 +601,21 @@ while keeping it all Pythonic and cross-platform.")
 
 (define-public python2-ripe-atlas-tools
   (package-with-python2 python-ripe-atlas-tools))
+
+(define-public python-pyaudio
+  (package
+    (name "python-pyaudio")
+    (version "0.2.11")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "PyAudio" version))
+              (sha256
+               (base32
+                "0x7vdsigm7xgvyg3shd3lj113m8zqj2pxmrgdyj66kmnw0qdxgwk"))))
+    (build-system python-build-system)
+    (inputs
+     `(("portaudio" ,portaudio)))
+    (home-page "https://people.csail.mit.edu/hubert/pyaudio/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
