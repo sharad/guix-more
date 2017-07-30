@@ -205,13 +205,13 @@ convenience will depart from that convention.")
 (define-public python2-archinfo
   (package
     (name "python2-archinfo")
-    (version "6.7.4.12")
+    (version "6.7.7.27")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "archinfo" version))
               (sha256
                (base32
-                "1kfc9nk73i5rr3xz8mv00cp76p7dc62h9pd8hvnda414jhx7n0pb"))))
+                "1amcavk8x9xch18sfzbla5sgas955clj06g6hx20n47q87bw22vz"))))
     (build-system python-build-system)
     (arguments
      `(#:python ,python-2))
@@ -225,15 +225,15 @@ architecture-specific information.  It is useful for cross-architecture tools
 (define-public angr-vex
   (package
     (name "angr-vex")
-    (version "1")
+    (version "20170130")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/angr/vex.git")
-                    (commit "3a620e43ecc71cb9e5470995a45bbce4a600293f")))
+                    (commit "fc6a0b1187cd614e97e204046b4d4be482e7ab3f")))
               (sha256
                (base32
-                "1qxpwi9961140dnys1iywm043nbm13qg2vw9xi1bjjdh80hbnfw4"))
+                "1qfv5j2hpvh5mv8mschrcd5sga4h910iggppr2g8jr6k9r3x725i"))
               (file-name (string-append name "-" version))))
     (build-system gnu-build-system)
     (arguments
@@ -264,13 +264,13 @@ valgrind.org) for use with PyVEX.")
 (define-public python2-pyvex
   (package
     (name "python2-pyvex")
-    (version "6.7.4.12")
+    (version "6.7.7.27")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "pyvex" version))
               (sha256
                (base32
-                "1x57aq96ka7gz6qcj9zqwdcylfks4q3iiykismyk1g0vp68qlwv9"))))
+                "1bqag7hb1ysrq9hb31cn8l7b8ad91rfw52bm3kh9gbma8rmxi0hl"))))
     (build-system python-build-system)
     (inputs `(("angr-vex" ,angr-vex)))
     (propagated-inputs
@@ -301,7 +301,7 @@ analyses on binary.  PyVEX exposes VEX into Python.")
 (define-public unicorn
   (package
     (name "unicorn")
-    (version "1.0-rc3")
+    (version "1.0.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/unicorn-engine/unicorn/archive/"
@@ -309,7 +309,7 @@ analyses on binary.  PyVEX exposes VEX into Python.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "18sf8vbmf08ss27qhiv7la492k39q0ci8kpjx836bv7rq3cbgb2q"))))
+                "0z01apwmvhvdldm372ww9pjfn45awkw3m90c0h4v0nj0ihmlysis"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -337,8 +337,7 @@ CPU emulator framework.")
      `(("unicorn" ,unicorn)))
     (build-system python-build-system)
     (arguments
-     `(#:tests? #f
-       #:phases (modify-phases %standard-phases
+     `(#:phases (modify-phases %standard-phases
                   (add-after 'unpack 'chdir-and-fix-setup-py
                     (lambda _
                       (chdir "bindings/python")
@@ -360,13 +359,13 @@ CPU emulator framework.")
 (define-public python2-simuvex
   (package
     (name "python2-simuvex")
-    (version "6.7.4.12")
+    (version "6.7.7.27")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "simuvex" version))
               (sha256
                (base32
-                "03rqdk7f1ynm6p50rbl4abq6hgnfvb7qd5k26m7cyxjii09waa2x"))
+                "1awc078861x7nj44g3x1p3mjdc3fhz85gqgx7rfk6918s6nbx848"))
               (modules '((guix build utils)))
               (snippet
                '(substitute* "setup.py"
@@ -398,13 +397,13 @@ loaded by the OS's loader.")
 (define-public python2-cle
   (package
     (name "python2-cle")
-    (version "6.7.4.12")
+    (version "6.7.7.27")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "cle" version))
               (sha256
                (base32
-                "1fx21jx2nmc5lbz7hgpz4p7ccvzrnrcnf0wj2fbqdyjb9s0w2sfw"))
+                "0x4cyl1qkhwj18860nhxdylzaxq45264jv4449cl0vl6y23lbk8v"))
               (modules '((guix build utils)))
               (snippet
                '(substitute* "setup.py"
@@ -429,13 +428,13 @@ loaded by the OS's loader.")
 (define-public python2-angr
   (package
     (name "python2-angr")
-    (version "6.7.4.12")
+    (version "6.7.7.27")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "angr" version))
               (sha256
                (base32
-                "0cqqakh2drb593wcbdcq0vq3pcf1ckxwy486cg378667lrb4042i"))))
+                "1k9vr9kds956jqyv126fc57ygly400jhhga98ms8clr4m3k3xlzn"))))
     (build-system python-build-system)
     (arguments
      `(#:python ,python-2))

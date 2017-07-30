@@ -58,13 +58,13 @@
 (define-public python2-claripy
   (package
     (name "python2-claripy")
-    (version "6.7.4.12")
+    (version "6.7.7.27")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "claripy" version))
               (sha256
                (base32
-                "0w6f2jvqajmw1mmdbdzvvs71fsv62z73w0q6jz3sap7mhlwj3vrd"))
+                "1jrnww0lpfi65g83pbdkig951r4jrhri67dn4n67viz897q73736"))
               (modules '((guix build utils)))
               (snippet
                `(substitute* "setup.py"

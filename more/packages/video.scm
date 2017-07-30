@@ -63,10 +63,10 @@
     `(("ffmpeg" ,ffmpeg)))
    (native-inputs
     `(("pkg-config" ,pkg-config)))
-   (synopsis "Cross-plateform wrapper around ffmpeg/libav")
+   (synopsis "Cross-platform wrapper around ffmpeg/libav")
    (description
      "FFMpegSource is a wrapper library around ffmpeg/libav that allows
-programmers to access a standard API to open and decompress media files")
+programmers to access a standard API to open and decompress media files.")
    (license license:gpl2+))); inherits from ffmpeg
   ;; sources are distributed under a different license that the binary.
   ;; see https://github.com/FFMS/ffms2/blob/master/COPYING
@@ -110,7 +110,10 @@ programmers to access a standard API to open and decompress media files")
        ("pkg-config" ,pkg-config)))
     (home-page "http://www.aegisub.org/")
     (synopsis "Subtitle engine")
-    (description "Aegisub helps translators create subtitles for video")
+    (description
+      "Aegisub is a tool for creating and modifying subtitles.  Aegisub makes
+it quick and easy to time subtitles to audio, and features many powerful
+tools for styling them, including a built-in real-time video preview.")
     (license (list license:bsd-3 ; the package is licensed under the bsd-3, except
                    license:mpl1.1 ; for vendor/universalchardet under the mpl1.1
                    license:expat)))) ; and src/gl that is under a license similar
