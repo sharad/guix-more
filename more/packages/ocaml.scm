@@ -947,7 +947,7 @@ Coq proof assistant.")
            (lambda _
              (substitute* "Makefile.in"
                (("SVNREV=") "#SVNREV="))))
-         (add-before 'configure 'fix-configure
+         (add-before 'configure 'fix-/bin/sh
            (lambda _
              (substitute* "configure"
                (("/bin/sh") (which "sh")))))
@@ -956,6 +956,10 @@ Coq proof assistant.")
              (substitute* "Makefile.in"
                (("\\\\n") "")))))))
     (home-page "http://cubicle.lri.fr/")
-    (synopsis "SMT solver")
-    (description "SMT solver.")
+    (synopsis "Model checker for array-based systems")
+    (description "Cubicle is an open source model checker for verifying safety
+properties of array-based systems.  This is a syntactically restricted class of
+parametrized transition systems with states represented as arrays indexed by an
+arbitrary number of processes.  Cache coherence protocols and mutual exclusion
+algorithms are typical examples of such systems.")
     (license license:asl2.0)))
