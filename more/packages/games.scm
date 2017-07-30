@@ -45,6 +45,8 @@
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (more packages python)
+  #:use-module (gnu packages qt)
   #:use-module (gnu packages sdl)
   #:use-module (gnu packages tbb)
   #:use-module (more packages tcl)
@@ -249,67 +251,52 @@ and anki.")
     (description "")
     (license license:agpl3)))
 
-(define-public khanat-assets
+(define-public anki
   (package
-    (name "khanat-assets")
-    (version "3.0")
+    (name "anki")
+    ; the latest stable version requires qt4 webkit which we don't have because
+    ; of issues on arm and probably security reasons.
+    (version "2.1.0beta3")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://git.khaganat.net/khaganat/khanat-assets"
-                                  "/repository/archive.tar.bz2?ref="
-                                  "22abb542c6b87637ccf24bfd79ccd762b35f8f19"))
-              (file-name (string-append name "-" version ".tar.bz2"))
+              (uri (string-append "https://apps.ankiweb.net/downloads/beta/anki-"
+                                  version "-source.tgz"))
               (sha256
                (base32
-                "1f08s6682v6i909d0gp20pk599685gyhwivqxgs9cxxg6h132azz"))))
-    (build-system trivial-build-system)
+                "1iffc8l856j7c6r8s6y5f79fgf31d4halbhrwfc09zlkasvf9wqg"))))
+    (build-system gnu-build-system)
+    (propagated-inputs
+     `(("python" ,python)
+       ("pyaudio" ,python-pyaudio)
+       ("pyqt" ,python-pyqt)
+       ("sip" ,python-sip)))
     (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules (guix build utils))
-         (let* ((source (assoc-ref %build-inputs "source"))
-                (output (assoc-ref %outputs "out"))
-                (vardir (string-append output "/share/khanat")))
-           (chdir (string-append source "/database"))
-           (for-each
-             (lambda (file)
-               (mkdir-p (dirname (string-append vardir "/" file)))
-               (copy-file file (string-append vardir "/" file)))
-             (find-files "." "[^/]*"))))))
-    (home-page "")
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (delete 'build)
+         (replace 'install
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((output (assoc-ref outputs "out"))
+                    (bindir (string-append output "/bin"))
+                    (libdir (string-append output "/lib/python3.5/site-packages")))
+               (for-each
+                 (lambda (file)
+                   (mkdir-p (dirname (string-append libdir "/" file)))
+                   (copy-file file (string-append libdir "/" file)))
+                 (append (find-files "anki" ".*\\.py")
+                         (find-files "aqt" ".*\\.py")))
+               (mkdir-p bindir)
+               (with-output-to-file (string-append bindir "/anki")
+                 (lambda _
+                   (display
+                     (string-append
+                       "#!" (assoc-ref inputs "python") "/bin/python3\n"
+                       "import aqt\n"
+                       "aqt.run()\n"))))
+               (chmod (string-append bindir "/anki") #o755)))))))
+    (home-page "https://apps.ankiweb.net")
     (synopsis "")
     (description "")
-    (license license:cc-by-sa3.0)))
-
-(define-public khanat-resources
-  (package
-    (name "khanat-resources")
-    (version "3.0")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "https://git.khaganat.net/khaganat/khanat-ressources.git")
-                     (commit "8db7ba5840ced758710696a401ee4a4246eb9b70")))
-              (sha256
-               (base32
-                "010z3wvh0bkdbar0n0rvk0pqj87nnk9srgjh8pjx7mic8p517k8j"))))
-    (build-system trivial-build-system)
-    (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules (guix build utils))
-         (let* ((source (assoc-ref %build-inputs "source"))
-                (output (assoc-ref %outputs "out"))
-                (vardir (string-append output "/share/khanat")))
-           (chdir source)
-           (for-each
-             (lambda (file)
-               (mkdir-p (dirname (string-append vardir "/" file)))
-               (copy-file file (string-append vardir "/" file)))
-             (find-files "." "[^/]*"))))))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:cc-by-sa3.0)))
+    (license license:gpl2)))
