@@ -43,6 +43,7 @@
   #:use-module (gnu packages xiph)
   #:use-module (gnu packages xorg)
   #:use-module (gnu packages xml)
+  #:use-module (gnu packages java)
   #:use-module (more packages java))
 
 ;; goes to check.scm

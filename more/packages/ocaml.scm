@@ -30,6 +30,7 @@
   #:use-module (gnu packages emacs)
   #:use-module (gnu packages flex)
   #:use-module (gnu packages llvm)
+  #:use-module (gnu packages maths)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages ocaml)
   #:use-module (gnu packages perl)
@@ -937,7 +938,7 @@ Coq proof assistant.")
      `(("ocaml" ,ocaml)
        ("which" ,which)))
     (propagated-inputs
-     `(("z3" ,z3-solver)))
+     `(("z3" ,z3)))
     (arguments
      `(#:configure-flags (list "--with-z3")
        #:tests? #f

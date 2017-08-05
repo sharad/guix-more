@@ -119,14 +119,14 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-jmapviewer
   (package
     (name "java-jmapviewer")
-    (version "2.2")
+    (version "2.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://svn.openstreetmap.org/applications/viewer/jmapviewer/releases/"
                                   version "/JMapViewer-" version "-Source.zip"))
               (sha256
                (base32
-                "00jxqc4fzy7hpdi0007f0a84aa630brvam7vxqirdk9j4za4p0d8"))))
+                "0xalq8bacn8ibz3xiaqvj5pg6pxk9irvwx5f1lb0y2z5gsny3l1x"))))
     (build-system ant-build-system)
     (native-inputs
      `(("unzip" ,unzip)))
@@ -371,6 +371,260 @@ outputting XML data from Java code.")
      `(("log4j" ,java-log4j-api)
        ,@(package-inputs java-commons-logging-minimal)))))
 
+(define-public java-lz4
+  (package
+    (name "java-lz4")
+    (version "1.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://repo1.maven.org/maven2/net/jpountz/"
+                                  "lz4/lz4/" version "/lz4-" version "-sources.jar"))
+              (sha256
+               (base32
+                "1vplqq2fhwjjrkdnnlclwyclxvzav80f7246awd178xwl9ng4vcm"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-lj4.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "."
+       #:tests? #f)); no tests
+    (home-page "https://jpountz.github.io/lz4-java"); or http://blog.jpountz.net/
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-kafka-clients
+  (package
+    (name "java-kafka-clients")
+    (version "0.11.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/kafka/" version "/kafka-"
+                                  version "-src.tgz"))
+              (sha256
+               (base32
+                "01mbi12bdxhrv4iadb3179cqrg689jva8hh8nig4n747arsbgiby"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-kafka-clients.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "clients/src/main/java"
+       #:tests? #f))
+    (inputs
+     `(("java-slf4j-api" ,java-slf4j-api)
+       ("java-lz4" ,java-lz4)))
+    (home-page "https://kafka.apache.org")
+    (synopsis "")
+    (description "")
+    (license (list license:cddl1.0; actually cddl1.1
+                   license:gpl2)))); with classpath exception
+
+(define-public java-bsh
+  (package
+    (name "java-bsh")
+    (version "2.0b6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/beanshell/beanshell/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1bawkxk6jyc75hxvzkpz689h73cn3f222m0ar3nvb0dal2b85kfv"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jarall"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((share (string-append (assoc-ref outputs "out") "/share/java")))
+               (mkdir-p share)
+               (copy-file "dist/bsh-2.0b6.jar" (string-append share "/bsh-2.0b6.jar"))))))))
+    (home-page "http://beanshell.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-hdrhistogram
+  (package
+    (name "java-hdrhistogram")
+    (version "2.1.9")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/HdrHistogram/HdrHistogram/"
+                                  "archive/HdrHistogram-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1sicbmc3sr42nw93qbkb26q9rn33ag33k6k77phjc3j5h5gjffqv"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-hdrhistogram.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'set-version
+           (lambda _
+             (let* ((version-java "src/main/java/org/HdrHistogram/Version.java")
+                    (template (string-append version-java ".template")))
+               (copy-file template version-java)
+               (substitute* version-java
+                 (("\\$VERSION\\$") ,version)
+                 (("\\$BUILD_TIME\\$") "0"))))))))
+    (home-page "https://hdrhistogram.github.io/HdrHistogram")
+    (synopsis "")
+    (description "")
+    (license license:bsd-2)))
+
+(define-public java-jmock
+  (package
+    (name "java-jmock")
+    (version "2.8.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jmock-developers/"
+                                  "jmock-library/archive/" version ".tar.gz"))
+              (sha256
+               (base32
+                "18650a9g8xffcsdb6w91pbswa7f40fp2sh6s3nclkclz5dbzq8f0"))))
+    (build-system ant-build-system)
+    (inputs
+     `(("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-asm" ,java-asm)
+       ("java-bsh" ,java-bsh)
+       ("java-jumit" ,java-junit)))
+    (arguments
+     `(#:jar-name "java-jmock.jar"
+       #:source-dir "jmock/src/main/java"
+       #:tests? #f))
+    (home-page "https://github.com/jmock-developers/jmock-library")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-jmock-junit4
+  (package
+    (inherit java-jmock)
+    (name "java-jmock-junit4")
+    (arguments
+     `(#:jar-name "java-jmock-junit4.jar"
+       #:source-dir "jmock-junit4/src/main/java"
+       #:tests? #f))
+    (inputs
+     `(("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-asm" ,java-asm)
+       ("java-bsh" ,java-bsh)
+       ("java-jmock" ,java-jmock)
+       ("java-jumit" ,java-junit)))))
+
+
+(define-public java-jmock-legacy
+  (package
+    (inherit java-jmock)
+    (name "java-jmock-legacy")
+    (arguments
+     `(#:jar-name "java-jmock-legacy.jar"
+       #:source-dir "jmock-legacy/src/main/java"
+       #:tests? #f))
+    (inputs
+     `(("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-objenesis" ,java-objenesis)
+       ("java-cglib" ,java-cglib)
+       ("java-jmock" ,java-jmock)
+       ("java-asm" ,java-asm)
+       ("java-bsh" ,java-bsh)
+       ("java-jumit" ,java-junit)))))
+
+(define-public java-lmax-disruptor
+  (package
+    (name "java-lmax-disruptor")
+    (version "3.3.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/LMAX-Exchange/disruptor/"
+                                  "archive/" version ".tar.gz"))
+              (sha256
+               (base32
+                "19c7c5cf3lby4fy7vl3b6a9hds1g0j7xgfbskqbdlcai1x82hh8i"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-lmax-disruptor.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src"
+       #:tests? #f)); no tests
+    (inputs
+     `(("junit" ,java-junit)
+       ("java-hdrhistogram" ,java-hdrhistogram)
+       ("java-jmock" ,java-jmock)
+       ("java-jmock-legacy" ,java-jmock-legacy)
+       ("java-jmock-junit4" ,java-jmock-junit4)
+       ("java-hamcrest-all" ,java-hamcrest-all)))
+    (home-page "https://www.lmax.com/disruptor")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-mail
+  (package
+    (name "java-mail")
+    (version "1.6.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/javamail/archive/"
+                                  "JAVAMAIL-1_6_0.tar.gz"))
+              (sha256
+               (base32
+                "1b4rg7fpj50ld90a71iz2m4gm3f5cnw18p3q3rbrrryjip46kx92"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-mail.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "mail/src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'move-version.java
+           (lambda _
+             ;; this is done in build.xml (init target)
+             (copy-file "mail/src/main/resources/javax/mail/Version.java"
+                        "mail/src/main/java/javax/mail/Version.java"))))))
+    (home-page "https://javaee.github.io/javamail")
+    (synopsis "")
+    (description "")
+    (license (list license:cddl1.0; actually cddl1.1
+                   license:gpl2)))); with classpath exception
+
+(define-public java-log4j-core
+  (package
+    (inherit java-log4j-api)
+    (name "java-log4j-core")
+    (inputs
+     `(("java-osgi-core" ,java-osgi-core)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-log4j-api" ,java-log4j-api)
+       ("java-mail" ,java-mail)
+       ("java-lmax-disruptor" ,java-lmax-disruptor)
+       ("java-kafka" ,java-kafka-clients)
+       ("java-commons-compress" ,java-commons-compress)
+       ("java-junit" ,java-junit)))
+    (arguments
+     `(#:tests? #f ; tests require unpackaged software
+       #:jar-name "log4j-core.jar"
+       #:make-flags
+       (list (string-append "-Ddist.dir=" (assoc-ref %outputs "out")
+                            "/share/java"))
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'enter-dir
+           (lambda _ (chdir "log4j-core") #t))
+         ;; FIXME: The tests require additional software that has not been
+         ;; packaged yet, such as
+         ;; * org.apache.maven
+         ;; * org.apache.felix
+         (add-after 'enter-dir 'delete-tests
+           (lambda _ (delete-file-recursively "src/test") #t)))))))
+
 (define-public java-velocity
   (package
     (name "java-velocity")
@@ -381,12 +635,21 @@ outputting XML data from Java code.")
                                   version "/velocity-" version ".tar.gz"))
               (sha256
                (base32
-                "0rk7s04hkrr2k3glccx0yrglzqzj4qbipcrxhglk46yhx92vravc"))))
+                "0rk7s04hkrr2k3glccx0yrglzqzj4qbipcrxhglk46yhx92vravc"))
+	      (patches
+		(search-patches "java-velocity-dont-use-werken-xpath.patch"))))
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "src/java"
        #:phases
        (modify-phases %standard-phases
+	     (add-before 'configure 'fix-log4j-path
+	       (lambda _
+	         (for-each (lambda (file)
+                         (substitute* file
+	                       (("org.apache.log4j") "org.apache.logging.log4j")))
+               '("src/java/org/apache/velocity/runtime/log/Log4JLogChute.java"
+                 "src/java/org/apache/velocity/runtime/log/SimpleLog4JLogSystem.java"))))
          (add-before 'build 'prepare
            (lambda* (#:key inputs #:allow-other-keys)
              (delete-file-recursively "lib")
@@ -928,57 +1191,57 @@ the options available for a command line tool.")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-joda-convert
-  (package
-    (name "java-joda-convert")
-    (version "1.8.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/JodaOrg/joda-convert/archive/v"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1di9chp0pgvd2gxsmdaxhldwns9a2ss9705jmn97mdd69cg5zcnc"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "src/main/java"
-       #:tests? #f))
-    (inputs
-     `(("java-google-collect" ,java-google-collect)))
-    (native-inputs
-     `(("junit" ,java-junit)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public java-joda-time
-  (package
-    (name "java-joda-time")
-    (version "2.9.9")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/JodaOrg/joda-time/archive/v"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1i9x91mi7yg2pasl0k3912f1pg46n37sps6rdb0v1gs8hj9ppwc1"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "src/main/java"
-       #:tests? #f))
-    (inputs
-     `(("java-joda-convert" ,java-joda-convert)))
-    (native-inputs
-     `(("junit" ,java-junit)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
+;(define-public java-joda-convert
+;  (package
+;    (name "java-joda-convert")
+;    (version "1.8.1")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/JodaOrg/joda-convert/archive/v"
+;                                  version ".tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1di9chp0pgvd2gxsmdaxhldwns9a2ss9705jmn97mdd69cg5zcnc"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name (string-append ,name "-" ,version ".jar")
+;       #:source-dir "src/main/java"
+;       #:tests? #f))
+;    (inputs
+;     `(("java-google-collect" ,java-google-collect)))
+;    (native-inputs
+;     `(("junit" ,java-junit)))
+;    (home-page "")
+;    (synopsis "")
+;    (description "")
+;    (license license:asl2.0)))
+;
+;(define-public java-joda-time
+;  (package
+;    (name "java-joda-time")
+;    (version "2.9.9")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/JodaOrg/joda-time/archive/v"
+;                                  version ".tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1i9x91mi7yg2pasl0k3912f1pg46n37sps6rdb0v1gs8hj9ppwc1"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name (string-append ,name "-" ,version ".jar")
+;       #:source-dir "src/main/java"
+;       #:tests? #f))
+;    (inputs
+;     `(("java-joda-convert" ,java-joda-convert)))
+;    (native-inputs
+;     `(("junit" ,java-junit)))
+;    (home-page "")
+;    (synopsis "")
+;    (description "")
+;    (license license:asl2.0)))
 
 (define-public java-xstream
   (package
@@ -1083,99 +1346,99 @@ the options available for a command line tool.")
        #:source-dir "src/main"))))
 
 
-(define-public antlr3-3.4
-  (package
-    (name "antlr3")
-    (version "3.4")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/antlr/website-antlr3/raw/"
-                                  "gh-pages/download/antlr-"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "1cwfswpk3jlzl1dhc6b6586srza8q0bbzwlxcq136p29v62fjrb3"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "tool/src/main/java:runtime/Java/src/main/java:tool/src/main/antlr3"
-       #:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'install 'bin-install
-           (lambda* (#:key inputs outputs #:allow-other-keys)
-             (let ((jar (string-append (assoc-ref outputs "out") "/share/java"))
-                   (bin (string-append (assoc-ref outputs "out") "/bin")))
-               (mkdir-p bin)
-               (with-output-to-file (string-append bin "/antlr3")
-                 (lambda _
-                   (display
-                     (string-append "#!/bin/sh\n"
-                                    "java -cp " jar "/antlr3-3.3.jar:"
-                                    (string-concatenate
-                                      (find-files (assoc-ref inputs "stringtemplate")
-                                                  ".*\\.jar"))
-                                    ":"
-                                    (string-concatenate
-                                      (find-files (string-append (assoc-ref inputs "antlr") "/lib")
-                                                  ".*\\.jar"))
-                                    " org.antlr.Tool $*"))))
-               (chmod (string-append bin "/antlr3") #o755))))
-         (add-before 'build 'generate-grammar
-           (lambda _
-             (chdir "tool/src/main/antlr3/org/antlr/grammar/v3/")
-             (for-each (lambda (file)
-                         (display file)
-                         (newline)
-                         (system* "antlr3" file))
-                       '("ActionAnalysis.g" "ActionTranslator.g" "ANTLR.g"
-                         "ANTLRTreePrinter.g" "ANTLRv3.g" "ANTLRv3Tree.g"
-                         "AssignTokenTypesWalker.g" "CodeGenTreeWalker.g"
-                         "DefineGrammarItemsWalker.g" "LeftRecursiveRuleWalker.g"
-                         "TreeToNFAConverter.g"))
-             (chdir "../../../../../../../..")
-             (system* "antlr" "-o" "tool/src/main/java/org/antlr/tool"
-                      "tool/src/main/java/org/antlr/tool/serialize.g")
-             (substitute* "tool/src/main/java/org/antlr/tool/LeftRecursiveRuleAnalyzer.java"
-               (("import org.antlr.grammar.v3.\\*;") "import org.antlr.grammar.v3.*;
-import org.antlr.grammar.v3.ANTLRTreePrinter;"))
-             (substitute* "tool/src/main/java/org/antlr/tool/Grammar.java"
-               (("import org.antlr.grammar.v3.\\*;")
-                "import org.antlr.grammar.v3.*;\n
-import org.antlr.grammar.v3.TreeToNFAConverter;\n
-import org.antlr.grammar.v3.DefineGrammarItemsWalker;\n
-import org.antlr.grammar.v3.ANTLRTreePrinter;"))
-             (substitute* "tool/src/main/java/org/antlr/tool/ErrorManager.java"
-               (("case NO_SUCH_ATTRIBUTE_PASS_THROUGH:") ""))
-             (substitute* "tool/src/main/antlr3/org/antlr/grammar/v3/ANTLRParser.java"
-               (("public Object getTree") "public GrammarAST getTree"))
-             (substitute* "tool/src/main/antlr3/org/antlr/grammar/v3/ANTLRv3Parser.java"
-               (("public Object getTree") "public CommonTree getTree"))))
-         (add-before 'build 'fix-build-xml
-           (lambda _
-             (substitute* "build.xml"
-               (("<exec") "<copy todir=\"${classes.dir}\">
-<fileset dir=\"tool/src/main/resources\">
-<include name=\"**/*.stg\"/>
-<include name=\"**/*.st\"/>
-<include name=\"**/*.sti\"/>
-<include name=\"**/STLexer.tokens\"/>
-</fileset>
-</copy><exec")))))))
-    (native-inputs
-     `(("antlr" ,antlr2)
-       ("antlr3" ,antlr3-3.3)))
-    (inputs
-     `(("junit" ,java-junit)))
-    (propagated-inputs
-     `(("stringtemplate" ,stringtemplate3)
-       ("stringtemplate4" ,stringtemplate4)
-       ("antlr" ,antlr2)
-       ("antlr3" ,antlr3-3.1)))
-    (home-page "http://www.stringtemplate.org")
-    (synopsis "")
-    (description "")
-    (license license:bsd-3)))
+;(define-public antlr3-3.4
+;  (package
+;    (name "antlr3")
+;    (version "3.4")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/antlr/website-antlr3/raw/"
+;                                  "gh-pages/download/antlr-"
+;                                  version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1cwfswpk3jlzl1dhc6b6586srza8q0bbzwlxcq136p29v62fjrb3"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name (string-append ,name "-" ,version ".jar")
+;       #:source-dir "tool/src/main/java:runtime/Java/src/main/java:tool/src/main/antlr3"
+;       #:tests? #f
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-after 'install 'bin-install
+;           (lambda* (#:key inputs outputs #:allow-other-keys)
+;             (let ((jar (string-append (assoc-ref outputs "out") "/share/java"))
+;                   (bin (string-append (assoc-ref outputs "out") "/bin")))
+;               (mkdir-p bin)
+;               (with-output-to-file (string-append bin "/antlr3")
+;                 (lambda _
+;                   (display
+;                     (string-append "#!/bin/sh\n"
+;                                    "java -cp " jar "/antlr3-3.3.jar:"
+;                                    (string-concatenate
+;                                      (find-files (assoc-ref inputs "stringtemplate")
+;                                                  ".*\\.jar"))
+;                                    ":"
+;                                    (string-concatenate
+;                                      (find-files (string-append (assoc-ref inputs "antlr") "/lib")
+;                                                  ".*\\.jar"))
+;                                    " org.antlr.Tool $*"))))
+;               (chmod (string-append bin "/antlr3") #o755))))
+;         (add-before 'build 'generate-grammar
+;           (lambda _
+;             (chdir "tool/src/main/antlr3/org/antlr/grammar/v3/")
+;             (for-each (lambda (file)
+;                         (display file)
+;                         (newline)
+;                         (system* "antlr3" file))
+;                       '("ActionAnalysis.g" "ActionTranslator.g" "ANTLR.g"
+;                         "ANTLRTreePrinter.g" "ANTLRv3.g" "ANTLRv3Tree.g"
+;                         "AssignTokenTypesWalker.g" "CodeGenTreeWalker.g"
+;                         "DefineGrammarItemsWalker.g" "LeftRecursiveRuleWalker.g"
+;                         "TreeToNFAConverter.g"))
+;             (chdir "../../../../../../../..")
+;             (system* "antlr" "-o" "tool/src/main/java/org/antlr/tool"
+;                      "tool/src/main/java/org/antlr/tool/serialize.g")
+;             (substitute* "tool/src/main/java/org/antlr/tool/LeftRecursiveRuleAnalyzer.java"
+;               (("import org.antlr.grammar.v3.\\*;") "import org.antlr.grammar.v3.*;
+;import org.antlr.grammar.v3.ANTLRTreePrinter;"))
+;             (substitute* "tool/src/main/java/org/antlr/tool/Grammar.java"
+;               (("import org.antlr.grammar.v3.\\*;")
+;                "import org.antlr.grammar.v3.*;\n
+;import org.antlr.grammar.v3.TreeToNFAConverter;\n
+;import org.antlr.grammar.v3.DefineGrammarItemsWalker;\n
+;import org.antlr.grammar.v3.ANTLRTreePrinter;"))
+;             (substitute* "tool/src/main/java/org/antlr/tool/ErrorManager.java"
+;               (("case NO_SUCH_ATTRIBUTE_PASS_THROUGH:") ""))
+;             (substitute* "tool/src/main/antlr3/org/antlr/grammar/v3/ANTLRParser.java"
+;               (("public Object getTree") "public GrammarAST getTree"))
+;             (substitute* "tool/src/main/antlr3/org/antlr/grammar/v3/ANTLRv3Parser.java"
+;               (("public Object getTree") "public CommonTree getTree"))))
+;         (add-before 'build 'fix-build-xml
+;           (lambda _
+;             (substitute* "build.xml"
+;               (("<exec") "<copy todir=\"${classes.dir}\">
+;<fileset dir=\"tool/src/main/resources\">
+;<include name=\"**/*.stg\"/>
+;<include name=\"**/*.st\"/>
+;<include name=\"**/*.sti\"/>
+;<include name=\"**/STLexer.tokens\"/>
+;</fileset>
+;</copy><exec")))))))
+;    (native-inputs
+;     `(("antlr" ,antlr2)
+;       ("antlr3" ,antlr3-3.3)))
+;    (inputs
+;     `(("junit" ,java-junit)))
+;    (propagated-inputs
+;     `(("stringtemplate" ,java-stringtemplate-3)
+;       ("stringtemplate4" ,java-stringtemplate)
+;       ("antlr" ,antlr2)
+;       ("antlr3" ,antlr3-3.1)))
+;    (home-page "http://www.stringtemplate.org")
+;    (synopsis "")
+;    (description "")
+;    (license license:bsd-3)))
 
 (define-public libantlr3c
   (package
@@ -1270,7 +1533,7 @@ import org.antlr.grammar.v3.ANTLRTreePrinter;"))
        ("icu4j" ,java-icu4j)
        ("java-json" ,java-json)
        ("treelayout" ,java-treelayout)
-       ("stringtemplate4" ,stringtemplate4)))
+       ("stringtemplate4" ,java-stringtemplate)))
     (home-page "https://antlr.org")
     (synopsis "")
     (description "")
