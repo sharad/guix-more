@@ -23,6 +23,7 @@
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix svn-download)
+  #:use-module (guix cvs-download)
   #:use-module (guix utils)
   #:use-module (guix build-system ant)
   #:use-module (guix build-system gnu)
@@ -73,6 +74,91 @@ Servlet, JavaServer Pages, Java Expression Language and Java WebSocket
 technologies. The Java Servlet, JavaServer Pages, Java Expression Language and
 Java WebSocket specifications are developed under the Java Community Process.")
     (license license:asl2.0)))
+
+(define-public java-openjfx
+  (package
+    (name "java-openjfx")
+    (version "8u141-b14")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://hg.openjdk.java.net/openjfx/8u-dev/rt"
+                                  "/archive/d6db71e77bb1.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1qjmwrrkk5z3nzz08ihy0qww8y0922wiil95pz2na0d4ql3cx625"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-openjfx.jar"
+       #:source-dir "buildSrc/src/main/java"
+       #:test-dir "buildSrc/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'generate-jsl-parser
+           (lambda _
+             (zero? (system* "antlr3" "-o" "buildSrc/src/main/java/com/sun/scenario/effect/compiler"
+                             "buildSrc/src/main/antlr/JSL.g")))))))
+    (inputs
+     `(("antlr" ,antlr3)
+       ("ST4" ,java-stringtemplate)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "http://openjdk.java.net/projects/openjfx/")
+    (synopsis "")
+    (description "")
+    (license license:gpl2)));with classpath exception
+
+(define-public java-openjfx-base
+  (package (inherit java-openjfx)
+    (name "java-openjfx-base")
+    (arguments
+     `(#:jar-name "java-openjfx-base.jar"
+       #:source-dir "modules/base/src/main/java:modules/base/src/main/java8:modules/base/src/main/version-info"
+       #:test-dir "modules/base/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'remove-empty-file
+           (lambda _
+             ;; This file is completely commented, but junit expects it to contain
+             ;; a class, so tests fail.
+             (delete-file "modules/base/src/test/java/com/sun/javafx/property/adapter/PropertyDescriptorTest.java")
+             (delete-file "modules/base/src/test/java/com/sun/javafx/property/adapter/ReadOnlyPropertyDescriptorTest.java")
+             (delete-file "modules/base/src/test/java/javafx/beans/property/PropertiesTest.java")
+             (delete-file "modules/base/src/test/java/javafx/beans/property/adapter/ReadOnlyJavaBeanPropertyBuilder_General_Test.java")
+             ;; This one fails
+             (delete-file "modules/base/src/test/java/com/sun/javafx/runtime/VersionInfoTest.java"))))))
+    (inputs
+     `(("java-openjfx" ,java-openjfx)))))
+
+(define-public java-openjfx-graphics
+  (package (inherit java-openjfx)
+    (name "java-openjfx-graphics")
+    (arguments
+     `(#:jar-name "java-openjfx-graphics.jar"
+       #:source-dir "modules/graphics/src/main/java"
+       #:tests? #f; require X?
+       #:test-dir "modules/graphics/src/test"
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("java-openjfx" ,java-openjfx)
+       ("java-openjfx-base" ,java-openjfx-base)
+       ("java-swt" ,java-swt)))))
+
+(define-public java-openjfx-media
+  (package (inherit java-openjfx)
+    (name "java-openjfx-media")
+    (inputs
+     `(("graphics" ,java-openjfx-graphics)
+       ("base" ,java-openjfx-base)
+       ("openjfx" ,java-openjfx)))
+    (arguments
+     `(#:jar-name "java-openjfx-media.jar"
+       #:source-dir "modules/media/src/main/java"
+       #:tests? #f; no tests
+       #:jdk ,icedtea-8))))
 
 (define-public java-brotli-dec
   (package
@@ -152,18 +238,18 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "12450")
+    (version "12545")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/openstreetmap/josm.git")
-                    (commit "61a9c27e59976805b7cce4fae5a48c8e04b19373")))
+                    (commit "3534f00bd3a58fe82f6b2e2685f5b9d17cc13886")))
               ;;(uri (svn-reference
               ;;      (url "https://svn.openstreetmap.org/applications/editors/josm")
               ;;      (revision 12039)))
               (sha256
                (base32
-                "1hab27b8s6h2b1g07pghr4nkx6rx2gx75488rwppdfc0ymzpjzrp"))
+                "10j1p9xsi6g11qspcfj280n8bsm77skw9v50cyhj378v6bcxjh41"))
               (file-name (string-append name "-" version))))
     (build-system ant-build-system)
     (native-inputs
@@ -174,12 +260,44 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        ("java-brotli-dec" ,java-brotli-dec)
        ("java-xz" ,java-xz)
        ("java-velocity" ,java-velocity)
+       ("java-openjfx" ,java-openjfx)
+       ("java-openjfx-base" ,java-openjfx-base)
+       ("java-openjfx-media" ,java-openjfx-media)
+       ("java-openjfx-graphics" ,java-openjfx-graphics)
        ("java-commons-collections" ,java-commons-collections)
+       ("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-commons-compress" ,java-commons-compress-latest)))
+    ;(arguments
+    ; `(#:tests? #f
+    ;   #:jdk ,icedtea-8
+    ;   #:build-target "dist"
+    ;   #:phases
+    ;   (modify-phases %standard-phases
+    ;     (add-before 'build 'fix-revision
+    ;       (lambda* _
+    ;         (with-output-to-file "REVISION.XML"
+    ;           (lambda _
+    ;             (display
+    ;               (string-append "<info><entry><commit revision=\"" ,version "\">"
+    ;                              "<date>1970-01-01 00:00:00 +0000</date>"
+    ;                              "</commit></entry></info>"))))))
+    ;     (add-before 'build 'fix-build.xml
+    ;       (lambda _
+    ;         (substitute* "build.xml"
+    ;           ;; otherwise gives a warnig at runtime
+    ;           (("UNKNOWN") ,version)
+    ;           ;; the folder is not created
+    ;           (("<touch.*epsg.output.*") "<mkdir dir=\"${epsg.output}/..\" /><touch file=\"${epsg.output}\"/>\n")
+    ;           ;; we don't have this compiler, so we use icedtea directly
+    ;           ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
+    ;           (("compiler=\"[^\"]*\" ") "")
+    ;           ;; Add this to classpath to find deps
+    ;           (("<javac sourcepath=\"\" srcdir=\"\\$\\{src.dir\\}\"")
+    ;            (string-append "<path id=\"classpath\"><pathelement location=\"${env.CLASSPATH}\" /></path>\n"
+    ;                           "<javac sourcepath=\"\" srcdir=\"${src.dir}\" classpath=\"${classpath}\""))))))))
     (arguments
-     `(;#:build-target "dist"
-       #:tests? #f
+     `(#:tests? #f
        #:jdk ,icedtea-8
        #:jar-name "josm.jar"
        #:phases
@@ -206,30 +324,56 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                                "-GRAMMAR_ENCODING=UTF-8"
                                (string-append "-OUTPUT_DIRECTORY=" out)
                                file)))))
-)))
-         ;(add-before 'build 'fix-compiler
-         ;  (lambda* _
-         ;    (substitute* "build.xml"
-         ;      (("UNKNOWN") ,version)
-         ;      (("<touch.*epsg.output.*") "<mkdir dir=\"${epsg.output}/..\" /><touch file=\"${epsg.output}\"/>\n")
-         ;      ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
-         ;      (("compiler=\"[^\"]*\" ") ""))))
-         ;(replace 'install
-         ;  (lambda* (#:key outputs inputs #:allow-other-keys)
-         ;    (let* ((out (assoc-ref outputs "out"))
-         ;           (bin (string-append out "/bin"))
-         ;           (lib (string-append out "/lib/josm")))
-         ;      (mkdir-p bin)
-         ;      (mkdir-p lib)
-         ;      (copy-file "dist/josm-custom.jar"
-         ;                 (string-append lib "/josm.jar"))
-         ;      (with-output-to-file (string-append bin "/josm")
-         ;        (lambda _
-         ;          (display
-         ;            (string-append "#!/bin/sh\n"
-         ;                           (assoc-ref inputs "jdk") "/bin/java"
-         ;                           " -jar " lib "/josm.jar"))))
-         ;      (chmod (string-append bin "/josm") #o755)))))))
+         (add-after 'build 'generate-epsg
+           (lambda _
+             (system* "javac" "scripts/BuildProjectionDefinitions.java"
+                      "-cp" "build/classes")
+             (mkdir-p "data/projection")
+             (with-output-to-file "data/projection/custom-epsg"
+               (lambda _ (display "")))
+             (zero? (system* "java" "-cp" "build/classes:scripts:."
+                             "BuildProjectionDefinitions" "."))))
+         (add-after 'generate-epsg 'copy-data
+           (lambda _
+             (mkdir-p "build/classes")
+             (rename-file "data" "build/classes/data")))
+         (add-before 'install 'regenerate-jar
+           (lambda _
+             ;; We need to regenerate the jar file with to add data.
+             (delete-file "build/jar/josm.jar")
+             (zero? (system* "jar" "-cf" "build/jar/josm.jar" "-C"
+                             "build/classes" "."))))
+         (add-before 'build 'copy-styles
+           (lambda _
+             (mkdir-p "build/classes")
+             (rename-file "styles" "build/classes/styles")))
+         (add-before 'build 'copy-images
+           (lambda _
+             (mkdir-p "build/classes")
+             (rename-file "images" "build/classes/images")))
+         (add-before 'build 'copy-revision
+           (lambda _
+             (mkdir-p "build/classes")
+             (with-output-to-file "build/classes/REVISION"
+               (lambda _
+                 (display
+                   (string-append "Revision: " ,version "\n"
+                                  "Is-Local-Build: true\n"
+                                  "Build-Date: 1970-01-01 00:00:00 +0000\n"))))))
+         (add-after 'install 'install-bin
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (bin (string-append out "/bin")))
+               (mkdir-p bin)
+               (with-output-to-file (string-append bin "/josm")
+                 (lambda _
+                   (display
+                     (string-append "#!/bin/sh\n"
+                                    (assoc-ref inputs "jdk") "/bin/java"
+                                    " -cp " out "/share/java/josm.jar:"
+                                    (getenv "CLASSPATH")
+                                    " org.openstreetmap.josm.gui.MainApplication"))))
+               (chmod (string-append bin "/josm") #o755)))))))
     (home-page "https://josm.openstreetmap.de")
     (synopsis "OSM editor")
     (description "OSM editor.")
@@ -565,6 +709,126 @@ outputting XML data from Java code.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-datanucleus-javax-persistence
+  (package
+    (name "java-datanucleus-javax-persistence")
+    (version "2.2.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/datanucleus/"
+                                  "javax.persistence/archive/javax.persistence-"
+                                  version "-release.tar.gz"))
+              (sha256
+               (base32
+                "11jx0fjwgc2hhbqqgdd6m1pf2fplf9vslppygax0y1z5csnqjhpx"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-datanucleus-javax-persistence.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:tests? #f)); no tests
+    (home-page "https://github.com/datanucleus/javax.persistence")
+    (synopsis "")
+    (description "")
+    (license (list license:edl1.0 license:epl1.0))))
+
+(define-public java-jboss-interceptors-api-spec
+  (package
+    (name "java-jboss-interceptors-api-spec")
+    (version "1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss/jboss-interceptors-api_spec/"
+                                  "archive/jboss-interceptors-api_" version
+                                  "_spec-1.0.0.Final.tar.gz"))
+              (sha256
+               (base32
+                "15h3486rcqg46sfz99kilwidhgv085gyjx6fdpxa1c5j75s8qc3k"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jboss-interceptors-api_spec.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "."
+       #:tests? #f)); no tests
+    (home-page "https://github.com/jboss/jboss-interceptors-api_spec")
+    (synopsis "")
+    (description "")
+    (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
+
+(define-public java-jboss-el-api-spec
+  (package
+    (name "java-jboss-el-api-spec")
+    (version "3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss/jboss-el-api_spec/"
+                                  "archive/jboss-el-api_" version
+                                  "_spec-1.0.7.Final.tar.gz"))
+              (sha256
+               (base32
+                "1j45ljxalwlibxl7g7iv952sjxkw275m8vyxxij8l6wdd5pf0pdh"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jboss-el-api_spec.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "."
+       #:tests? #f)); no tests
+    (inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://github.com/jboss/jboss-el-api_spec")
+    (synopsis "")
+    (description "")
+    (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
+
+(define-public java-jboss-transaction-api-spec
+  (package
+    (name "java-jboss-transaction-api-spec")
+    (version "1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss/jboss-transaction-api_spec/"
+                                  "archive/jboss-transaction-api_" version
+                                  "_spec-1.0.1.Final.tar.gz"))
+              (sha256
+               (base32
+                "0crfl4f5m2sm59kdsivrw2dy63w02al1li88bhlhp7mxnicfmxv7"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jboss-transaction-api_spec.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "."
+       #:tests? #f)); no tests
+    (inputs
+     `(("cdi-api" ,java-cdi-api)
+       ("interceptors" ,java-jboss-interceptors-api-spec)))
+    (home-page "https://github.com/jboss/jboss-transaction-api_spec")
+    (synopsis "")
+    (description "")
+    (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
+
+(define-public java-jboss-jms-api-spec
+  (package
+    (name "java-jboss-jms-api-spec")
+    (version "2.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss/jboss-jms-api_spec/"
+                                  "archive/jboss-jms-api_" version
+                                  "_spec-1.0.1.Final.tar.gz"))
+              (sha256
+               (base32
+                "07bqblw9kq2i8q92bz70fvavq5xjfkaixl8xa0m0cypjgy82rb7m"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jboss-jms-api_spec.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "."
+       #:tests? #f)); no tests
+    (home-page "https://github.com/jboss/jboss-jms-api_spec")
+    (synopsis "")
+    (description "")
+    (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
+
 (define-public java-mail
   (package
     (name "java-mail")
@@ -595,6 +859,657 @@ outputting XML data from Java code.")
     (license (list license:cddl1.0; actually cddl1.1
                    license:gpl2)))); with classpath exception
 
+(define-public java-fasterxml-jackson-annotations
+  (package
+    (name "java-fasterxml-jackson-annotations")
+    (version "2.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/"
+                                  "jackson-annotations/archive/"
+                                  "jackson-annotations-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0lh6ngld2sgspy3zy6yk7wfd7a1lqy0a7kl90krz49l6wyx440ny"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jackson-annotations.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f)); how to run them? src/test/java
+    (home-page "https://github.com/FasterXML/jackson-annotations")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define-public java-fasterxml-jackson-core
+  (package
+    (name "java-fasterxml-jackson-core")
+    (version "2.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/"
+                                  "jackson-core/archive/"
+                                  "jackson-core-" version ".tar.gz"))
+              (sha256
+               (base32
+                "05r742510lwclv51lwbca3753hppzvq38pnsalp1hccn3102lhy2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jackson-core.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; how to run them? src/test/java
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'generate-PackageVersion.java
+           (lambda _
+             (let* ((out "src/main/java/com/fasterxml/jackson/core/json/PackageVersion.java")
+                    (in (string-append out ".in")))
+               (copy-file in out)
+               (substitute* out
+                 (("@package@") "com.fasterxml.jackson.core.json")
+                 (("@projectversion@") ,version)
+                 (("@projectgroupid@") "com.fasterxml.jackson.core")
+                 (("@projectartifactid@") "jackson-core"))))))))
+    (home-page "https://github.com/FasterXML/jackson-core")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define-public java-fasterxml-jackson-databind
+  (package
+    (name "java-fasterxml-jackson-databind")
+    (version "2.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/"
+                                  "jackson-databind/archive/"
+                                  "jackson-databind-" version ".tar.gz"))
+              (sha256
+               (base32
+                "01a60dwy1q11xizvimphmhjfbk41rwar3rl1q3xcwlhic2vdw147"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jackson-databind.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; how to run them? src/test/java
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'generate-PackageVersion.java
+           (lambda _
+             (let* ((out "src/main/java/com/fasterxml/jackson/databind/cfg/PackageVersion.java")
+                    (in (string-append out ".in")))
+               (copy-file in out)
+               (substitute* out
+                 (("@package@") "com.fasterxml.jackson.databind.cfg")
+                 (("@projectversion@") ,version)
+                 (("@projectgroupid@") "com.fasterxml.jackson.databind")
+                 (("@projectartifactid@") "jackson-databind"))))))))
+    (inputs
+     `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
+       ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)))
+    (home-page "https://github.com/FasterXML/jackson-databind")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define-public java-fasterxml-jackson-modules-base
+  (package
+    (name "java-fasterxml-jackson-modules-base")
+    (version "2.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/"
+                                  "jackson-modules-base/archive/"
+                                  "jackson-modules-base-" version ".tar.gz"))
+              (sha256
+               (base32
+                "054f1rk3k7way7d2a67q2j81yi33n1q9l4rp14jb864y46zdaayy"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jackson-modules-base.jar"
+       #:source-dir "jaxb/src/main/java"
+       #:tests? #f; how to run them? src/test/java
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'generate-PackageVersion.java
+           (lambda _
+             (let* ((out (string-append "jaxb/src/main/java/com/fasterxml/"
+                                        "jackson/module/jaxb/PackageVersion.java"))
+                    (in (string-append out ".in")))
+               (copy-file in out)
+               (substitute* out
+                 (("@package@") "com.fasterxml.jackson.module.jaxb")
+                 (("@projectversion@") ,version)
+                 (("@projectgroupid@") "com.fasterxml.jackson.module.jaxb")
+                 (("@projectartifactid@") "jackson-module-jaxb"))))))))
+    (inputs
+     `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
+       ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
+       ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)))
+    (home-page "https://github.com/FasterXML/jackson-dataformat-xml")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define-public java-fasterxml-jackson-dataformat-xml
+  (package
+    (name "java-fasterxml-jackson-dataformat-xml")
+    (version "2.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/"
+                                  "jackson-dataformat-xml/archive/"
+                                  "jackson-dataformat-xml-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1iv8brs68szk2d4fghji1bgg5g8fcc4y1yp363phiy794f40vxfc"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jackson-dataformat-xml.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; how to run them? src/test/java
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'generate-PackageVersion.java
+           (lambda _
+             (let* ((out "src/main/java/com/fasterxml/jackson/dataformat/xml/PackageVersion.java")
+                    (in (string-append out ".in")))
+               (copy-file in out)
+               (substitute* out
+                 (("@package@") "com.fasterxml.jackson.dataformat.xml")
+                 (("@projectversion@") ,version)
+                 (("@projectgroupid@") "com.fasterxml.jackson.dataformat.xml")
+                 (("@projectartifactid@") "jackson-dataformat-xml"))))))))
+    (inputs
+     `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
+       ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
+       ("java-fasterxml-jackson-modules-base" ,java-fasterxml-jackson-modules-base)
+       ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
+       ("java-stax2-api" ,java-stax2-api)))
+    (home-page "https://github.com/FasterXML/jackson-dataformat-xml")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define-public java-stax2-api
+  (package
+    (name "java-stax2-api")
+    (version "4.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/stax2-api/archive/"
+                                  "stax2-api-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1amc1si0l0hyyw2sawmnzy4hkna3z6fp195y4nm5m9wb9ld5awkq"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-stax2-api.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f))
+    (home-page "https://github.com/FasterXML/stax2-api")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;(define-public java-woodstox
+;  (package
+;    (name "java-woodstox")
+;    (version "5.0.3")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/FasterXML/woodstox/archive/"
+;                                  "woodstox-core-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1i7pdgb8jbw6gdy5kmm0l6rz109n2ns92pqalpyp24vb8vlvdfd4"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "java-woodstox.jar"
+;       #:source-dir "src/main/java"
+;       #:tests? #f))
+;    (inputs
+;     `(("java-stax2-api" ,java-stax2-api)))
+;    (home-page "https://github.com/FasterXML/woodstox")
+;    (synopsis "")
+;    (description "")
+;    (license license:asl2.0)))
+
+(define-public java-snakeyaml
+  (package
+    (name "java-snakeyaml")
+    (version "1.18")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://bitbucket.org/asomov/snakeyaml/get/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0rf5ha6w0waz50jz2479jsrbgmd0dnx0gs337m126j5z7zlmg7mg"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-snakeyaml.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f))
+    (home-page "https://bitbucket.org/asomov/snakeyaml")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+    
+
+(define-public java-fasterxml-jackson-dataformat-yaml
+  (package
+    (name "java-fasterxml-jackson-dataformat-yaml")
+    (version "2.8.9")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/"
+                                  "jackson-dataformat-yaml/archive/"
+                                  "jackson-dataformat-yaml-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1qsqkbm9myq2bgqp58b64i2791gcl9njvrgfsy0kdmfhsxy975a9"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jackson-dataformat-yaml.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; how to run them? src/test/java
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'generate-PackageVersion.java
+           (lambda _
+             (let* ((out "src/main/java/com/fasterxml/jackson/dataformat/yaml/PackageVersion.java")
+                    (in (string-append out ".in")))
+               (copy-file in out)
+               (substitute* out
+                 (("@package@") "com.fasterxml.jackson.dataformat.yaml")
+                 (("@projectversion@") ,version)
+                 (("@projectgroupid@") "com.fasterxml.jackson.dataformat.yaml")
+                 (("@projectartifactid@") "jackson-dataformat-yaml"))))))))
+    (inputs
+     `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
+       ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
+       ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
+       ("java-snakeyaml" ,java-snakeyaml)))
+    (home-page "https://github.com/FasterXML/jackson-dataformat-yaml")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define-public java-commons-csv
+  (package
+    (name "java-commons-csv")
+    (version "1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/csv/source/"
+                                  "commons-csv-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "1l89m0fm2s3xx3v3iynvangymfg2vlyngaj6fgsi457nmsw7m7ij"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-csv.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f)); some failures, but I want to package dependents
+    (inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-commons-io" ,java-commons-io)
+       ("java-commons-lang3" ,java-commons-lang3)
+       ("junit" ,java-junit)))
+    (home-page "https://commons.apache.org/proper/commons-csv/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-javax-inject
+  (package
+    (name "java-javax-inject")
+    (version "tck-1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javax-inject/javax-inject/"
+                                  "archive/javax.inject-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1ydrlvh2r7vr1g7lhjwy3w2dggpj9h6pix1lakkkgdywb365n6g0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-javax-inject.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f)); no tests
+    (home-page "http://github.org/javax-inject/javax-inject")
+    (synopsis "JSR-330: Dependency Injection for Java")
+    (description "This package specifies a means for obtaining objects in such
+a way as to maximize reusability, testability and maintainability compared to
+traditional approaches such as constructors, factories, and service locators
+(e.g., JNDI).  This process, known as dependency injection, is beneficial to
+most nontrivial applications.
+
+Many types depend on other types.  For example, a @var{Stopwatch} might depend
+on a @var{TimeSource}.  The types on which a type depends are known as its
+dependencies.  The process of finding an instance of a dependency to use at run
+time is known as resolving the dependency.  If no such instance can be found,
+the dependency is said to be unsatisfied, and the application is broken.")
+    (license license:asl2.0)))
+
+(define-public java-aopalliance
+  (package
+    (name "java-aopalliance")
+    (version "1.0")
+    (source (origin
+              (method git-fetch)
+              ;; Note: this git repository is not official, but contains the
+              ;; source code that is in the CVS repository.  Downloading the
+              ;; tarball from sourceforge is undeterministic, and the cvs download
+              ;; fails.
+              (uri (git-reference
+                     (url "https://github.com/hoverruan/aopalliance")
+                     (commit "0d7757ae204e5876f69431421fe9bc2a4f01e8a0")))
+              (file-name (string-append name "-" version))
+              (sha256
+               (base32
+                "0rsg2b0v3hxlq2yk1i3m2gw3xwq689j3cwx9wbxvqfpdcjbca0qr"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-aopalliance.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f; requires java-testng
+       #:source-dir "aopalliance/src/main"))
+    (home-page "http://aopalliance.sourceforge.net")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-guice
+  (package
+    (name "java-guice")
+    (version "4.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/google/guice/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0dwmqjzlavb144ywqqglj3h68hqszkff8ai0a42hyb5il0qh4rbp"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-guice.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f
+       #:source-dir "core/src"))
+    (inputs
+     `(("guava" ,java-guava)
+       ("java-cglib" ,java-cglib)
+       ("java-aopalliance" ,java-aopalliance)
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-asm" ,java-asm)))
+    (home-page "http://github.org/google/guice")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jcommander
+  (package
+    (name "java-jcommander")
+    (version "1.71")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/cbeust/jcommander/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1f5k2ckay6qjc3d3w3d7bc0p3cx3c7n6p6zxvw1kibqdr0q98wlx"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jcommander.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f
+       #:source-dir "src/main/java"))
+    (home-page "http://jcommander.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-assertj
+  (package
+    (name "java-assertj")
+    (version "3.8.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/joel-costigliola/assertj-core/archive/"
+                                  "assertj-core-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1kf124fxskf548rklkg86294w2x6ajqrff94rrhyqns31danqkfz"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-assertj.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f; TODO: has dependencies
+       #:source-dir "src/main/java"))
+    (inputs
+     `(("cglib" ,java-cglib)
+       ("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "https://joel-costigliola.github.io/assertj/index.html")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;; depends on guice: https://github.com/google/guice
+(define-public java-testng
+  (package
+    (name "java-testng")
+    (version "6.12")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/cbeust/testng/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "01j2x47wkj7n5w6gpcjfbwgc88ai5654b23lb87w7nsrj63m3by6"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jdk ,icedtea-8; java.util.function
+       #:jar-name "java-testng.jar"
+       #:tests? #f; fails to find hamcrest
+       #:source-dir "src/main/java"))
+    (inputs
+     `(("junit" ,java-junit)
+       ("java-jsr305" ,java-jsr305)
+       ("java-bsh" ,java-bsh)
+       ("java-jcommander" ,java-jcommander)
+       ("java-guice" ,java-guice)
+       ("snakeyaml" ,java-snakeyaml)))
+    (native-inputs
+     `(("guava" ,java-guava)
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-hamcrest" ,java-hamcrest-all)
+       ("java-assertj" ,java-assertj)))
+    (home-page "http://testng.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-fest-util
+  (package
+    (name "java-fest-util")
+    (version "1.2.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/alexruiz/fest-util/"
+                                  "archive/fest-util-" version ".tar.gz"))
+              (sha256
+               (base32
+                "05g6hljz5mdaakk8d7g32klbhz9bdwp3qlj6rdaggdidxs3x1sb8"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-fest-util.jar"
+       #:source-dir "src/main/java"))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "https://github.com/alexruiz/fest-util")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;; required by java-jnacl
+;(define java-fest-util-1.3
+;  (package
+;    (inherit java-fest-util)
+;    (name "java-fest-util")
+;    (version "1.3.0-SNAPSHOT")
+;    (source (origin
+;              (method git-fetch)
+;              (uri (git-reference
+;                    (url "https://github.com/alexruiz/fest-util")
+;                    (commit "6bca64f2673fbc255bab6c289dc65333f28734f6")))
+;              (file-name (string-append name "-" version))
+;              (sha256
+;               (base32
+;                "1gfvy0s47xvg7rf1dx174pcq9mmsrcg172sprn7s9859hcy9r8y8"))))
+;    (inputs
+;     `(("java-error-prone-annotations" ,java-error-prone-annotations)))))
+
+(define-public java-fest-test
+  (package
+    (name "java-fest-test")
+    (version "2.1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/alexruiz/fest-test/"
+                                  "archive/fest-test-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1rxfbw6l9vc65iy1x3fb617qc6y4w2k430pgf1mfbxfdlxbm0f7g"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-fest-test.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f)); no tests
+    (inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://github.com/alexruiz/fest-test")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;(define-public java-fest-assert-1
+;  (package
+;    (name "java-fest-assert")
+;    (version "1.4")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/alexruiz/fest-assert-1.x/"
+;                                  "archive/" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "0q4jvjydrd0pl10cp9vl18kph2wg429qallicfrqhh7mdr8dpvw5"))))
+;    (inputs
+;     `(("java-fest-util" ,java-fest-util-1.3)))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "java-fest-assert.jar"
+;       #:source-dir "src/main/java"))
+;    (home-page "https://github.com/alexruiz/fest-assert-2.x")
+;    (synopsis "")
+;    (description "")
+;    (license license:asl2.0)))
+
+(define-public java-fest-assert
+  (package
+    (name "java-fest-assert")
+    (version "2.0M10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/alexruiz/fest-assert-2.x/"
+                                  "archive/fest-assert-core-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1bi0iqavikzww6rxvz5jyg7y6bflv95s6ibryxx0xfcxrrw6i5lw"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-fest-assert.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f)); tests fail
+    (inputs
+     `(("java-fest-util" ,java-fest-util)))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-fest-test" ,java-fest-test)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-mockito" ,java-mockito-1)))
+    (home-page "https://github.com/alexruiz/fest-assert-2.x")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jnacl
+  (package
+    (name "java-jnacl")
+    (version "0.1.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/neilalexander/jnacl")
+                     (commit "40c322e0a42637ab17cdf941138eeaf2494055f8")))
+              (sha256
+               (base32
+                "1pspnmp44q61a2q4bpslpxw86rfn8s5l0xgvyrikqgdvg7ypx597"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jnacl.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f
+       #:jdk ,icedtea-8))
+    (native-inputs
+     `(("java-testng" ,java-testng)))
+       ;("java-fest-assert" ,java-fest-assert-1)))
+    (home-page "https://github.com/neilalexander/jnacl")
+    (synopsis "")
+    (description "")
+    (license license:mpl2.0)))
+
+(define-public java-jeromq
+  (package
+    (name "java-jeromq")
+    (version "0.4.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/zeromq/jeromq/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "17wx8dlyqmbw77xf6d6wxnhiyky6181zpf1a48jqzz9hidz0j841"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jeromq.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'remove-failing
+           (lambda _
+             ;; This test requires network.
+             (delete-file "src/test/java/org/zeromq/ZBeaconTest.java")
+             ;; Don't know why it fails
+             (delete-file "src/test/java/zmq/io/coder/AbstractDecoderTest.java")
+             ;; And then we must remove its folder:
+             (delete-file-recursively "src/test/java/zmq/io/coder")
+             ;; This one causes: java.lang.Exception: No runnable methods
+             (delete-file-recursively "src/test/java/zmq/socket"))))))
+    (inputs
+     `(("java-jnacl" ,java-jnacl)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("junit" ,java-junit)))
+    (home-page "http://zeromq.org/bindings:java")
+    (synopsis "")
+    (description "")
+    (license license:mpl2.0)))
+
 (define-public java-log4j-core
   (package
     (inherit java-log4j-api)
@@ -604,13 +1519,29 @@ outputting XML data from Java code.")
        ("java-hamcrest-core" ,java-hamcrest-core)
        ("java-log4j-api" ,java-log4j-api)
        ("java-mail" ,java-mail)
+       ("java-jboss-jms-api-spec" ,java-jboss-jms-api-spec)
        ("java-lmax-disruptor" ,java-lmax-disruptor)
        ("java-kafka" ,java-kafka-clients)
+       ("java-datanucleus-javax-persistence" ,java-datanucleus-javax-persistence)
+       ("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
+       ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
+       ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
+       ("java-fasterxml-jackson-dataformat-xml" ,java-fasterxml-jackson-dataformat-xml)
+       ("java-fasterxml-jackson-dataformat-yaml" ,java-fasterxml-jackson-dataformat-yaml)
        ("java-commons-compress" ,java-commons-compress)
+       ("java-commons-csv" ,java-commons-csv)
+       ("java-jeromq" ,java-jeromq)
        ("java-junit" ,java-junit)))
+    (native-inputs
+     `(("hamcrest" ,java-hamcrest-all)
+       ("java-commons-io" ,java-commons-io)
+       ("java-commons-lang3" ,java-commons-lang3)
+       ("slf4j" ,java-slf4j-api)))
     (arguments
      `(#:tests? #f ; tests require unpackaged software
+       #:test-dir "src/test"
        #:jar-name "log4j-core.jar"
+       #:jdk ,icedtea-8
        #:make-flags
        (list (string-append "-Ddist.dir=" (assoc-ref %outputs "out")
                             "/share/java"))
@@ -625,6 +1556,235 @@ outputting XML data from Java code.")
          (add-after 'enter-dir 'delete-tests
            (lambda _ (delete-file-recursively "src/test") #t)))))))
 
+(define-public java-log4j-1.2-api
+  (package
+    (inherit java-log4j-api)
+    (name "java-log4j-1.2-api")
+    (arguments
+     `(#:jar-name "java-log4j-1.2-api.jar"
+       #:source-dir "log4j-1.2-api/src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'copy-required
+           (lambda _
+             ;; Some files from log4j-core are required, but we cannot use
+             ;; log4j-core, because it would be a cyclic dependency:
+             ;; log4j-core -> avalon-logkit -> log4j-1.2-api -> log4j-core
+             (let* ((api "log4j-1.2-api/src/main/java/org/apache/logging/log4j")
+                    (core "log4j-core/src/main/java/org/apache/logging/log4j/core"))
+             (mkdir-p (string-append api "/core/util"))
+             (mkdir-p (string-append api "/core/appender"))
+             (mkdir-p (string-append api "/core/net"))
+             (mkdir-p (string-append api "/core/jmx"))
+             (mkdir-p (string-append api "/core/impl"))
+             (mkdir-p (string-append api "/core/filter"))
+             (mkdir-p (string-append api "/core/layout"))
+             (mkdir-p (string-append api "/core/lookup"))
+             (mkdir-p (string-append api "/core/pattern"))
+             (mkdir-p (string-append api "/core/async"))
+             (mkdir-p (string-append api "/core/selector"))
+             (mkdir-p (string-append api "/core/config/status"))
+             (mkdir-p (string-append api "/core/config/plugins/convert"))
+             (mkdir-p (string-append api "/core/config/plugins/processor"))
+             (mkdir-p (string-append api "/core/config/plugins/visitors"))
+             (mkdir-p (string-append api "/core/config/plugins/validation/constraints"))
+             (mkdir-p (string-append api "/core/config/plugins/validation/validators"))
+             (mkdir-p (string-append api "/core/config/plugins/util"))
+             (mkdir-p (string-append api "/core/config/builder/api"))
+             (mkdir-p (string-append api "/core/config/builder/impl"))
+             (for-each (lambda (file) (copy-file (string-append core "/" file)
+                                                 (string-append api "/core/" file)))
+               '("async/AsyncLogger.java" "async/AsyncLoggerContextSelector.java"
+                 "async/DaemonThreadFactory.java" "async/AsyncLoggerContext.java"
+                 "async/AsyncLoggerConfig.java" "async/RingBufferLogEvent.java"
+                 "async/RingBufferLogEventTranslator.java"
+                 "async/RingBufferLogEventHandler.java"
+                 "async/AsyncLoggerConfigHelper.java"
+                 "LoggerContext.java" "AbstractLifeCycle.java"
+                 "Logger.java" "LifeCycle.java" "ErrorHandler.java"
+                 "Appender.java" "Filter.java" "LogEvent.java" "Layout.java"
+                 "config/Configuration.java" "config/ConfigurationFactory.java"
+                 "config/ConfigurationListener.java" "config/LoggerConfig.java"
+                 "config/ConfigurationSource.java" "config/DefaultConfiguration.java"
+                 "config/NullConfiguration.java" "config/Reconfigurable.java"
+                 "config/ReliabilityStrategy.java" "config/Property.java"
+                 "config/AppenderRef.java" "config/Node.java"
+                 "config/AppenderControl.java" "config/ConfigurationException.java"
+                 "config/AbstractConfiguration.java" "config/FileConfigurationMonitor.java"
+                 "config/ConfigurationMonitor.java" "config/CustomLevelConfig.java"
+                 "config/CustomLevels.java" "config/Loggers.java" "config/OrderComparator.java"
+                 "config/DefaultAdvertiser.java" "config/DefaultConfigurationMonitor.java"
+                 "config/DefaultReliabilityStrategy.java" "config/ReliabilityStrategyFactory.java"
+                 "config/Order.java" "config/AwaitCompletionReliabilityStrategy.java"
+                 "config/AwaitUnconditionallyReliabilityStrategy.java"
+                 "config/LockingReliabilityStrategy.java"
+                 "config/status/StatusConfiguration.java"
+                 "config/plugins/Plugin.java" "config/plugins/PluginAttribute.java"
+                 "config/plugins/PluginBuilderAttribute.java"
+                 "config/plugins/PluginBuilderFactory.java"
+                 "config/plugins/PluginConfiguration.java"
+                 "config/plugins/PluginElement.java"
+                 "config/plugins/PluginFactory.java"
+                 "config/plugins/PluginValue.java"
+                 "config/plugins/PluginAliases.java"
+                 "config/plugins/PluginVisitorStrategy.java"
+                 "config/plugins/util/PluginManager.java"
+                 "config/plugins/util/PluginType.java"
+                 "config/plugins/util/PluginBuilder.java"
+                 "config/plugins/util/ResolverUtil.java"
+                 "config/plugins/util/PluginRegistry.java"
+                 "config/plugins/processor/PluginEntry.java"
+                 "config/plugins/processor/PluginProcessor.java"
+                 "config/plugins/processor/PluginCache.java"
+                 "config/plugins/convert/TypeConverter.java"
+                 "config/plugins/convert/TypeConverters.java"
+                 "config/plugins/convert/TypeConverterRegistry.java"
+                 "config/plugins/convert/EnumConverter.java"
+                 "config/plugins/visitors/AbstractPluginVisitor.java"
+                 "config/plugins/visitors/PluginAttributeVisitor.java"
+                 "config/plugins/visitors/PluginBuilderAttributeVisitor.java"
+                 "config/plugins/visitors/PluginConfigurationVisitor.java"
+                 "config/plugins/visitors/PluginElementVisitor.java"
+                 "config/plugins/visitors/PluginValueVisitor.java"
+                 "config/plugins/visitors/PluginVisitor.java"
+                 "config/plugins/visitors/PluginVisitors.java"
+                 "config/plugins/validation/ConstraintValidator.java"
+                 "config/plugins/validation/ConstraintValidators.java"
+                 "config/plugins/validation/Constraint.java"
+                 "config/plugins/validation/validators/RequiredValidator.java"
+                 "config/plugins/validation/constraints/Required.java"
+                 "config/builder/api/ConfigurationBuilderFactory.java"
+                 "config/builder/api/Component.java"
+                 "config/builder/api/AppenderComponentBuilder.java"
+                 "config/builder/api/AppenderRefComponentBuilder.java"
+                 "config/builder/api/ComponentBuilder.java"
+                 "config/builder/api/ConfigurationBuilder.java"
+                 "config/builder/api/CustomLevelComponentBuilder.java"
+                 "config/builder/api/FilterComponentBuilder.java"
+                 "config/builder/api/LayoutComponentBuilder.java"
+                 "config/builder/api/LoggerComponentBuilder.java"
+                 "config/builder/api/RootLoggerComponentBuilder.java"
+                 "config/builder/impl/BuiltConfiguration.java"
+                 "config/builder/impl/DefaultConfigurationBuilder.java"
+                 "config/builder/impl/DefaultRootLoggerComponentBuilder.java"
+                 "config/builder/impl/DefaultLayoutComponentBuilder.java"
+                 "config/builder/impl/DefaultLoggerComponentBuilder.java"
+                 "config/builder/impl/DefaultFilterComponentBuilder.java"
+                 "config/builder/impl/DefaultCustomLevelComponentBuilder.java"
+                 "config/builder/impl/DefaultComponentBuilder.java"
+                 "config/builder/impl/DefaultAppenderComponentBuilder.java"
+                 "config/builder/impl/DefaultAppenderRefComponentBuilder.java"
+                 "config/builder/impl/DefaultComponentAndConfigurationBuilder.java"
+                 "appender/ConsoleAppender.java" "appender/AsyncAppender.java"
+                 "appender/AppenderLoggingException.java"
+                 "appender/ManagerFactory.java" "appender/AbstractAppender.java"
+                 "appender/AbstractOutputStreamAppender.java"
+                 "appender/OutputStreamManager.java"
+                 "appender/AbstractManager.java" "appender/DefaultErrorHandler.java"
+                 "net/Advertiser.java"
+                 "pattern/ThrowablePatternConverter.java"
+                 "pattern/LogEventPatternConverter.java"
+                 "pattern/AbstractPatternConverter.java"
+                 "pattern/PatternFormatter.java" "pattern/PatternParser.java"
+                 "pattern/RegexReplacement.java" "pattern/FormattingInfo.java"
+                 "pattern/PatternConverter.java" "pattern/LiteralPatternConverter.java"
+                 "pattern/AnsiConverter.java" "pattern/NanoTimePatternConverter.java"
+                 "pattern/ConverterKeys.java" "pattern/ArrayPatternConverter.java"
+                 "pattern/ExtendedThrowablePatternConverter.java"
+                 "selector/ContextSelector.java" "selector/ClassLoaderContextSelector.java"
+                 "layout/PatternLayout.java" "layout/PatternSelector.java"
+                 "layout/AbstractStringLayout.java" "layout/AbstractLayout.java"
+                 "lookup/StrSubstitutor.java" "lookup/Interpolator.java"
+                 "lookup/StrLookup.java" "lookup/MapLookup.java" "lookup/StrMatcher.java"
+                 "lookup/ContextMapLookup.java" "lookup/DateLookup.java"
+                 "lookup/JavaLookup.java" "lookup/MarkerLookup.java"
+                 "lookup/SystemPropertiesLookup.java" "lookup/EnvironmentLookup.java"
+                 "lookup/SystemPropertiesLookup.java" "lookup/Log4jLookup.java"
+                 "lookup/AbstractLookup.java" "lookup/MainMapLookup.java"
+                 "impl/Log4jLogEvent.java" "impl/Log4jContextFactory.java"
+                 "impl/ThrowableProxy.java" "impl/LogEventFactory.java"
+                 "impl/DefaultLogEventFactory.java" "impl/ContextAnchor.java"
+                 "impl/ExtendedStackTraceElement.java" "impl/ExtendedClassInfo.java"
+                 "impl/ThrowableFormatOptions.java"
+                 "jmx/Server.java" "jmx/RingBufferAdmin.java"
+                 "jmx/RingBufferAdminMBean.java" "jmx/AppenderAdmin.java"
+                 "jmx/AsyncAppenderAdmin.java" "jmx/LoggerConfigAdmin.java"
+                 "jmx/ContextSelectorAdmin.java" "jmx/StatusLoggerAdmin.java"
+                 "jmx/LoggerContextAdmin.java" "jmx/AppenderAdminMBean.java"
+                 "jmx/AsyncAppenderAdminMBean.java" "jmx/ContextSelectorAdminMBean.java"
+                 "jmx/LoggerConfigAdminMBean.java" "jmx/LoggerContextAdminMBean.java"
+                 "jmx/StatusLoggerAdminMBean.java"
+                 "filter/CompositeFilter.java" "filter/AbstractFilterable.java"
+                 "filter/Filterable.java"
+                 "util/NameUtil.java" "util/Constants.java" "util/Clock.java"
+                 "util/ClockFactory.java" "util/DummyNanoClock.java" "util/Integers.java"
+                 "util/Loader.java" "util/NanoClock.java" "util/FileUtils.java"
+                 "util/NetUtils.java" "util/ReflectionUtil.java" "util/Cancellable.java"
+                 "util/ShutdownCallbackRegistry.java" "util/NanoClockFactory.java"
+                 "util/Booleans.java" "util/DefaultShutdownCallbackRegistry.java"
+                 "util/Patterns.java" "util/Builder.java" "util/TypeUtil.java"
+                 "util/SystemClock.java" "util/CoarseCachedClock.java"
+                 "util/CachedClock.java" "util/SystemClock.java" "util/Closer.java"
+                 "util/SystemNanoClock.java" "util/OptionConverter.java"
+                 "util/Throwables.java"))))))))
+    (inputs
+     `(("log4j-api" ,java-log4j-api)
+       ("osgi-core" ,java-osgi-core)
+       ("java-lmax-disruptor" ,java-lmax-disruptor)))))
+
+(define-public java-log4j-1.2
+  (package
+    (inherit java-log4j-core)
+    (version "1.2.17")
+    (name "java-log4j-1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/logging/log4j/" version
+                                  "/log4j-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0qw618mdyg8nih499piqxkgqkvps2hpa03zbnmhlc8z63rvy6a55"))))
+    (arguments
+     `(#:tests? #f ; tests require unpackaged software
+       #:test-dir "src/test"
+       #:source-dir "src/main/java"
+       #:jar-name "log4j-1.2.jar"
+       #:jdk ,icedtea-8))))
+
+(define-public java-avalon-logkit
+  (package
+    (name "java-avalon-logkit")
+    (version "2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/excalibur/"
+                                  "avalon-logkit/source/avalon-logkit-2.1-src.zip"))
+              (sha256
+               (base32
+                "1gx5xc35w9yzc44brw73ghm17h4dnlai4kgz9sy808mhlfc6x4pz"))
+              (patches
+                (search-patches "java-avalon-logkit-default-datasource.patch"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-avalon-logkit.jar"
+       #:source-dir "src/java"
+       #:tests? #f
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("java-mail" ,java-mail)
+       ("java-tomcat" ,java-tomcat)
+       ("java-log4j-1.2" ,java-log4j-1.2)
+       ("java-jboss-jms-api-spec" ,java-jboss-jms-api-spec)))
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("java-junit" ,java-junit)))
+    (home-page "https://excalibur.apache.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-velocity
   (package
     (name "java-velocity")
@@ -637,19 +1797,21 @@ outputting XML data from Java code.")
                (base32
                 "0rk7s04hkrr2k3glccx0yrglzqzj4qbipcrxhglk46yhx92vravc"))
 	      (patches
-		(search-patches "java-velocity-dont-use-werken-xpath.patch"))))
+            (search-patches "java-velocity-dont-use-werken-xpath.patch"))))
     (build-system ant-build-system)
     (arguments
-     `(#:source-dir "src/java"
+     `(#:jdk ,icedtea-8
+       #:test-target "test-main"
+       #:tests? #f
        #:phases
        (modify-phases %standard-phases
-	     (add-before 'configure 'fix-log4j-path
-	       (lambda _
-	         (for-each (lambda (file)
-                         (substitute* file
-	                       (("org.apache.log4j") "org.apache.logging.log4j")))
-               '("src/java/org/apache/velocity/runtime/log/Log4JLogChute.java"
-                 "src/java/org/apache/velocity/runtime/log/SimpleLog4JLogSystem.java"))))
+	     ;(add-before 'configure 'fix-log4j-path
+	     ;  (lambda _
+	     ;    (for-each (lambda (file)
+         ;                (substitute* file
+	     ;                  (("org.apache.log4j") "org.apache.logging.log4j")))
+         ;      '("src/java/org/apache/velocity/runtime/log/Log4JLogChute.java"
+         ;        "src/java/org/apache/velocity/runtime/log/SimpleLog4JLogSystem.java"))))
          (add-before 'build 'prepare
            (lambda* (#:key inputs #:allow-other-keys)
              (delete-file-recursively "lib")
@@ -657,7 +1819,14 @@ outputting XML data from Java code.")
              ;; Don't download anything
              (substitute* "build/build.xml"
                ((".*download.xml.*") ""))
-             (chdir "build"))))))
+             (chdir "build")))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (dir (string-append out "/share/java")))
+               (mkdir-p dir)
+               (copy-file "../bin/velocity-1.7.jar"
+                          (string-append dir "/velocity-1.7.jar"))))))))
     (native-inputs
      `(("javacc" ,java-javacc)
        ("antlr" ,antlr2)))
@@ -666,13 +1835,205 @@ outputting XML data from Java code.")
        ("java-jakarta-oro" ,java-jakarta-oro)
        ("java-jdom" ,java-jdom)
        ("java-tomcat" ,java-tomcat)
-       ("java-log4j-api" ,java-log4j-api)
+       ("java-avalon-logkit" ,java-avalon-logkit)
+       ;("java-log4j-api" ,java-log4j-api)
+       ;("java-log4j-core" ,java-log4j-core)
+       ("java-log4j-1.2" ,java-log4j-1.2)
        ("java-commons-logging-minimal" ,java-commons-logging)
        ("java-commons-lang" ,java-commons-lang)))
     (home-page "https://velocity.apache.org/")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+;; Older version, unmaintained, for jcs.
+(define-public java-commons-httpclient
+  (package
+    (name "java-commons-httpclient")
+    (version "3.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/httpcomponents/"
+                                  "commons-httpclient/source/commons-httpclient-"
+                                  version "-src.tar.gz"))
+              (sha256
+               (base32
+                "1wlpn3cfy3d4inxy6g7wxcsa8p7sshn6aldk9y4ia3lb879rd97r"))))
+    (arguments
+     `(#:build-target "compile"
+       #:test-target "test"
+       #:tests? #f; error: unmappable character for encoding UTF8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-accent
+           (lambda _
+             (for-each (lambda (file)
+                         (with-fluids ((%default-port-encoding "ISO-8859-1"))
+                          (substitute* file
+                            (("\\* @author Ortwin .*") "* @author Ortwin Gluck\n"))))
+               '("src/java/org/apache/commons/httpclient/HttpContentTooLargeException.java"
+                 "src/examples/TrivialApp.java" "src/examples/ClientApp.java"
+                 "src/test/org/apache/commons/httpclient/TestHttps.java"
+                 "src/test/org/apache/commons/httpclient/TestURIUtil2.java"))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (zero? (system* "ant" "dist"
+                             (string-append "-Ddist.home=" (assoc-ref outputs "out")
+                                            "/share/java"))))))))
+    (propagated-inputs
+     `(("java-commons-logging" ,java-commons-logging)
+       ("java-commons-codec" ,java-commons-codec)))
+    (build-system ant-build-system)
+    (home-page "https://hc.apache.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-pool
+  (package
+    (name "java-commons-pool")
+    (version "1.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/pool/source/"
+                                  "commons-pool-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0nhrv5lf4a7ixzn7s4sgbw3pkijqj59gkjj0lvdncxl5vkjq5l9i"))))
+    (arguments
+     `(#:build-target "build-jar"
+       #:test-target "test"
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((target (string-append (assoc-ref outputs "out")
+                                          "/share/java")))
+               (install-file (string-append "dist/commons-pool-" ,version "-SNAPSHOT.jar")
+                             (string-append target "/commons-pool-" ,version ".jar"))))))))
+    (build-system ant-build-system)
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "https://commons.apache.org/proper/commons-pool")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-pool2
+  (package
+    (name "java-commons-pool2")
+    (version "2.4.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/pool/source/"
+                                  "commons-pool2-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "11hbkh9djzm2v486ypykmawf92li7z20xazpk5dp9zsl937s024f"))))
+    (arguments
+     `(#:build-target "build-jar"
+       #:test-target "test"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((target (string-append (assoc-ref outputs "out")
+                                          "/share/java")))
+               (install-file (string-append "dist/commons-pool2-" ,version ".jar")
+                             target)))))))
+    (build-system ant-build-system)
+    (inputs
+     `(("cglib" ,java-cglib)))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest" ,java-hamcrest-core)))
+    (home-page "https://commons.apache.org/proper/commons-pool")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-cdi-api
+  (package
+    (name "java-cdi-api")
+    (version "2.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/cdi-spec/cdi/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1iv8b8bp07c5kmqic14jsr868vycjv4qv02lf3pkgp9z21mnfg5y"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:source-dir "api/src/main/java"
+       #:jar-name "java-cdi-api.jar"
+       #:test-dir "api/src/test"
+       #:tests? #f
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("java-javax-inject" ,java-javax-inject)
+       ("javax-el" ,java-jboss-el-api-spec)
+       ("javax-interceptors" ,java-jboss-interceptors-api-spec)))
+    (native-inputs
+     `(("testng" ,java-testng)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-dbcp2
+  (package
+    (name "java-commons-dbcp2")
+    (version "2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/dbcp/source/"
+                                  "commons-dbcp2-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "023p6qlwyj8i75gcycxqi6i9b3rxpzq5pim0l37i8lrsvhhm19z1"))))
+    (arguments
+     `(#:source-dir "src/main/java"
+       #:jar-name "java-commons-dbcp.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f))
+    (inputs
+     `(("java-commons-pool2" ,java-commons-pool2)
+       ("java-commons-logging" ,java-commons-logging)
+       ("java-jboss-transaction-api-spec" ,java-jboss-transaction-api-spec)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (build-system ant-build-system)
+    (home-page "https://commons.apache.org/proper/commons-dbcp")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-dbcp
+  (package
+    (inherit java-commons-dbcp2)
+    (version "1.4")
+    (name "java-commons-dbcp")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/dbcp/source/"
+                                  "commons-dbcp-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "10zjdngdki7bfklikrsr3fq0cmapf4fwc0klzqhi3iwzwx30iwgm"))
+              (patches
+                (search-patches "java-commons-dbcp-fix-abstract.patch"))))
+    (arguments
+     `(#:source-dir "src/java"
+       #:jar-name "java-commons-dbcp.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f))
+    (inputs
+     `(("java-commons-pool" ,java-commons-pool)
+       ("java-commons-logging" ,java-commons-logging)
+       ("java-jboss-transaction-api-spec" ,java-jboss-transaction-api-spec)))))
+    
 
 (define-public java-commons-jcs
   (package
@@ -688,9 +2049,22 @@ outputting XML data from Java code.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "commons-jcs.jar"
-       #:source-dir "commons-jcs-core/src/main/java"))
+       #:source-dir "commons-jcs-core/src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'prepare
+           (lambda _
+             (substitute* "commons-jcs-core/src/main/java/org/apache/commons/jcs/auxiliary/disk/jdbc/dsfactory/SharedPoolDataSourceFactory.java"
+                (("commons.dbcp") "commons.dbcp2")
+                ((".*\\.setMaxActive.*") ""))
+             ;; Remove dependency on velocity-tools
+             (delete-file "commons-jcs-core/src/main/java/org/apache/commons/jcs/admin/servlet/JCSAdminServlet.java"))))))
     (propagated-inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-commons-httpclient" ,java-commons-httpclient)
+       ("java-commons-dbcp" ,java-commons-dbcp2)
        ("java-velocity" ,java-velocity)))
     (home-page "https://commons.apache.org/proper/commons-jcs/")
     (synopsis "")
