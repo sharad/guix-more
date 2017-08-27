@@ -36,14 +36,14 @@
 (define-public java-tomcat
   (package
     (name "java-tomcat")
-    (version "8.5.16")
+    (version "8.5.20")
     (source (origin
               (method url-fetch)
-              (uri (string-append "http://download.nextag.com/apache/tomcat/tomcat-8/v"
+              (uri (string-append "mirror://apache/tomcat/tomcat-8/v"
                                   version "/src/apache-tomcat-" version "-src.tar.gz"))
               (sha256
                (base32
-                "08vc859z9f0787nhikbdsj6i441d4qk5xv17c1564hxxg6bmilqd"))))
+                "0436glw5knwnlj5636vsb966zfdfcw3jpnwbpwjn743p3gk0mi3b"))))
     (build-system ant-build-system)
     (inputs
      `(("java-eclipse-jdt-core" ,java-eclipse-jdt-core)))
@@ -51,7 +51,6 @@
      `(("java-junit" ,java-junit)))
     (arguments
      `(#:build-target "package"
-       ;#:test-target "test"
        #:tests? #f; requires downloading some files.
        #:phases
        (modify-phases %standard-phases
@@ -78,6 +77,7 @@ Java WebSocket specifications are developed under the Java Community Process.")
 (define-public java-openjfx
   (package
     (name "java-openjfx")
+    ;; This is the last version that can be built for java8
     (version "8u141-b14")
     (source (origin
               (method url-fetch)
@@ -122,8 +122,8 @@ Java WebSocket specifications are developed under the Java Community Process.")
        (modify-phases %standard-phases
          (add-before 'check 'remove-empty-file
            (lambda _
-             ;; This file is completely commented, but junit expects it to contain
-             ;; a class, so tests fail.
+             ;; These files are completely commented, but junit expects them to
+             ;; contain a class, so tests fail.
              (delete-file "modules/base/src/test/java/com/sun/javafx/property/adapter/PropertyDescriptorTest.java")
              (delete-file "modules/base/src/test/java/com/sun/javafx/property/adapter/ReadOnlyPropertyDescriptorTest.java")
              (delete-file "modules/base/src/test/java/javafx/beans/property/PropertiesTest.java")
@@ -268,34 +268,6 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        ("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-commons-compress" ,java-commons-compress-latest)))
-    ;(arguments
-    ; `(#:tests? #f
-    ;   #:jdk ,icedtea-8
-    ;   #:build-target "dist"
-    ;   #:phases
-    ;   (modify-phases %standard-phases
-    ;     (add-before 'build 'fix-revision
-    ;       (lambda* _
-    ;         (with-output-to-file "REVISION.XML"
-    ;           (lambda _
-    ;             (display
-    ;               (string-append "<info><entry><commit revision=\"" ,version "\">"
-    ;                              "<date>1970-01-01 00:00:00 +0000</date>"
-    ;                              "</commit></entry></info>"))))))
-    ;     (add-before 'build 'fix-build.xml
-    ;       (lambda _
-    ;         (substitute* "build.xml"
-    ;           ;; otherwise gives a warnig at runtime
-    ;           (("UNKNOWN") ,version)
-    ;           ;; the folder is not created
-    ;           (("<touch.*epsg.output.*") "<mkdir dir=\"${epsg.output}/..\" /><touch file=\"${epsg.output}\"/>\n")
-    ;           ;; we don't have this compiler, so we use icedtea directly
-    ;           ((".*com.google.errorprone.ErrorProneAntCompilerAdapter.*") "")
-    ;           (("compiler=\"[^\"]*\" ") "")
-    ;           ;; Add this to classpath to find deps
-    ;           (("<javac sourcepath=\"\" srcdir=\"\\$\\{src.dir\\}\"")
-    ;            (string-append "<path id=\"classpath\"><pathelement location=\"${env.CLASSPATH}\" /></path>\n"
-    ;                           "<javac sourcepath=\"\" srcdir=\"${src.dir}\" classpath=\"${classpath}\""))))))))
     (arguments
      `(#:tests? #f
        #:jdk ,icedtea-8
@@ -420,7 +392,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
     (build-system ant-build-system)
     (arguments
      `(#:build-target "package"
-       #:tests? #f; junit run with "package" target
+       #:tests? #f; tests are run as part of the build process
        #:phases
        (modify-phases %standard-phases
          (replace 'install
@@ -445,7 +417,7 @@ outputting XML data from Java code.")
     (build-system ant-build-system)
     (arguments
      `(#:build-target "package"
-       #:tests? #f; junit run with "package" target
+       #:tests? #f; tests are run as part of the build process
        #:phases
        (modify-phases %standard-phases
          (add-after 'unpack 'remove-bin
@@ -472,7 +444,7 @@ outputting XML data from Java code.")
     (build-system ant-build-system)
     (arguments
      `(#:build-target "package"
-       #:tests? #f; junit run with "package" target
+       #:tests? #f; tests are run as part of the build process
        #:phases
        (modify-phases %standard-phases
          (replace 'install
@@ -482,38 +454,6 @@ outputting XML data from Java code.")
     (description " Java-based solution for accessing, manipulating, and
 outputting XML data from Java code.")
     (license license:bsd-4)))
-
-(define-public java-commons-logging
-  (package
-    (inherit java-commons-logging-minimal)
-    (arguments
-     `(#:tests? #f ; avoid dependency on logging frameworks
-       #:jar-name "commons-logging.jar"
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'delete-adapters-and-tests
-           (lambda _
-             ;; Delete all adapters except for NoOpLog, SimpleLog, and
-             ;; LogFactoryImpl.  NoOpLog is required to build; LogFactoryImpl
-             ;; is used by applications; SimpleLog is the only actually usable
-             ;; implementation that does not depend on another logging
-             ;; framework.
-             (for-each
-              (lambda (file)
-                (delete-file (string-append
-                              "src/main/java/org/apache/commons/logging/impl/" file)))
-              (list "Jdk13LumberjackLogger.java"
-                    "WeakHashtable.java"
-                    "Log4JLogger.java"
-                    "ServletContextCleaner.java"
-                    "Jdk14Logger.java"
-                    "AvalonLogger.java"
-                    "LogKitLogger.java"))
-             (delete-file-recursively "src/test")
-             #t)))))
-    (inputs
-     `(("log4j" ,java-log4j-api)
-       ,@(package-inputs java-commons-logging-minimal)))))
 
 (define-public java-lz4
   (package
@@ -537,6 +477,222 @@ outputting XML data from Java code.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-bouncycastle-bcprov
+  (package
+    (name "java-bouncycastle-bcprov")
+    (version "1.58")
+    (source (origin
+              (method url-fetch)
+              (uri "https://bouncycastle.org/download/bcprov-jdk15on-158.tar.gz")
+              (sha256
+               (base32
+                "1hgkg96llbvgs8i0krwz2n0j7wlg6jfnq8w8kg0cc899j0wfmf3n"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "bouncycastle-bcprov.jar"
+       #:tests? #f; no tests
+       #:source-dir "src"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'unzip-src
+           (lambda _
+             (mkdir-p "src")
+             (with-directory-excursion "src"
+               (zero? (system* "unzip" "../src.zip"))))))))
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("junit" ,java-junit)))
+    (home-page "https://www.bouncycastle.org")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public java-bouncycastle-bcpkix
+  (package
+    (name "java-bouncycastle-bcpkix")
+    (version "1.58")
+    (source (origin
+              (method url-fetch)
+              (uri "https://bouncycastle.org/download/bcpkix-jdk15on-158.tar.gz")
+              (sha256
+               (base32
+                "0is7qay02803s9f7lhnfcjlz61ni3hq5d7apg0iil7nbqkbfbcq2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "bouncycastle-bcpkix.jar"
+       #:tests? #f; no tests
+       #:source-dir "src"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'unzip-src
+           (lambda _
+             (mkdir-p "src")
+             (with-directory-excursion "src"
+               (zero? (system* "unzip" "../src.zip"))))))))
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("junit" ,java-junit)))
+    (inputs
+     `(("bcprov" ,java-bouncycastle-bcprov)))
+    (home-page "https://www.bouncycastle.org")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public java-bouncycastle-bctls
+  (package
+    (name "java-bouncycastle-bctls")
+    (version "1.58")
+    (source (origin
+              (method url-fetch)
+              (uri "https://bouncycastle.org/download/bctls-jdk15on-158.tar.gz")
+              (sha256
+               (base32
+                "0riyd4iy9q9gk8spf0pqp64hrfihrdfm445aqr9n2zfb7n4jz2v3"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "bouncycastle.jar"
+       #:tests? #f; no tests
+       #:source-dir "src"))
+    (inputs
+     `(("bcprov" ,java-bouncycastle-bcprov)
+       ("bcpkix" ,java-bouncycastle-bcpkix)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://www.bouncycastle.org")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public java-powermock-core
+  (package
+    (name "java-powermock-core")
+    (version "1.7.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/powermock/powermock/"
+                                  "archive/powermock-" version ".tar.gz"))
+              (sha256
+               (base32
+                "09rdklqm1c2zp45c8x9596g8r9m5ab8aalxh447kljcrzajz49ri"))
+              (patches
+                (search-patches "java-powermock-fix-java-files.patch"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-powermock-core.jar"
+       #:source-dir "powermock-core/src/main/java"
+       #:test-dir "powermock-core/src/test"
+       #:tests? #f; requires powermock-api
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("reflect" ,java-powermock-reflect)
+       ("javassist" ,java-jboss-javassist)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("assertj" ,java-assertj)
+       ("mockito" ,java-mockito-1)))
+    (home-page "https://github.com/powermock/powermock")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-powermock-reflect
+  (package
+    (inherit java-powermock-core)
+    (name "java-powermock-reflect")
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-powermock-reflect.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "powermock-reflect/src/main/java"
+       #:test-dir "powermock-reflect/src/test"))
+    (inputs
+     `(("java-objenesis" ,java-objenesis)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("hamcrest" ,java-hamcrest-core)
+       ("assertj" ,java-assertj)))))
+
+(define-public java-powermock-api-support
+  (package
+    (inherit java-powermock-core)
+    (name "java-powermock-api-support")
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-powermock-api-support.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "powermock-api/powermock-api-support/src/main/java"
+       #:tests? #f)); no tests
+    (inputs
+     `(("core" ,java-powermock-core)
+       ("reflect" ,java-powermock-reflect)))))
+
+(define-public java-powermock-api-easymock
+  (package
+    (inherit java-powermock-core)
+    (name "java-powermock-api-easymock")
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-powermock-api-easymock.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "powermock-api/powermock-api-easymock/src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-file
+           (lambda _
+             ;; FIXME: This should not be necessary
+             (substitute* "powermock-api/powermock-api-easymock/src/main/java/org/powermock/api/easymock/PowerMock.java"
+               (("classLoader instanceof MockClassLoader") "false")
+               (("\\(\\(MockClassLoader\\) classLoader\\).cache\\(mock.getClass\\(\\)\\);") ";")))))))
+    (inputs
+     `(("core" ,java-powermock-core)
+       ("easymock" ,java-easymock)
+       ("reflect" ,java-powermock-reflect)
+       ("support" ,java-powermock-api-support)
+       ("cglib" ,java-cglib)))))
+
+(define-public java-powermock-modules-junit4-common
+  (package
+    (inherit java-powermock-core)
+    (name "java-powermock-modules-junit4-common")
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-powermock-modules-junit4-common.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "powermock-modules/powermock-module-junit4-common/src/main/java"
+       #:test-dir "powermock-modules/powermock-module-junit4-common/src/test"))
+    (inputs
+     `(("core" ,java-powermock-core)
+       ("easymock" ,java-easymock)
+       ("reflect" ,java-powermock-reflect)
+       ("hamcrest" ,java-hamcrest-core)
+       ("cglib" ,java-cglib)))))
+
+(define-public java-powermock-modules-junit4
+  (package
+    (inherit java-powermock-core)
+    (name "java-powermock-modules-junit4")
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-powermock-modules-junit4.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "powermock-modules/powermock-module-junit4/src/main/java"
+       #:test-dir "powermock-modules/powermock-module-junit4/src/test"))
+    (inputs
+     `(("core" ,java-powermock-core)
+       ("reflect" ,java-powermock-reflect)
+       ("common" ,java-powermock-modules-junit4-common)
+       ("cglib" ,java-cglib)))
+    (native-inputs
+     `(("easymock" ,java-easymock)
+       ("hamcrest" ,java-hamcrest-core)
+       ("objenesis" ,java-objenesis)
+       ("asm" ,java-asm)
+       ("junit" ,java-junit)))))
+
 (define-public java-kafka-clients
   (package
     (name "java-kafka-clients")
@@ -553,10 +709,26 @@ outputting XML data from Java code.")
      `(#:jar-name "java-kafka-clients.jar"
        #:jdk ,icedtea-8
        #:source-dir "clients/src/main/java"
+       #:test-dir "clients/src/test"
+       ;; FIXME: we have all test dependencies, but they fail with:
+       ;; java.lang.UnsupportedOperationException: This code should have never made it into slf4j-api.jar
        #:tests? #f))
     (inputs
      `(("java-slf4j-api" ,java-slf4j-api)
        ("java-lz4" ,java-lz4)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-all)
+       ("objenesis" ,java-objenesis)
+       ("asm" ,java-asm)
+       ("easymock" ,java-easymock)
+       ("powermock" ,java-powermock-core)
+       ("powermock-easymock" ,java-powermock-api-easymock)
+       ("powermock-junit4-common" ,java-powermock-modules-junit4-common)
+       ("powermock-junit4" ,java-powermock-modules-junit4)
+       ("powermock-support" ,java-powermock-api-support)
+       ("bouncycastle" ,java-bouncycastle-bcprov)
+       ("bouncycastle-bcpkix" ,java-bouncycastle-bcpkix)))
     (home-page "https://kafka.apache.org")
     (synopsis "")
     (description "")
@@ -577,7 +749,7 @@ outputting XML data from Java code.")
     (build-system ant-build-system)
     (arguments
      `(#:build-target "jarall"
-       #:tests? #f
+       #:test-target "junit-tests-all"
        #:phases
        (modify-phases %standard-phases
          (replace 'install
@@ -605,7 +777,6 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-hdrhistogram.jar"
        #:source-dir "src/main/java"
-       #:tests? #f
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'set-version
@@ -616,6 +787,9 @@ outputting XML data from Java code.")
                (substitute* version-java
                  (("\\$VERSION\\$") ,version)
                  (("\\$BUILD_TIME\\$") "0"))))))))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
     (home-page "https://hdrhistogram.github.io/HdrHistogram")
     (synopsis "")
     (description "")
@@ -641,7 +815,18 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-jmock.jar"
        #:source-dir "jmock/src/main/java"
-       #:tests? #f))
+       #:test-dir "jmock/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'fix-tests
+           (lambda _
+             ;; Otherwise the abstract class is tested, but junit cannot create
+             ;; an instance of it. Then remove dependent.
+             (for-each (lambda (file) (delete-file file))
+               '("jmock/src/test/java/org/jmock/test/unit/lib/AbstractMatcherTest.java"
+                 "jmock/src/test/java/org/jmock/test/unit/lib/CurrentStateMatcherTests.java")))))))
+    (native-inputs
+     `(("cglib" ,java-cglib)))
     (home-page "https://github.com/jmock-developers/jmock-library")
     (synopsis "")
     (description "")
@@ -654,14 +839,13 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-jmock-junit4.jar"
        #:source-dir "jmock-junit4/src/main/java"
-       #:tests? #f))
+       #:test-dir "jmock-junit4/src/test"))
     (inputs
      `(("java-hamcrest-all" ,java-hamcrest-all)
        ("java-asm" ,java-asm)
        ("java-bsh" ,java-bsh)
        ("java-jmock" ,java-jmock)
        ("java-jumit" ,java-junit)))))
-
 
 (define-public java-jmock-legacy
   (package
@@ -670,7 +854,14 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-jmock-legacy.jar"
        #:source-dir "jmock-legacy/src/main/java"
-       #:tests? #f))
+       #:test-dir "jmock-legacy/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'copy-tests
+           (lambda _
+             ;; This file is a dependance of some tests
+             (copy-file "jmock/src/test/java/org/jmock/test/acceptance/PackageProtectedType.java"
+                        "jmock-legacy/src/test/java/org/jmock/test/acceptance/PackageProtectedType.java"))))))
     (inputs
      `(("java-hamcrest-all" ,java-hamcrest-all)
        ("java-objenesis" ,java-objenesis)
@@ -678,7 +869,9 @@ outputting XML data from Java code.")
        ("java-jmock" ,java-jmock)
        ("java-asm" ,java-asm)
        ("java-bsh" ,java-bsh)
-       ("java-jumit" ,java-junit)))))
+       ("java-junit" ,java-junit)))
+    (native-inputs
+     `(("java-jmock-junit4" ,java-jmock-junit4)))))
 
 (define-public java-lmax-disruptor
   (package
@@ -695,8 +888,7 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-lmax-disruptor.jar"
        #:jdk ,icedtea-8
-       #:source-dir "src"
-       #:tests? #f)); no tests
+       #:tests? #f)); tests hang
     (inputs
      `(("junit" ,java-junit)
        ("java-hdrhistogram" ,java-hdrhistogram)
@@ -704,6 +896,10 @@ outputting XML data from Java code.")
        ("java-jmock-legacy" ,java-jmock-legacy)
        ("java-jmock-junit4" ,java-jmock-junit4)
        ("java-hamcrest-all" ,java-hamcrest-all)))
+    (native-inputs
+     `(("cglib" ,java-cglib)
+       ("objenesis" ,java-objenesis)
+       ("asm" ,java-asm)))
     (home-page "https://www.lmax.com/disruptor")
     (synopsis "")
     (description "")
@@ -731,6 +927,60 @@ outputting XML data from Java code.")
     (synopsis "")
     (description "")
     (license (list license:edl1.0 license:epl1.0))))
+
+(define-public java-jboss-javassist
+  (package
+    (name "java-jboss-javassist")
+    (version "3.21.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss-javassist/javassist/"
+                                  "archive/rel_"
+                                  (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
+                                  "_ga.tar.gz"))
+              (sha256
+               (base32
+                "10lpcr3sbf7y6fq6fc2h2ik7rqrivwcy4747bg0kxhwszil3cfmf"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jboss-javassist.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main"
+       #:tests? #f; FIXME: requires junit-awtui and junit-swingui from junit3
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'remove-binary
+           (lambda _
+             (delete-file "javassist.jar"))))))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://github.com/jboss-javassist/javassist")
+    (synopsis "")
+    (description "")
+    (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
+
+(define-public java-jboss-annotations-api-spec
+  (package
+    (name "java-jboss-annotations-api-spec")
+    (version "1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss/jboss-annotations-api_spec/"
+                                  "archive/jboss-annotations-api_" version
+                                  "_spec-1.0.1.Final.tar.gz"))
+              (sha256
+               (base32
+                "0zvglvscq177lahvp8n9nlm0vkdxlf6db0fs8jcy8zf82z6k4d2n"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jboss-annotations-api_spec.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "."
+       #:tests? #f)); no tests
+    (home-page "https://github.com/jboss/jboss-annotations-api_spec")
+    (synopsis "")
+    (description "")
+    (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
 
 (define-public java-jboss-interceptors-api-spec
   (package
@@ -770,9 +1020,7 @@ outputting XML data from Java code.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-jboss-el-api_spec.jar"
-       #:jdk ,icedtea-8
-       #:source-dir "."
-       #:tests? #f)); no tests
+       #:jdk ,icedtea-8))
     (inputs
      `(("junit" ,java-junit)))
     (home-page "https://github.com/jboss/jboss-el-api_spec")
@@ -796,7 +1044,7 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-jboss-transaction-api_spec.jar"
        #:jdk ,icedtea-8
-       #:source-dir "."
+       #:source-dir "src/main/java"
        #:tests? #f)); no tests
     (inputs
      `(("cdi-api" ,java-cdi-api)
@@ -845,14 +1093,40 @@ outputting XML data from Java code.")
      `(#:jar-name "java-mail.jar"
        #:jdk ,icedtea-8
        #:source-dir "mail/src/main/java"
-       #:tests? #f; no tests
+       #:test-dir "mail/src/test"
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'move-version.java
            (lambda _
              ;; this is done in build.xml (init target)
              (copy-file "mail/src/main/resources/javax/mail/Version.java"
-                        "mail/src/main/java/javax/mail/Version.java"))))))
+                        "mail/src/main/java/javax/mail/Version.java")))
+         (add-before 'check 'remove-failing
+           (lambda _
+             ;; This fails
+             (delete-file "mail/src/test/java/com/sun/mail/util/logging/CollectorFormatterTest.java")
+             ;; This one needs the previous one
+             (delete-file "mail/src/test/java/com/sun/mail/util/logging/CompactFormatterTest.java")
+             ;; This fails
+             (delete-file "mail/src/test/java/com/sun/mail/util/logging/DurationFilterTest.java")
+             (delete-file "mail/src/test/java/com/sun/mail/util/logging/MailHandlerTest.java")
+             (delete-file "mail/src/test/java/javax/mail/internet/GetLocalAddressTest.java")
+             ;; FIXME: ends with:
+             ;; java.lang.ClassNotFoundException: javax.mail.internet.MimeMultipartParseTest
+             (delete-file "mail/src/test/java/javax/mail/internet/MimeMultipartParseTest.java")
+             ;; FIXME: same here
+             (delete-file "mail/src/test/java/javax/mail/search/SearchTermSerializationTest.java")
+             ))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes/META-INF/"
+                                                        (basename file))))
+               (find-files "mail/src/main/resources/META-INF/" ".*")))))))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
     (home-page "https://javaee.github.io/javamail")
     (synopsis "")
     (description "")
@@ -875,7 +1149,9 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "jackson-annotations.jar"
        #:source-dir "src/main/java"
-       #:tests? #f)); how to run them? src/test/java
+       #:test-dir "src/test"))
+    (native-inputs
+     `(("junit" ,java-junit)))
     (home-page "https://github.com/FasterXML/jackson-annotations")
     (synopsis "")
     (description "")
@@ -897,7 +1173,7 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "jackson-core.jar"
        #:source-dir "src/main/java"
-       #:tests? #f; how to run them? src/test/java
+       #:test-dir "src/test"
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -909,7 +1185,44 @@ outputting XML data from Java code.")
                  (("@package@") "com.fasterxml.jackson.core.json")
                  (("@projectversion@") ,version)
                  (("@projectgroupid@") "com.fasterxml.jackson.core")
-                 (("@projectartifactid@") "jackson-core"))))))))
+                 (("@projectartifactid@") "jackson-core")))))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes/META-INF/"
+                                                        (basename file))))
+               (find-files "src/main/resources/META-INF/" ".*"))))
+         (add-before 'check 'copy-test-resources
+           (lambda _
+             (mkdir-p "build/test-classes")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes"
+                                                        (basename file))))
+               (find-files "src/test/resources/" ".*\\.json"))))
+         (add-before 'check 'exclude-base
+           (lambda _
+             ;; not really tests
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/*Test.java\" />"
+                               "<exclude name=\"**/failing/**\" />"
+                               "<exclude name=\"**/BaseTest.java\" />"
+                               "<exclude name=\"**/ConcurrencyReadTest.java\" />"
+                               "<exclude name=\"**/ManualCharAccessTest.java\" />"
+                               "<exclude name=\"**/TrailingCommasTest.java\" />"
+                               "<exclude name=\"**/AsyncMissingValuesInObjectTest.java\" />"
+                               "<exclude name=\"**/AsyncMissingValuesInArrayTest.java\" />")))))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes/META-INF/"
+                                                        (basename file))))
+               (find-files "src/main/resources/META-INF/" ".*")))))))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
     (home-page "https://github.com/FasterXML/jackson-core")
     (synopsis "")
     (description "")
@@ -931,7 +1244,7 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "jackson-databind.jar"
        #:source-dir "src/main/java"
-       #:tests? #f; how to run them? src/test/java
+       #:tests? #f; requires javax.measures for which I can't find a free implementation
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -943,10 +1256,19 @@ outputting XML data from Java code.")
                  (("@package@") "com.fasterxml.jackson.databind.cfg")
                  (("@projectversion@") ,version)
                  (("@projectgroupid@") "com.fasterxml.jackson.databind")
-                 (("@projectartifactid@") "jackson-databind"))))))))
+                 (("@projectartifactid@") "jackson-databind")))))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes/META-INF/"
+                                                        (basename file))))
+               (find-files "src/main/resources/META-INF/" ".*")))))))
     (inputs
      `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
        ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)))
+    (native-inputs
+     `(("junit" ,java-junit)))
     (home-page "https://github.com/FasterXML/jackson-databind")
     (synopsis "")
     (description "")
@@ -968,7 +1290,7 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "jackson-modules-base.jar"
        #:source-dir "jaxb/src/main/java"
-       #:tests? #f; how to run them? src/test/java
+       #:test-dir "jaxb/src/test"
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -981,15 +1303,77 @@ outputting XML data from Java code.")
                  (("@package@") "com.fasterxml.jackson.module.jaxb")
                  (("@projectversion@") ,version)
                  (("@projectgroupid@") "com.fasterxml.jackson.module.jaxb")
-                 (("@projectartifactid@") "jackson-module-jaxb"))))))))
+                 (("@projectartifactid@") "jackson-module-jaxb")))))
+         (add-before 'check 'disable-failing
+           (lambda _
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/*Test.java\" />"
+                               ;; The base class for tests, not a test in itself
+                               "<exclude name=\"**/BaseJaxbTest.java\" />")))))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes/META-INF/"
+                                                        (basename file))))
+               (find-files "jaxb/src/main/resources/META-INF/" ".*")))))))
     (inputs
      `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
        ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
        ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
     (home-page "https://github.com/FasterXML/jackson-dataformat-xml")
     (synopsis "")
     (description "")
     (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define-public java-woodstox-core
+  (package
+    (name "java-woodstox-core")
+    (version "5.0.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/woodstox/archive/woodstox-core-5.0.3.tar.gz"))
+              (sha256
+               (base32
+                "1i7pdgb8jbw6gdy5kmm0l6rz109n2ns92pqalpyp24vb8vlvdfd4"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "woodstox.jar"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-msv-dep
+           (lambda _
+             ;; we don't need osgi, and it depends on msv
+             (delete-file-recursively "src/main/java/com/ctc/wstx/osgi")
+             ;; msv's latest release is from 2011
+             (delete-file-recursively "src/main/java/com/ctc/wstx/msv")
+             (delete-file-recursively "src/test/java/wstxtest/osgi")
+             (delete-file-recursively "src/test/java/wstxtest/msv")))
+         (add-before 'check 'remove-failing
+           (lambda _
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/*Test.java\" />"
+                               "<exclude name=\"**/Base*.java\" />"
+                               "<exclude name=\"failing/**\" />")))))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes/META-INF/"
+                                                        (basename file))))
+               (find-files "src/main/resources/META-INF/" ".*")))))))
+    (inputs
+     `(("stax2" ,java-stax2-api)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://github.com/FasterXML/woodstox")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
 
 (define-public java-fasterxml-jackson-dataformat-xml
   (package
@@ -1007,7 +1391,9 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "jackson-dataformat-xml.jar"
        #:source-dir "src/main/java"
-       #:tests? #f; how to run them? src/test/java
+       ;; FIXME: tests fail to find the SAX API implementation in woodstox.
+       ;; It probably means this package is broken.
+       #:tests? #f
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -1015,17 +1401,29 @@ outputting XML data from Java code.")
              (let* ((out "src/main/java/com/fasterxml/jackson/dataformat/xml/PackageVersion.java")
                     (in (string-append out ".in")))
                (copy-file in out)
+               (newline)
                (substitute* out
                  (("@package@") "com.fasterxml.jackson.dataformat.xml")
                  (("@projectversion@") ,version)
                  (("@projectgroupid@") "com.fasterxml.jackson.dataformat.xml")
-                 (("@projectartifactid@") "jackson-dataformat-xml"))))))))
+                 (("@projectartifactid@") "jackson-dataformat-xml")))))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/classes/META-INF/"
+                                                        (basename file))))
+               (find-files "src/main/resources/META-INF/" ".*")))))))
     (inputs
      `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
        ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
        ("java-fasterxml-jackson-modules-base" ,java-fasterxml-jackson-modules-base)
        ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
-       ("java-stax2-api" ,java-stax2-api)))
+       ("java-stax2-api" ,java-stax2-api)
+       ("woodstox" ,java-woodstox-core)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
     (home-page "https://github.com/FasterXML/jackson-dataformat-xml")
     (synopsis "")
     (description "")
@@ -1046,34 +1444,304 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-stax2-api.jar"
        #:source-dir "src/main/java"
-       #:tests? #f))
+       #:tests? #f)); no tests
     (home-page "https://github.com/FasterXML/stax2-api")
+    (synopsis "Stax2 API")
+    (description "Stax2 API is an extension to basic Stax 1.0 API that adds
+significant new functionalities, such as full-featured bi-direction validation
+interface and high-performance Typed Access API.")
+    (license license:bsd-2)))
+
+(define-public java-aspectj-weaver
+  (package
+    (name "java-aspectj-weaver")
+    (version "1.8.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://eclipsemirror.itemis.de/eclipse/tools"
+                                  "/aspectj/aspectj-" version "-src.jar"))
+              (sha256
+               (base32
+                "0r16lgzindqf4xhdmdyk9j6p15nak2fwhqlp42yg3axvn8fx6r23"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-aspectj-weaver.jar"
+       #:source-dir "."
+       #:jdk ,icedtea-8
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'unpack-jar
+           (lambda _
+             (mkdir-p "weaver-src")
+             (chdir "weaver-src")
+             (zero? (system* "jar" "xf" "../src/aspectjweaver1.8.10-src.jar"))))
+         (add-after 'unpack-jar 'remove-propriatory
+           (lambda _
+             ;; this file depends on JRockit, for which I can't find a free implementation
+             (delete-file "org/aspectj/weaver/loadtime/JRockitAgent.java")))
+         (add-after 'unpack-jar 'rename-lib-back
+           (lambda _
+             ;; aj.org.objectweb.asm is actually java-asm, renamed
+             (substitute* "org/aspectj/weaver/bcel/asm/StackMapAdder.java"
+               (("aj.org.objectweb.asm") "org.objectweb.asm"))))
+         (add-before 'build 'copy-ressource
+           (lambda _
+             (mkdir-p "build/classes")
+             (copy-file "aspectj_1_5_0.dtd" "build/classes/aspectj_1_5_0.dtd"))))))
+    (inputs
+     `(("commons-logging" ,java-commons-logging-minimal)
+       ("asm" ,java-asm)))
+    (home-page "https://www.eclipse.org/aspectj")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
-;(define-public java-woodstox
-;  (package
-;    (name "java-woodstox")
-;    (version "5.0.3")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://github.com/FasterXML/woodstox/archive/"
-;                                  "woodstox-core-" version ".tar.gz"))
-;              (sha256
-;               (base32
-;                "1i7pdgb8jbw6gdy5kmm0l6rz109n2ns92pqalpyp24vb8vlvdfd4"))))
-;    (build-system ant-build-system)
+(define java-xmlunit-test-resources
+  (origin
+    (method git-fetch)
+    (uri (git-reference
+           (url "https://github.com/xmlunit/test-resources.git")
+           (commit "a590d2ae865c3e0455691d76ba8eefccc2215aec")))
+    (file-name "java-xmlunit-test-resources")
+    (sha256
+     (base32
+      "0r0glj37pg5l868yjz78gckr91cs8fysxxbp9p328dssssi91agr"))))
+
+(define-public java-xmlunit
+  (package
+    (name "java-xmlunit")
+    (version "2.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/xmlunit/xmlunit/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0gy9wbrg682m5j4p7xw2lvvp1p86vrki83kcl59h084z262ks2pl"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-xmlunit.jar"
+       #:source-dir "xmlunit-core/src/main/java"
+       #:test-dir "xmlunit-core/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((dir (string-append (getcwd) "/../test-resources/")))
+               (with-directory-excursion (assoc-ref inputs "resources")
+                 (for-each (lambda (file)
+                             (mkdir-p (dirname (string-append dir file)))
+                             (copy-file file (string-append dir file)))
+                   (find-files "." ".*"))))))
+         (add-before 'check 'disable-non-tests
+           (lambda _
+             ;; not really tests
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/*Test.java\" />"
+                               "<exclude name=\"**/Abstract*Test.java\" />"))))))))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("mockito" ,java-mockito-1)
+       ("hamcrest" ,java-hamcrest-all)
+       ("objenesis" ,java-objenesis)
+       ("asm" ,java-asm)
+       ("cglib" ,java-cglib)
+       ("resources" ,java-xmlunit-test-resources)))
+    (home-page "https://github.com/xmlunit/xmlunit")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-xmlunit-legacy
+  (package
+    (inherit java-xmlunit)
+    (name "java-xmlunit-legacy")
+    (arguments
+     `(#:jar-name "java-xmlunit-legacy.jar"
+       #:source-dir "xmlunit-legacy/src/main/java"
+       #:test-dir "xmlunit-legacy/src/test"))
+    (inputs
+     `(("xmlunit" ,java-xmlunit)
+       ("junit" ,java-junit)))
+    (native-inputs
+     `(("mockito" ,java-mockito-1)))))
+
+(define-public java-spring-framework-core
+  (package
+    (name "java-spring-framework-core")
+    (version "4.3.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/spring-projects/"
+                                  "spring-framework/archive/v" version
+                                  ".RELEASE.tar.gz"))
+              (sha256
+               (base32
+                "13vbshq61cb6r37yb87rky1q16dzh5l76l9iiskgbzqpzp4igjk5"))))
+    (arguments
+     `(#:jar-name "java-spring-framework-core.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-core")))
+         (add-before 'configure 'rename-dep
+           (lambda _
+             (substitute* "src/main/java/org/springframework/objenesis/SpringObjenesis.java"
+               (("org.springframework.objenesis") "org.objenesis"))))
+         (add-before 'configure 'add-import
+           (lambda _
+             (substitute* "src/main/java/org/springframework/cglib/core/SpringNamingPolicy.java"
+               (("public class")
+                "import net.sf.cglib.core.DefaultNamingPolicy;\npublic class"))))
+         (add-before 'check 'remove-log4j-1-dep
+           (lambda _
+             ;; this tests requires log4j-1 (not log4j-1.2-api)
+             (delete-file "src/test/java/org/springframework/util/MockLog4jAppender.java")
+             (delete-file "src/test/java/org/springframework/util/Log4jConfigurerTests.java")))
+         (add-before 'check 'select-tests
+           (lambda _
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/*Tests.java\" />"
+                               ;; these tests fail
+                               "<exclude name=\"**/LocalVariableTableParameterNameDiscovererTests.java\" />"
+                               "<exclude name=\"**/StandardReflectionParameterNameDiscoverTests.java\" />"
+                               "<exclude name=\"**/SpringFactoriesLoaderTests.java\" />"
+                               "<exclude name=\"**/PropertySourceTests.java\" />"
+                               "<exclude name=\"**/StaxEventXMLReaderTests.java\" />"
+                               "<exclude name=\"**/StaxStreamHandlerTests.java\" />"
+                               ;; Unable to set MockitoNamingPolicy on cglib generator which creates FastClasses
+                               "<exclude name=\"**/util/StreamUtilsTests.java\" />"
+                               "<exclude name=\"**/Abstract*.java\" />")))))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((dir (string-append (getcwd) "/build/test-classes/")))
+               (with-directory-excursion "src/test/resources"
+                 (for-each (lambda (file)
+                             (mkdir-p (dirname (string-append dir file)))
+                             (copy-file file (string-append dir file)))
+                   (find-files "." ".*")))))))))
+    (inputs
+     `(("logging" ,java-commons-logging-minimal)
+       ("java-jopt-simple" ,java-jopt-simple)
+       ("java-commons-codec" ,java-commons-codec)
+       ("java-log4j-1.2-api" ,java-log4j-1.2-api)
+       ("objenesis" ,java-objenesis)
+       ("cglib" ,java-cglib)
+       ("weaver" ,java-aspectj-weaver)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-all)
+       ("asm" ,java-asm)
+       ("java-jboss-annotations-api-spec" ,java-jboss-annotations-api-spec)
+       ("java-xmlunit-legacy" ,java-xmlunit-legacy)
+       ("java-xmlunit" ,java-xmlunit)
+       ("java-mockito" ,java-mockito-1)))
+    (build-system ant-build-system)
+    (home-page "https://projects.spring.io/spring-framework/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;(define-public java-spring-framework-web
+;  (package (inherit java-spring-framework-core)
+;    (name "java-spring-framework-web")
 ;    (arguments
-;     `(#:jar-name "java-woodstox.jar"
-;       #:source-dir "src/main/java"
-;       #:tests? #f))
+;     `(#:jar-name "java-spring-framework-web.jar"
+;       #:jdk ,icedtea-8
+;       #:source-dir "spring-web/src/main/java"
+;       #:test-dir "spring-web/src/test"))
 ;    (inputs
-;     `(("java-stax2-api" ,java-stax2-api)))
-;    (home-page "https://github.com/FasterXML/woodstox")
-;    (synopsis "")
-;    (description "")
-;    (license license:asl2.0)))
+;     `(("core" ,java-spring-framework-core)
+;       ("aspectj" ,java-aspectj-weaver)
+;       ("tomcat" ,java-tomcat)
+;       ("logging" ,java-commons-logging-minimal)))
+;    (native-inputs '())))
+;
+;(define-public java-spring-framework-test
+;  (package (inherit java-spring-framework-core)
+;    (name "java-spring-framework-test")
+;    (arguments
+;     `(#:jar-name "java-spring-framework-test.jar"
+;       #:jdk ,icedtea-8
+;       #:source-dir "spring-test/src/main/java"
+;       #:test-dir "spring-test/src/test"))
+;    (inputs
+;     `(("core" ,java-spring-framework-core)
+;       ("http" ,java-spring-framework-web)
+;       ("aspectj" ,java-aspectj-weaver)
+;       ("tomcat" ,java-tomcat)
+;       ("logging" ,java-commons-logging-minimal)))
+;    (native-inputs '())))
+;
+;(define-public java-spring-framework-aop
+;  (package (inherit java-spring-framework-core)
+;    (name "java-spring-framework-aop")
+;    (arguments
+;     `(#:jar-name "java-spring-framework-aop.jar"
+;       #:jdk ,icedtea-8
+;       #:source-dir "spring-aop/src/main/java"
+;       #:test-dir "spring-aop/src/test"))
+;    (inputs
+;     `(("core" ,java-spring-framework-core)
+;       ("beans" ,java-spring-framework-beans)
+;       ("aspectj" ,java-aspectj-weaver)
+;       ("logging" ,java-commons-logging-minimal)))
+;    (native-inputs '())))
+;
+;(define-public java-spring-framework-beans
+;  (package (inherit java-spring-framework-core)
+;    (name "java-spring-framework-beans")
+;    (arguments
+;     `(#:jar-name "java-spring-framework-beans.jar"
+;       #:jdk ,icedtea-8
+;       #:source-dir "spring-beans/src/main/java"
+;       #:test-dir "spring-beans/src/test"
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'configure 'fix-dep
+;           (lambda _
+;             (substitute* "spring-beans/src/main/java/org/springframework/beans/factory/support/CglibSubclassingInstantiationStrategy.java"
+;               (("org.springframework.cglib.proxy") "net.sf.cglib.proxy")
+;               (("org.springframework.cglib.core.ClassGenerator")
+;                "net.sf.cglib.core.ClassGenerator")
+;               (("org.springframework.cglib.core.DefaultGeneratorStrategy")
+;                "net.sf.cglib.core.DefaultGeneratorStrategy")))))))
+;    (inputs
+;     `(("core" ,java-spring-framework-core)
+;       ("cglib" ,java-cglib)
+;       ("inject" ,java-javax-inject)
+;       ("snakeyaml" ,java-snakeyaml-notests)
+;       ("el" ,java-jboss-el-api-spec)
+;       ("aspectj" ,java-aspectj-weaver)
+;       ("logging" ,java-commons-logging-minimal)))
+;    (native-inputs
+;     `(("junit" ,java-junit)
+;       ("hamcrest" ,java-hamcrest-all)
+;       ("test" ,java-spring-framework-test)
+;       ("mockito" ,java-mockito-1)))))
+;
+;(define-public java-spring-framework-context
+;  (package (inherit java-spring-framework-core)
+;    (name "java-spring-framework-context")
+;    (arguments
+;     `(#:jar-name "java-spring-framework-context.jar"
+;       #:jdk ,icedtea-8
+;       #:source-dir "spring-context/src/main/java"
+;       #:test-dir "spring-context/src/test"))
+;    (inputs
+;     `(("java-aopalliance" ,java-aopalliance)
+;       ("java-commons-logging" ,java-commons-logging-minimal)
+;       ("java-spring-framework-aop" ,java-spring-framework-aop)))
+;    (native-inputs '())))
+
 
 (define-public java-snakeyaml
   (package
@@ -1090,11 +1758,657 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "java-snakeyaml.jar"
        #:source-dir "src/main/java"
-       #:tests? #f))
+       #:test-dir "src/test"))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("joda-time" ,java-joda-time)
+       ("java-velocity" ,java-velocity)))
+    ;; FIXME: requires java-spring-framework-context
     (home-page "https://bitbucket.org/asomov/snakeyaml")
     (synopsis "")
     (description "")
     (license license:asl2.0))); found on wiki.fasterxml.com/JacksonLicensing
+
+(define java-snakeyaml-notests
+  (package (inherit java-snakeyaml)
+    (native-inputs '())
+    (arguments
+      `(#:tests? #f
+        ,@(package-arguments java-snakeyaml)))))
+
+(define-public java-ops4j-lang
+  (package
+    (name "java-ops4j-lang")
+    (version "1.5.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ops4j/org.ops4j.base/"
+                                  "archive/base-" version ".tar.gz"))
+              (sha256
+               (base32
+                "18hl3lpchgpv8yh5rlk39l2gif5dlfgb8gxjmncf39pr2dprkniw"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-ops4j-lang.jar"
+       #:source-dir "ops4j-base-lang/src/main/java"
+       #:tests? #f)); no tests
+    (home-page "https://ops4j1.jira.com/wiki/spaces/base/overview")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-ops4j-monitors
+  (package
+    (inherit java-ops4j-lang)
+    (name "java-ops4j-monitors")
+    (arguments
+     `(#:jar-name "java-ops4j-monitors.jar"
+       #:source-dir "ops4j-base-monitors/src/main/java"
+       #:tests? #f)); no tests
+    (inputs
+     `(("lang" ,java-ops4j-lang)))))
+
+(define-public java-ops4j-io
+  (package
+    (inherit java-ops4j-lang)
+    (name "java-ops4j-io")
+    (arguments
+     `(#:jar-name "java-ops4j-io.jar"
+       #:source-dir "ops4j-base-io/src/main/java"
+       #:test-dir "ops4j-base-io/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'disable-failing
+           (lambda _
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/*Test.java\" />"
+                               "<exclude name=\"**/ListerTest.java\" />"))))))))
+    (inputs
+     `(("lang" ,java-ops4j-monitors)
+       ("lang" ,java-ops4j-lang)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))))
+
+(define-public java-ops4j-util
+  (package
+    (inherit java-ops4j-lang)
+    (name "java-ops4j-util")
+    (arguments
+     `(#:jar-name "java-ops4j-util.jar"
+       #:source-dir "ops4j-base-util/src/main/java"
+       #:test-dir "ops4j-base-util/src/test"))
+    (inputs
+     `(("lang" ,java-ops4j-lang)))
+    (native-inputs
+     `(("junit" ,java-junit)))))
+
+(define-public java-ops4j-util-property
+  (package
+    (inherit java-ops4j-lang)
+    (name "java-ops4j-util-property")
+    (arguments
+     `(#:jar-name "java-ops4j-util-property.jar"
+       #:source-dir "ops4j-base-util-property/src/main/java"
+       #:tests? #f)); no tests
+    (inputs
+     `(("lang" ,java-ops4j-lang)
+       ("util" ,java-ops4j-util)))))
+
+(define-public java-ops4j-store
+  (package
+    (inherit java-ops4j-lang)
+    (name "java-ops4j-store")
+    (arguments
+     `(#:jar-name "java-ops4j-store.jar"
+       #:source-dir "ops4j-base-store/src/main/java"
+       #:tests? #f)); no tests
+    (inputs
+     `(("lang" ,java-ops4j-lang)
+       ("slf4j" ,java-slf4j-api)
+       ("io" ,java-ops4j-io)))))
+
+(define-public java-ops4j-spi
+  (package
+    (inherit java-ops4j-lang)
+    (name "java-ops4j-spi")
+    (arguments
+     `(#:jar-name "java-ops4j-spi.jar"
+       #:source-dir "ops4j-base-spi/src/main/java"
+       #:test-dir "ops4j-base-spi/src/test"))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))))
+
+(define java-asm-old
+  (package
+    (inherit java-asm)
+    (version "3.3.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://download.forge.ow2.org/asm/asm-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1xcp06wbqqq4jm93pafjw5jc08vy30qiw9s7kff9gmw23ka279b9"))))))
+
+(define-public java-microemulator
+  (package
+    (name "java-microemulator")
+    (version "2.0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/microemulator/microemulator/"
+                                  version "/microemulator-" version ".zip"))
+              (sha256
+               (base32
+                "0x9a4xqw6747c130y2znfwg945jgpjnd4bzj5gdamxmi7848dslb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "microemulator.jar"
+       #:source-dir "src"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'unpack-jar
+           (lambda _
+             (mkdir-p "src")
+             (with-directory-excursion "src"
+               (zero? (system* "jar" "xf" "../microemulator-sources.jar")))))
+         (add-before 'configure 'remove-old-dep
+           (lambda _
+             ;; requires netscape.javascript for which I can't find a free implementation
+             (delete-file "src/org/microemu/applet/CookieRecordStoreManager.java")
+             ;; requires an old version of swt
+             (delete-file "src/org/microemu/app/Swt.java"))))))
+    (inputs
+     `(("java-swt" ,java-swt)
+       ("asm" ,java-asm-old)))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "https://sourceforge.net/projects/microemulator/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-cmpn
+  (package
+    (name "java-osgi-cmpn")
+    (version "6.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/"
+                                  "org/osgi/osgi.cmpn/" version "/osgi.cmpn-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "1lmb6xyrmkqdhv1kayf0514rlwq6ypvs4m44ibrck3snp8241wys"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-cmpn.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)
+       ("core" ,java-osgi-core)
+       ("java-datanucleus-javax-persistence" ,java-datanucleus-javax-persistence)
+       ("microemulator" ,java-microemulator)
+       ("tomcat" ,java-tomcat)))
+    (home-page "http://www.osgi.org")
+    (synopsis "Compendium specification module of OSGi framework")
+    (description
+      "OSGi, for Open Services Gateway initiative framework, is a module system
+and service platform for the Java programming language.  This package contains
+the compendium specification module, providing interfaces and classes for use
+in compiling bundles.")
+    (license license:asl2.0)))
+
+(define-public java-osgi-service-component-annotations
+  (package
+    (name "java-osgi-service-component-annotations")
+    (version "1.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.service.component.annotations/"
+                                  version "/org.osgi.service.component.annotations-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "15rq9cmp4fpn74q44m4j35qsqmjf5lx3hcrk6pzvbhc08igic2f0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-service-component-annotations.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)))
+    (home-page "http://www.osgi.org")
+    (synopsis "Support annotations for osgi-service-component")
+    (description
+      "OSGi, for Open Services Gateway initiative framework, is a module system
+and service platform for the Java programming language.  This package contains
+the support annotations for osgi-service-component.")
+    (license license:asl2.0)))
+
+(define-public java-osgi-dto
+  (package
+    (name "java-osgi-dto")
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.dto/" version "/org.osgi.dto-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "0f4bqjzadn0hwk6sd3h5gvbyfp3yci1s6r0v770cc15p0pg627yr"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-resource.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)))
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-resource
+  (package
+    (name "java-osgi-resource")
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.resource/"
+                                  version "/org.osgi.resource-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "0hi0fsc5v99q22bd7lrkvpz1y0ds4w9arjldpwsrcpqvz2js7q2d"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-resource.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)
+       ("dto" ,java-osgi-dto)))
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-namespace-contract
+  (package
+    (name "java-osgi-namespace-contract")
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.namespace.contract/"
+                                  version "/org.osgi.namespace.contract-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "1iz4f2i0fvqrlq90ki9nfzcfpvy2av434ri25bglywqssx8mmp36"))))
+    (build-system ant-build-system)
+    (inputs
+     `(("resource" ,java-osgi-resource)
+       ("annotation" ,java-osgi-annotation)))
+    (arguments
+     `(#:jar-name "osgi-namespace-contract.jar"
+       #:tests? #f)); no tests
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-namespace-extender
+  (package
+    (name "java-osgi-namespace-extender")
+    (version "1.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.namespace.extender/"
+                                  version "/org.osgi.namespace.extender-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "0jgqiak2i05qv6j3gd33xlaifzzc0ylxxk376v2x0apfg3vvixmz"))))
+    (build-system ant-build-system)
+    (inputs
+     `(("resource" ,java-osgi-resource)
+       ("annotation" ,java-osgi-annotation)))
+    (arguments
+     `(#:jar-name "osgi-namespace-contract.jar"
+       #:tests? #f)); no tests
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-namespace-service
+  (package
+    (name "java-osgi-namespace-service")
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.namespace.service/"
+                                  version "/org.osgi.namespace.service-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "0qmw8n2449nkmm56d1znz9zhazb6ya3vsimd5bf5jg23zzhgl8c8"))))
+    (build-system ant-build-system)
+    (inputs
+     `(("resource" ,java-osgi-resource)
+       ("annotation" ,java-osgi-annotation)))
+    (arguments
+     `(#:jar-name "osgi-namespace-contract.jar"
+       #:tests? #f)); no tests
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-util-function
+  (package
+    (name "java-osgi-util-function")
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.util.function/"
+                                  version "/org.osgi.util.function-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "04l7j3hwmmj28w23m7paca0afzncs42j2mdr3liqq8kvp548sc6x"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-util-function.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)))
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-util-promise
+  (package
+    (name "java-osgi-util-promise")
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.util.promise/"
+                                  version "/org.osgi.util.promise-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "0y34dwiflg1c4ahvkswpf9z02xph2sr9fm04ia5493x3lshpw22c"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-util-promise.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)
+       ("function" ,java-osgi-util-function)))
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-osgi-service-metatype-annotations
+  (package
+    (name "java-osgi-service-metatype-annotations")
+    (version "1.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.service.metatype.annotations/"
+                                  version "/org.osgi.service.metatype.annotations-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "12rwm3349wk80vm88rcdgs4435m4jxkpkj5mrx326skkz2c6hyw6"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-service-metatype-annotations.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)))
+    (home-page "http://www.osgi.org")
+    (synopsis "Support annotations for metatype")
+    (description
+      "OSGi, for Open Services Gateway initiative framework, is a module system
+and service platform for the Java programming language.  This package contains
+the support annotations for metatype.")
+    (license license:asl2.0)))
+
+(define-public java-osgi-service-repository
+  (package
+    (name "java-osgi-service-repository")
+    (version "1.1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.service.repository/"
+                                  version "/org.osgi.service.repository-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "1k41mhg7b58pd8nsghr2qwcjrxdnf1p9spsw9v11k4257g6rl06n"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-service-repository.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)
+       ("promise" ,java-osgi-util-promise)
+       ("resource" ,java-osgi-resource)))
+    (home-page "http://www.osgi.org")
+    (synopsis "service-repository")
+    (description
+      "OSGi, for Open Services Gateway initiative framework, is a module system
+and service platform for the Java programming language.  This package contains
+the service-repository.")
+    (license license:asl2.0)))
+
+(define-public java-osgi-framework
+  (package
+    (name "java-osgi-framework")
+    (version "1.8.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.framework/" version "/org.osgi.framework-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "1lwp2zfad3rybcc6q9bwz8xsgkc92ypzy5p6x54387f1qj65m73s"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-framework.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("annotation" ,java-osgi-annotation)
+       ("resource" ,java-osgi-resource)
+       ("dto" ,java-osgi-dto)))
+    (home-page "http://www.osgi.org")
+    (synopsis "OSGi framework")
+    (description
+      "OSGi, for Open Services Gateway initiative framework, is a module system
+and service platform for the Java programming language.")
+    (license license:asl2.0)))
+
+(define-public java-osgi-service-log
+  (package
+    (name "java-osgi-service-log")
+    (version "1.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.service.log/"
+                                  version "/org.osgi.service.log-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "1029j30dzcwializzca0j3fkhwwz08kmmsha5agw1iccscimj6r0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-service-log.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("java-osgi-framework" ,java-osgi-framework)))
+    (home-page "http://www.osgi.org")
+    (synopsis "service-log")
+    (description
+      "OSGi, for Open Services Gateway initiative framework, is a module system
+and service platform for the Java programming language.  This package contains
+the service-log.")
+    (license license:asl2.0)))
+
+(define-public java-aqute-bndlib
+  (package
+    (name "java-aqute-bndlib")
+    (version "3.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/bndtools/bnd/archive/"
+                                  version ".REL.tar.gz"))
+              (sha256
+               (base32
+                "158c9250v1q07hvj6v30lja4gq1s3y0v94j281rghz82lilwzb07"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-bndlib.jar"
+       #:source-dir "biz.aQute.bndlib/src"
+       #:tests? #f)); no tests
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("osgi-annot" ,java-osgi-annotation)
+       ("java-aqute-libg" ,java-aqute-libg)
+       ("java-aqute-bnd-annotation" ,java-aqute-bnd-annotation)
+       ("java-osgi-service-component-annotations" ,java-osgi-service-component-annotations)
+       ("java-osgi-service-repository" ,java-osgi-service-repository)
+       ("java-osgi-service-log" ,java-osgi-service-log)
+       ("java-osgi-service-metatype-annotations" ,java-osgi-service-metatype-annotations)
+       ("java-osgi-namespace-contract" ,java-osgi-namespace-contract)
+       ("java-osgi-namespace-extender" ,java-osgi-namespace-extender)
+       ("java-osgi-namespace-service" ,java-osgi-namespace-service)
+       ("promise" ,java-osgi-util-promise)
+       ("osgi" ,java-osgi-core)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-aqute-libg
+  (package
+    (inherit java-aqute-bndlib)
+    (name "java-aqute-libg")
+    (arguments
+     `(#:jar-name "java-aqute-libg.jar"
+       #:source-dir "aQute.libg/src"
+       #:tests? #f)); actually in "aQute.libg/test", not in .../java
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("osgi-annot" ,java-osgi-annotation)
+       ("java-osgi-cmpn" ,java-osgi-cmpn)
+       ("osgi" ,java-osgi-core)))))
+
+(define-public java-aqute-bnd-annotation
+  (package
+    (inherit java-aqute-bndlib)
+    (name "java-aqute-bnd-annotation")
+    (arguments
+     `(#:jar-name "java-aqute-bnd-annotation.jar"
+       #:source-dir "biz.aQute.bnd.annotation/src"
+       #:tests? #f)); empty test dir
+    (inputs '())))
+
+(define-public java-ops4j-pax-tinybundles
+  (package
+    (name "java-ops4j-pax-tinybundles")
+    (version "2.1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ops4j/org.ops4j.pax.tinybundles/"
+                                  "archive/tinybundles-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0y0gq3pvv0iir2b885lmlwnvr724vv7vklzhhr4fs27d7mdkj871"))))
+    (arguments
+     `(#:jar-name "java-ops4j-pax-tinybundles.jar"
+       #:source-dir "src/main/java"))
+    (inputs
+     `(("lang" ,java-ops4j-lang)
+       ("io" ,java-ops4j-io)
+       ("store" ,java-ops4j-store)
+       ("slf4j" ,java-slf4j-api)
+       ("libg" ,java-aqute-libg)
+       ("bndlib" ,java-aqute-bndlib)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("framework" ,java-osgi-framework)))
+    (build-system ant-build-system)
+    (home-page "https://ops4j1.jira.com/wiki/spaces/ops4j/pages/12060312/Tinybundles")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-ops4j-pax-exam-core
+  (package
+    (name "java-ops4j-pax-exam-core")
+    (version "4.11.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ops4j/org.ops4j.pax.exam2/"
+                                  "archive/exam-reactor-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0vk87df6m4shhqwd0wmkjklhnnqy98cxbhns06wzvb8rfgcl6wp5"))))
+    (arguments
+     `(#:jar-name "java-ops4j-pax-exam-core.jar"
+       #:source-dir "core/pax-exam/src/main/java"
+       #:test-dir "core/pax-exam/src/test"))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("lang" ,java-ops4j-lang)
+       ("io" ,java-ops4j-io)
+       ("util-property" ,java-ops4j-util-property)
+       ("util-store" ,java-ops4j-store)
+       ("java-osgi-core" ,java-osgi-core)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (build-system ant-build-system)
+    (home-page "https://ops4j1.jira.com/wiki/spaces/PAXEXAM4/overview")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-ops4j-pax-exam-core-spi
+  (package
+    (inherit java-ops4j-pax-exam-core)
+    (name "java-ops4j-pax-exam-core-spi")
+    (arguments
+     `(#:jar-name "java-ops4j-pax-exam-spi.jar"
+       #:source-dir "core/pax-exam-spi/src/main/java"
+       #:test-dir "core/pax-exam-spi/src/test"))
+    (inputs
+     `(("java-ops4j-pax-exam-core" ,java-ops4j-pax-exam-core)
+       ("store" ,java-ops4j-store)
+       ("io" ,java-ops4j-io)
+       ("spi" ,java-ops4j-spi)
+       ("osgi" ,java-osgi-core)
+       ("slf4j" ,java-slf4j-api)))))
     
 
 (define-public java-fasterxml-jackson-dataformat-yaml
@@ -1113,7 +2427,6 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "jackson-dataformat-yaml.jar"
        #:source-dir "src/main/java"
-       #:tests? #f; how to run them? src/test/java
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -1130,7 +2443,10 @@ outputting XML data from Java code.")
      `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
        ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
        ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
-       ("java-snakeyaml" ,java-snakeyaml)))
+       ("java-snakeyaml" ,java-snakeyaml-notests)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("java-ops4j-pax-exam" ,java-ops4j-pax-exam)))
     (home-page "https://github.com/FasterXML/jackson-dataformat-yaml")
     (synopsis "")
     (description "")
@@ -1321,7 +2637,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
        ("java-bsh" ,java-bsh)
        ("java-jcommander" ,java-jcommander)
        ("java-guice" ,java-guice)
-       ("snakeyaml" ,java-snakeyaml)))
+       ("snakeyaml" ,java-snakeyaml-notests)))
     (native-inputs
      `(("guava" ,java-guava)
        ("java-javax-inject" ,java-javax-inject)
@@ -1836,10 +3152,8 @@ the dependency is said to be unsatisfied, and the application is broken.")
        ("java-jdom" ,java-jdom)
        ("java-tomcat" ,java-tomcat)
        ("java-avalon-logkit" ,java-avalon-logkit)
-       ;("java-log4j-api" ,java-log4j-api)
-       ;("java-log4j-core" ,java-log4j-core)
        ("java-log4j-1.2" ,java-log4j-1.2)
-       ("java-commons-logging-minimal" ,java-commons-logging)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-commons-lang" ,java-commons-lang)))
     (home-page "https://velocity.apache.org/")
     (synopsis "")
@@ -1881,7 +3195,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
                              (string-append "-Ddist.home=" (assoc-ref outputs "out")
                                             "/share/java"))))))))
     (propagated-inputs
-     `(("java-commons-logging" ,java-commons-logging)
+     `(("java-commons-logging" ,java-commons-logging-minimal)
        ("java-commons-codec" ,java-commons-codec)))
     (build-system ant-build-system)
     (home-page "https://hc.apache.org")
@@ -2000,7 +3314,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
        #:tests? #f))
     (inputs
      `(("java-commons-pool2" ,java-commons-pool2)
-       ("java-commons-logging" ,java-commons-logging)
+       ("java-commons-logging" ,java-commons-logging-minimal)
        ("java-jboss-transaction-api-spec" ,java-jboss-transaction-api-spec)))
     (native-inputs
      `(("java-junit" ,java-junit)))
@@ -2031,7 +3345,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
        #:tests? #f))
     (inputs
      `(("java-commons-pool" ,java-commons-pool)
-       ("java-commons-logging" ,java-commons-logging)
+       ("java-commons-logging" ,java-commons-logging-minimal)
        ("java-jboss-transaction-api-spec" ,java-jboss-transaction-api-spec)))))
     
 
@@ -2538,84 +3852,134 @@ the options available for a command line tool.")
        #:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "java-boot-classpath-detector/src/main/java"))))
 
-(define-public java-guava
+;(define-public java-guava
+;  (package
+;    (name "java-guava")
+;    (version "20.0")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/google/guava/archive/v"
+;                                  version ".tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1kasavj973iblj1fj35gzbywhkljrnbjpymgqyqaibbbmmbzff8s"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name (string-append ,name "-" ,version ".jar")
+;       #:source-dir "guava/src"
+;       #:tests? #f))
+;    (inputs
+;     `(("java-jsr305" ,java-jsr305)
+;       ("java-j2objc-annotations" ,java-j2objc-annotations)
+;       ("java-animal-sniffer-annotations" ,java-animal-sniffer-annotations)
+;       ("java-error-prone-annotations" ,java-error-prone-annotations)))
+;    (home-page "https://github.com/google/guava")
+;    (synopsis "")
+;    (description "")
+;    (license license:asl2.0)))
+
+(define-public java-joda-convert
   (package
-    (name "java-guava")
-    (version "20.0")
+    (name "java-joda-convert")
+    (version "1.8.1")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://github.com/google/guava/archive/v"
+              (uri (string-append "https://github.com/JodaOrg/joda-convert/archive/v"
                                   version ".tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1kasavj973iblj1fj35gzbywhkljrnbjpymgqyqaibbbmmbzff8s"))))
+                "1di9chp0pgvd2gxsmdaxhldwns9a2ss9705jmn97mdd69cg5zcnc"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "guava/src"
-       #:tests? #f))
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'activate-all-tests
+           (lambda _
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/Test*.java\" />"
+                               "<exclude name=\"**/test*/**.java\" />"))))))))
     (inputs
-     `(("java-jsr305" ,java-jsr305)
-       ("java-j2objc-annotations" ,java-j2objc-annotations)
-       ("java-animal-sniffer-annotations" ,java-animal-sniffer-annotations)
-       ("java-error-prone-annotations" ,java-error-prone-annotations)))
-    (home-page "https://github.com/google/guava")
+     `(("java-guava" ,java-guava)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
-;(define-public java-joda-convert
-;  (package
-;    (name "java-joda-convert")
-;    (version "1.8.1")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://github.com/JodaOrg/joda-convert/archive/v"
-;                                  version ".tar.gz"))
-;              (file-name (string-append name "-" version ".tar.gz"))
-;              (sha256
-;               (base32
-;                "1di9chp0pgvd2gxsmdaxhldwns9a2ss9705jmn97mdd69cg5zcnc"))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:jar-name (string-append ,name "-" ,version ".jar")
-;       #:source-dir "src/main/java"
-;       #:tests? #f))
-;    (inputs
-;     `(("java-google-collect" ,java-google-collect)))
-;    (native-inputs
-;     `(("junit" ,java-junit)))
-;    (home-page "")
-;    (synopsis "")
-;    (description "")
-;    (license license:asl2.0)))
-;
-;(define-public java-joda-time
-;  (package
-;    (name "java-joda-time")
-;    (version "2.9.9")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://github.com/JodaOrg/joda-time/archive/v"
-;                                  version ".tar.gz"))
-;              (file-name (string-append name "-" version ".tar.gz"))
-;              (sha256
-;               (base32
-;                "1i9x91mi7yg2pasl0k3912f1pg46n37sps6rdb0v1gs8hj9ppwc1"))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:jar-name (string-append ,name "-" ,version ".jar")
-;       #:source-dir "src/main/java"
-;       #:tests? #f))
-;    (inputs
-;     `(("java-joda-convert" ,java-joda-convert)))
-;    (native-inputs
-;     `(("junit" ,java-junit)))
-;    (home-page "")
-;    (synopsis "")
-;    (description "")
-;    (license license:asl2.0)))
+(define-public java-joda-time
+  (package
+    (name "java-joda-time")
+    (version "2.9.9")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/JodaOrg/joda-time/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1i9x91mi7yg2pasl0k3912f1pg46n37sps6rdb0v1gs8hj9ppwc1"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-joda-time.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'build 'build-resources
+           (lambda _
+             (mkdir-p "build/classes/org/joda/time/tz/data")
+             (mkdir-p "build/classes/org/joda/time/format")
+             ;; This will produce an exception, but it's all right.
+             (zero? (system* "java" "-cp" (string-append "build/classes:" (getenv "CLASSPATH"))
+                             "org.joda.time.tz.ZoneInfoCompiler"
+                             "-src" "src/main/java/org/joda/time/tz/src"
+                             "-dst" "build/classes/org/joda/time/tz/data"
+                             "africa" "antarctica" "asia" "australasia"
+                             "europe" "northamerica" "southamerica"
+                             "pacificnew" "etcetera" "backward" "systemv"))
+             (for-each (lambda (f)
+                         (copy-file f (string-append
+                                        "build/classes/org/joda/time/format/"
+                                        (basename f))))
+               (find-files "src/main/java/org/joda/time/format" ".*.properties"))))
+         (add-before 'install 'regenerate-jar
+           (lambda _
+             ;; We need to regenerate the jar file to add generated data.
+             (delete-file "build/jar/java-joda-time.jar")
+             (zero? (system* "jar" "-cf" "build/jar/java-joda-time.jar" "-C"
+                             "build/classes" "."))))
+         (add-before 'check 'copy-test-resources
+           (lambda _
+             (mkdir-p "build/test-classes/org/joda/time/tz/data")
+             (copy-file "src/test/resources/tzdata/ZoneInfoMap"
+                        "build/test-classes/org/joda/time/tz/data/ZoneInfoMap")
+             (for-each (lambda (file)
+                         (copy-file file (string-append "build/test-classes/"
+                                                        (basename file))))
+               (find-files "src/test/resources/" ".*"))))
+         (add-before 'check 'exclude-non-tests
+           (lambda _
+             (substitute* "build.xml"
+               (("<include name=\"\\*\\*/\\*Test.java\" />")
+                (string-append "<include name=\"**/Test*.java\" />"
+                               "<exclude name=\"**/Test*Chronology.java\" />"
+                               "<exclude name=\"**/Test*Field.java\" />"))))))))
+    (inputs
+     `(("java-joda-convert" ,java-joda-convert)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("tzdata" ,tzdata)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
 
 (define-public java-xstream
   (package
@@ -2717,7 +4081,13 @@ the options available for a command line tool.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:tests? #f
-       #:source-dir "src/main"))))
+       #:source-dir "src/main"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-parser
+           (lambda _
+             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
+               (zero? (system* "antlr4" "java.g"))))))))))
 
 
 ;(define-public antlr3-3.4
@@ -2851,8 +4221,8 @@ the options available for a command line tool.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:tests? #f
        #:jdk ,icedtea-8
+       #:tests? #f; no tests
        #:source-dir "src"
        #:phases
        (modify-phases %standard-phases
