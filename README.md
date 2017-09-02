@@ -17,10 +17,7 @@ What is in there?
 Binary analysis software
 ------------------------
 
-* _capstone_: A disassembler framework with a lot of supported architectures
-* _z3_: A constraint solver
 * _angr_: A binary analysis tool
-* _radare2_: A disassembler and analysis tool
 * _bap_: A binary analysis platform
 
 Games
@@ -32,11 +29,6 @@ Video
 -----
 
 * _aegisub_: A subtitle editor
-
-Image
------
-
-* _gpick_: A color picker
 
 Java
 ----
@@ -72,6 +64,6 @@ The more the better. They are being integrated.
 TODO
 ====
 
-Eiffel studio -> eiffel -> AutoProof and Eve -> boogie -> z3.
+Eiffel studio -> eiffel -> AutoProof and Eve -> boogie.
 
 alt-ergo, CVC4
