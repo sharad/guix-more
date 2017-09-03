@@ -34,6 +34,7 @@ Java
 ----
 
 * _josm_: An openstreetmap editor
+* _fop_: A print formatter driven by XSL formatting objects
 
 Non-free
 --------

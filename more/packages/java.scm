@@ -3738,6 +3738,33 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-avalon-framework-api
+  (package
+    (name "java-avalon-framework-api")
+    (version "4.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/excalibur/"
+                                  "avalon-framework/source/avalon-framework-api-"
+                                  version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0iqx6g3lqzmq805cdzr9xghda20pl4akyb54yrvzrp896q2nmmd4"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "avalon-framework.jar"
+       #:source-dir "src/java"
+       #:tests? #f; FIXME: not in the java subdirectory
+       #:test-dir "src/test"))
+    (inputs
+     `(("log" ,java-avalon-logkit)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-velocity
   (package
     (name "java-velocity")
@@ -4962,3 +4989,163 @@ the options available for a command line tool.")
 ;    (synopsis "Alternative on-screen keyboard for multiple languages")
 ;    (description "Alternative on-screen keyboard for multiple languages.")
 ;    (license license:asl2.0)))
+
+(define-public java-batik
+  (package
+    (name "java-batik")
+    (version "1.9")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/xmlgraphics/batik/source/"
+                                  "batik-src-" version ".tar.gz"))
+              (sha256
+               (base32
+                "18y60rfzbd0ljndaq7a5adjxqbgld4krmpx8fj94k6mcnk03dx5y"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:test-target "regard"; FIXME: no test is actually run
+       #:build-target "all-jar"
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((dir (string-append (assoc-ref outputs "out") "/share/java/")))
+               (mkdir-p dir)
+               (copy-file (string-append "batik-" ,version "/lib/batik-all-" ,version ".jar")
+                          (string-append dir "batik-all.jar"))))))))
+    (inputs
+     `(("xmlgraphics" ,java-xmlgraphics-commons)))
+    (home-page "https://xmlgraphics.apache.org/batik")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-xmlgraphics-commons
+  (package
+    (name "java-xmlgraphics-commons")
+    (version "2.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/xmlgraphics/commons/source/"
+                                  "xmlgraphics-commons-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0i128sj8g29hqc66kqckjr2n1n2amfgijadp5xq4y9fy45q5mrrb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "xmlgraphics-commons.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:tests? #f)); FIXME: need commons-xml-resolver
+    (inputs
+     `(("commons-io" ,java-commons-io)
+       ("commons-logging" ,java-commons-logging-minimal)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("mockito" ,java-mockito-1)))
+    (home-page "https://xmlgraphics.apache.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-fop
+  (package
+    (name "java-fop")
+    (version "2.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/xmlgraphics/fop/source/"
+                                  "fop-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0lk59ba2388yq69i7wi8nr1k97aw4lkgd6yj96yqif64gzwgwljh"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jar-main"
+       #:test-target "junit"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; FIXME: need dependencies
+             ;(for-each delete-file
+             ;          (find-files "." ".*.jar"))
+             (chdir "fop")
+             (substitute* "build.xml"
+               (("<path id=\"libs-build-classpath\">")
+                "<path id=\"libs-build-classpath\"><pathelement location=\"${env.CLASSPATH}\" />")
+               (("TestCase.class\"/>")
+                "TestCase.class\" excludes=\"**/IFTestCase.class **/*HyphenationLayoutTestCase.class\"/>")
+               (("<fail><condition><or>"); don't fail after all tests actually passed
+                "<fail><condition><and>")
+               (("</not></or></condition>")
+                "</not></and></condition>"))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (lib (string-append out "/share/java/"))
+                    (bin (string-append out "/bin/"))
+                    (etc (string-append out "/etc")))
+               (mkdir-p lib)
+               (mkdir-p bin)
+               (mkdir-p etc)
+               (copy-file "build/fop.jar"
+                          (string-append lib "fop.jar"))
+               (copy-file "build/fop-hyph.jar"
+                          (string-append lib "fop-hyph.jar"))
+               (copy-file "build/fop-sandbox.jar"
+                          (string-append lib "fop-sandbox.jar"))
+               (copy-file "fop"
+                          (string-append bin "fop"))
+               (chmod (string-append bin "fop") #o755)
+               (substitute* (string-append bin "fop")
+                 (("/etc/fop.conf")
+                  (string-append etc "fop.conf")))
+               (with-output-to-file (string-append etc "fop.conf")
+                 (lambda _
+                   (display
+                     (string-append
+                       "FOP_HOME=\"" lib "\"\n"
+                       "CLASSPATH=\"$CLASSPATH:$FOP_HOME/fop.jar\"\n"
+                       "CLASSPATH=\"$CLASSPATH:" (getenv "CLASSPATH") "\""))))))))))
+    (home-page "https://xmlgraphics.apache.org/fop")
+    (inputs
+     `(("apache-logging" ,java-commons-logging-minimal)
+       ("commons-io" ,java-commons-io)
+       ("xmlgraphics" ,java-xmlgraphics-commons)
+       ("tomcat" ,java-tomcat)
+       ("batik" ,java-batik)
+       ("avalon" ,java-avalon-framework-api)
+       ("avalon" ,java-avalon-logkit)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-fop-util
+  (package
+    (inherit java-fop)
+    (name "java-fop-util")
+    (arguments
+     `(#:jar-name "fop-util.jar"
+       #:source-dir "fop-util/src/main/java"
+       #:tests? #f)); no tests
+    (inputs
+     `(("io" ,java-commons-io)
+       ("xmlgraphics" ,java-xmlgraphics-commons)
+       ("logging" ,java-commons-logging-minimal)))))
+
+(define-public java-fop-events
+  (package
+    (inherit java-fop)
+    (name "java-fop-events")
+    (arguments
+     `(#:jar-name "fop-events.jar"
+       #:source-dir "fop-events/src/main/java"
+       #:test-dir "fop-events/src/test"))
+    (inputs
+     `(("io" ,java-commons-io)
+       ("xmlgraphics" ,java-xmlgraphics-commons)
+       ("logging" ,java-commons-logging-minimal)
+       ("fop-util" ,java-fop-util)))))
