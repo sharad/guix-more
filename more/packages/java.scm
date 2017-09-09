@@ -5149,3 +5149,948 @@ the options available for a command line tool.")
        ("xmlgraphics" ,java-xmlgraphics-commons)
        ("logging" ,java-commons-logging-minimal)
        ("fop-util" ,java-fop-util)))))
+
+;;
+;;
+;;
+;; let's try to build maven :)
+;; This was mostly adapted from https://gitlab.com/htgoebel/guix/blob/WIP-maven/gnu/packages/java.scm
+;;
+;;
+;;
+
+(define* (codehaus-plexus-origin projname version hash
+                                 #:optional (prefix "plexus-"))
+  (let* ((projname (string-append prefix projname))
+         (url (string-append "https://github.com/codehaus-plexus/" projname
+                             "/archive/" projname "-" version ".tar.gz")))
+    (origin
+      (method url-fetch)
+      (uri url)
+      (sha256 (base32 hash)))))
+
+(define-public java-geronimo-xbean-reflect
+  (package
+    (name "java-geronimo-xbean-reflect")
+    (version "1807386")
+    (source (origin
+              (method svn-fetch)
+              (uri (svn-reference
+                     ;(url "https://svn.apache.org/repos/asf/geronimo/xbean/trunk/")
+                     (url "https://svn.apache.org/repos/asf/geronimo/xbean/tags/xbean-4.5/")
+                     (revision 1807396)))
+              (sha256
+               (base32
+                "18q3i6jgm6rkw8aysfgihgywrdc5nvijrwnslmi3ww497jvri6ja"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "geronimo-xbean-reflect.jar"
+       #:source-dir "xbean-reflect/src/main/java"
+       #:test-dir "xbean-reflect/src/test"
+       #:jdk ,icedtea-8
+       #:test-exclude (list "**/Abstract*.java" "**/AsmParameterNameLoaderTest.java"
+                            "**/ObjectRecipeTest.java" "**/ParameterNameLoaderTest.java"
+                            "**/RecipeHelperTest.java" "**/XbeanAsmParameterNameLoaderTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-source
+           (lambda _
+             ;; org.apache.xbean.asm6 is actually repackaged java-asm
+             (substitute* "xbean-reflect/src/main/java/org/apache/xbean/recipe/XbeanAsmParameterNameLoader.java"
+               (("org.apache.xbean.asm5") "org.objectweb.asm")))))))
+    (inputs
+     `(("asm" ,java-asm)
+       ("log4j" ,java-log4j-api)
+       ("log4j-1.2" ,java-log4j-1.2-api)
+       ("log4j-core" ,java-log4j-core)
+       ("logging" ,java-commons-logging-minimal)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-io
+  (package
+    (name "java-plexus-io")
+    (version "3.0.0")
+    (source (codehaus-plexus-origin
+             "plexus-io" version
+             "0f2j41kihaymxkpbm55smpxjja235vad8cgz94frfy3ppcp021dw"
+             ""))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "plexus-io.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (copy-file "src/main/resources/META-INF/plexus/components.xml"
+                        "build/classes/META-INF/plexus/components.xml")
+             #t)))))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("commons-io" ,java-commons-io)
+       ("java-jsr305" ,java-jsr305)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("guava" ,java-guava)
+       ("classworlds" ,java-plexus-classworlds)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("container-default" ,java-plexus-container-default-bootstrap)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-iq80-snappy
+  (package
+    (name "java-iq80-snappy")
+    (version "0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/dain/snappy/archive/snappy-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0rb3zhci7w9wzd65lfnk7p3ip0n6gb58a9qpx8n7r0231gahyamf"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "container-default.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:test-exclude (list "**/Abstract*.java"
+                            "**/SnappyFramedStreamTest.java"); No runnable method
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'check
+           (lambda _
+             (define (test class)
+               (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
+                                                           ":build/classes"
+                                                           ":build/test-classes")
+                               "-Dtest.resources.dir=src/test/resources"
+                               "org.testng.TestNG" "-testclass"
+                               class)))
+             (system* "ant" "compile-tests")
+             (and
+               (test "org.iq80.snappy.SnappyFramedStreamTest")
+               (test "org.iq80.snappy.SnappyStreamTest"))))
+               ;(test "org.iq80.snappy.SnappyTest"))))
+         (add-before 'build 'remove-dep
+           (lambda _
+             ;; We don't have hadoop
+             (delete-file "src/main/java/org/iq80/snappy/HadoopSnappyCodec.java")
+             (delete-file "src/test/java/org/iq80/snappy/TestHadoopSnappyCodec.java")
+             #t)))))
+    (home-page "https://github.com/dain/snappy")
+    (native-inputs
+     `(("guava" ,java-guava)
+       ("java-snappy" ,java-snappy)
+       ("hamcrest" ,java-hamcrest-core)
+       ("testng" ,java-testng)))
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-tukaani-xz
+  (package
+    (name "java-tukaani-xz")
+    (version "1.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://tukaani.org/xz/xz-java-" version ".zip"))
+              (sha256
+               (base32
+                "1z3p1ri1gvl07inxn0agx44ck8n7wrzfmvkz8nbq3njn8r9wba8x"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _
+             ; The package is not unzipped in a subdirectory
+             (chdir "..")))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; Do we want to install *Demo.jar?
+             (install-file "build/jar/xz.jar"
+                           (string-append
+                             (assoc-ref outputs "out")
+                             "/share/java/xz.jar")))))))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "https://tukaani.org")
+    (synopsis "")
+    (description "")
+    (license license:public-domain)))
+
+(define-public java-plexus-archiver
+  (package
+    (name "java-plexus-archiver")
+    (version "3.5")
+    (source (codehaus-plexus-origin
+             "plexus-archiver" version
+             "0iv1j7khra6icqh3jndng3iipfmkc7l5jq2y802cm8r575v75pyv"
+             ""))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "container-default.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "src/test"
+       #:test-exclude (list "**/Abstract*.java" "**/Base*.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'remove-failing
+           (lambda _
+             ;; Requires an older version of plexus container
+             (delete-file "src/test/java/org/codehaus/plexus/archiver/DuplicateFilesTest.java")))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (copy-file "src/main/resources/META-INF/plexus/components.xml"
+                        "build/classes/META-INF/plexus/components.xml")
+             #t)))))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("commons-io" ,java-commons-io)
+       ("snappy" ,java-iq80-snappy)
+       ("io" ,java-plexus-io)
+       ("compress" ,java-commons-compress)
+       ("container-default" ,java-plexus-container-default-bootstrap)
+       ("snappy" ,java-snappy)
+       ("java-jsr305" ,java-jsr305)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("classworld" ,java-plexus-classworlds)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("xz" ,java-tukaani-xz)
+       ("guava" ,java-guava)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-container-default-bootstrap
+  (package
+    (name "java-plexus-container-default-bootstrap")
+    (version "1.7.1")
+    (source (codehaus-plexus-origin
+             "plexus-containers" version
+             "07l7wfi0kxnabd175yvbkilb26mndnba0a1g0ac1rpfagv3qpnzw"
+             ""))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "container-default.jar"
+       #:source-dir "plexus-container-default/src/main/java"
+       #:test-dir "plexus-container-default/src/test"
+       #:jdk ,icedtea-8
+       #:tests? #f; requires plexus-archiver, which depends on this package
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (copy-file "plexus-container-default/src/main/resources/META-INF/plexus/components.xml"
+                        "build/classes/META-INF/plexus/components.xml")
+             #t)))))
+    (inputs
+     `(("worldclass" ,java-plexus-classworlds)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("utils" ,java-plexus-utils)
+       ("junit" ,java-junit)
+       ("guava" ,java-guava)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-container-default
+  (package
+    (inherit java-plexus-container-default-bootstrap)
+    (name "java-plexus-container-default")
+    (arguments
+     `(#:jar-name "container-default.jar"
+       #:source-dir "plexus-container-default/src/main/java"
+       #:test-dir "plexus-container-default/src/test"
+       #:test-exclude (list "**/*Test.java"
+                            "**/ComponentRealmCompositionTest.java")
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (copy-file "plexus-container-default/src/main/resources/META-INF/plexus/components.xml"
+                        "build/classes/META-INF/plexus/components.xml")
+             #t))
+         (add-before 'check 'fix-paths
+           (lambda _
+             (substitute* "plexus-container-default/src/test/java/org/codehaus/plexus/component/composition/ComponentRealmCompositionTest.java"
+               (("src/test") "plexus-container-default/src/test")))))))
+    (inputs
+     `(("worldclass" ,java-plexus-classworlds)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("utils" ,java-plexus-utils)
+       ("junit" ,java-junit)
+       ("guava" ,java-guava)))
+    (native-inputs
+     `(("archiver" ,java-plexus-archiver)
+       ("hamcrest" ,java-hamcrest-core)))))
+
+(define-public java-plexus-component-annotations
+  (package
+    (inherit java-plexus-container-default)
+    (name "java-plexus-component-annotations")
+    (arguments
+     `(#:jar-name "plexus-component-annotations.jar"
+       #:source-dir "plexus-component-annotations/src/main/java"
+       #:tests? #f)); no tests
+    (inputs '())
+    (native-inputs '())))
+
+(define-public java-plexus-component-metadata
+  (package
+    (inherit java-plexus-container-default)
+    (name "java-plexus-component-metadata")
+    (arguments
+     `(#:jar-name "plexus-component-metadata.jar"
+       #:source-dir "plexus-component-metadata/src/main/java"
+       #:test-dir "plexus-component-metadata/src/test"
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("container" ,java-plexus-container-default)
+       ("annotations" ,java-plexus-component-annotations)
+       ("utils" ,java-plexus-utils)
+       ("classworlds" ,java-plexus-classworlds)
+       ("cli" ,java-commons-cli)
+       ("qdox" ,java-qdox-1.12); TODO: package latest version
+       ("jdom2" ,java-jdom2)
+       ("asm" ,java-asm)))
+    (native-inputs '())))
+
+(define-public java-sisu-build-api
+  (package
+    (name "java-sisu-build-api")
+    (version "0.0.7")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/sonatype/sisu-build-api/"
+                                  "archive/plexus-build-api-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1c3rrpma3x634xp2rm2p5iskfhzdyc7qfbhjzr70agrl1jwghgy2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "sisu-build-api.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; I don't know how to run these tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/org/sonatype/plexus/build/incremental")
+             (copy-file "src/main/resources/org/sonatype/plexus/build/incremental/version.properties"
+                        "build/classes/org/sonatype/plexus/build/incremental/version.properties")
+             #t))
+         (add-before 'build 'generate-plexus-compontent
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             ;; This file is required for plexus to inject this package.
+             ;; It is absent from the source code, so maybe it is generated?
+             (with-output-to-file "build/classes/META-INF/plexus/components.xml"
+               (lambda _
+                 (display
+                   (string-append
+                     "<component-set>\n"
+                     "  <components>\n"
+                     "    <component>\n"
+                     "      <role>org.sonatype.plexus.build.incremental.BuildContext</role>\n"
+                     "      <role-hint>default</role-hint>\n"
+                     "      <implementation>org.sonatype.plexus.build.incremental.DefaultBuildContext</implementation>\n"
+                     "      <description>Filesystem based non-incremental build context implementation which behaves as if all files\n"
+                     "were just created.</description>\n"
+                     "    </component>\n"
+                     "  </components>\n"
+                     "</component-set>\n")))))))))
+    (inputs
+     `(("plexus-utils" ,java-plexus-utils)
+       ("plexus-container-default" ,java-plexus-container-default)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-compiler-api
+  (package
+    (name "java-plexus-compiler-api")
+    (version "2.8.2")
+    (source (codehaus-plexus-origin
+             "plexus-compiler" version
+             "13lxk1yg8fzv4ihby1jmfjda60dkxx4rg89k9i6glddd78q1xl4h"
+             ""))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "plexus-compiler-api.jar"
+       #:source-dir "plexus-compiler-api/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "plexus-compiler-api/src/test"))
+    (inputs
+     `(("container" ,java-plexus-container-default)
+       ("util" ,java-plexus-utils)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-compiler-javac
+  (package
+    (inherit java-plexus-compiler-api)
+    (name "java-plexus-compiler-javac")
+    (arguments
+     `(#:jar-name "plexus-compiler-javac.jar"
+       #:source-dir "plexus-compilers/plexus-compiler-javac/src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; depends on compiler-test -> maven-core -> ... -> this package.
+       #:test-dir "plexus-compilers/plexus-compiler-javac/src/test"))
+    (inputs
+     `(("api" ,java-plexus-compiler-api)
+       ("utils" ,java-plexus-utils)
+       ("logging" ,java-plexus-container-default)))
+    (native-inputs
+     `(("junit" ,java-junit)))))
+
+(define-public java-modello-core
+  (package
+    (name "java-modello-core")
+    (version "1.9.1")
+    (source (codehaus-plexus-origin
+             "modello" version
+             "1nqa1arvyc84i8wn3vk08k46vf8bpqqnf5a6szdj2lc3s1yamlv8"
+             "")) ;; no prefix
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "modello-core.jar"
+       #:source-dir "modello-core/src/main/java"
+       #:test-dir "modello-core/src/test"
+       #:main-class "org.codehaus.modello.ModelloCli"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (copy-file "modello-core/src/main/resources/META-INF/plexus/components.xml"
+                        "build/classes/META-INF/plexus/components.xml")
+             #t))
+         (add-before 'check 'fix-tests
+           (lambda _
+             (substitute* '("modello-core/src/test/java/org/codehaus/modello/core/DefaultModelloCoreTest.java"
+                            "modello-core/src/test/java/org/codehaus/modello/core/io/ModelReaderTest.java")
+               (("src/test") "modello-core/src/test")))))))
+    (inputs
+     `(("plexus-utils" ,java-plexus-utils)
+       ("container" ,java-plexus-container-default-bootstrap)
+       ("sisu" ,java-sisu-build-api)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("classworlds" ,java-plexus-classworlds)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("guava" ,java-guava)))
+    (home-page "http://codehaus-plexus.github.io/modello/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-modello-plugins-java
+  (package
+    (inherit java-modello-core)
+    (name "java-modello-plugins-java")
+    (arguments
+     `(#:jar-name "modello-plugins-java.jar"
+       #:source-dir "modello-plugins/modello-plugin-java/src/main/java"
+       #:test-dir "modello-plugins/modello-plugin-java/src/test"
+       #:jdk ,icedtea-8
+       #:tests? #f; requires maven-model, which depends on this package
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes")
+             (copy-recursively "modello-plugins/modello-plugin-java/src/main/resources"
+                               "build/classes")
+             #t)))))
+    (inputs
+     `(("core" ,java-modello-core)
+       ,@(package-inputs java-modello-core)))))
+
+(define-public java-modello-plugins-xml
+  (package
+    (inherit java-modello-core)
+    (name "java-modello-plugins-xml")
+    (arguments
+     `(#:jar-name "modello-plugins-xml.jar"
+       #:source-dir "modello-plugins/modello-plugin-xml/src/main/java"
+       #:test-dir "modello-plugins/modello-plugin-xml/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes")
+             (copy-recursively "modello-plugins/modello-plugin-xml/src/main/resources"
+                               "build/classes")
+             #t))
+         (add-before 'check 'fix-paths
+           (lambda _
+             (substitute* "modello-plugins/modello-plugin-xml/src/test/java/org/codehaus/modello/plugins/xml/XmlModelloPluginTest.java"
+               (("src/test") "modello-plugins/modello-plugin-xml/src/test")))))))
+    (inputs
+     `(("core" ,java-modello-core)
+       ("java" ,java-modello-plugins-java)
+       ,@(package-inputs java-modello-core)))))
+
+(define-public java-modello-test
+  (package
+    (inherit java-modello-core)
+    (name "java-modello-test")
+    (arguments
+     `(#:jar-name "modello-test.jar"
+       #:source-dir "modello-test/src/main/java"
+       #:tests? #f; no tests
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("compiler-api" ,java-plexus-compiler-api)
+       ("compiler-javac" ,java-plexus-compiler-javac)
+       ("container" ,java-plexus-container-default)))))
+
+(define-public java-modello-plugins-xpp3
+  (package
+    (inherit java-modello-core)
+    (name "java-modello-plugins-xpp3")
+    (arguments
+     `(#:jar-name "modello-plugins-xpp3.jar"
+       #:source-dir "modello-plugins/modello-plugin-xpp3/src/main/java"
+       #:test-dir "modello-plugins/modello-plugin-xpp3/src/test"
+       #:tests? #f; I can find some of its dependencies, for instance org.codehaus.modello.test.features.io.xpp3.ModelloFeaturesTestXpp3Reader
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes")
+             (copy-recursively "modello-plugins/modello-plugin-xpp3/src/main/resources"
+                               "build/classes")
+             #t)))))
+    (inputs
+     `(("core" ,java-modello-core)
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ,@(package-inputs java-modello-core)))
+    (native-inputs
+     `(("xmlunit" ,java-xmlunit)
+       ("test" ,java-modello-test)
+       ,@(package-native-inputs java-modello-core)))))
+
+(define-public java-plexus-cipher
+  (package
+    (name "java-plexus-cipher")
+    (version "1.7")
+    (source (codehaus-plexus-origin
+              "cipher" version
+              "1j3r8xzlxlk340snkjp6lk2ilkxlkn8qavsfiq01f43xmvv8ymk3"))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "plexus-cipher.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; TODO: org.sonatype.guice.bean.containers.InjectedTestCase
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes"))))))
+    (inputs
+     `(("cdi-api" ,java-cdi-api)
+       ("inject" ,java-javax-inject)))
+    (home-page "http://codehaus-plexus.github.io/plexus-cipher/")
+    (synopsis "Encryption/decryption Component")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-sec-dispatcher
+  (package
+    (name "java-plexus-sec-dispatcher")
+    (version "1.4") ;; Newest release listed at the Maven Central Repository.
+    (source (origin
+              ;; This project doesn't tag releases or publish tarballs, so we take
+              ;; the "prepare release plexus-sec-dispatcher-1.4" git commit.
+        (method url-fetch)
+        (uri (string-append "https://github.com/sonatype/plexus-sec-dispatcher/"
+                            "archive/" "7db8f88048" ".tar.gz"))
+        (sha256
+         (base32
+          "1nvlwj2090nn7f0144pyamp3lfygahlcp09dx0faqgla57lr11hj"))
+        (file-name (string-append name "-" version ".tar.gz"))))
+    (arguments
+     `(#:jar-name "plexus-sec-dispatcher.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "src/main/java" version
+                               "false" "true")))
+             (let ((file "src/main/mdo/settings-security.mdo"))
+               (and
+               (modello-single-mode file "1.0.0" "java")
+               (modello-single-mode file "1.0.0" "xpp3-reader")
+               (modello-single-mode file "1.0.0" "xpp3-writer")))))
+         (add-before 'check 'fix-paths
+           (lambda _
+             (mkdir-p "target")
+             (copy-file "src/test/resources/test-sec.xml"
+                        "target/sec.xml"))))))
+    (inputs
+     `(("cipher" ,java-plexus-cipher)))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ;; for modello:
+       ("container" ,java-plexus-container-default)
+       ("classworlds" ,java-plexus-classworlds)
+       ("utils" ,java-plexus-utils)
+       ("guava" ,java-guava)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ;; modello plugins:
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)
+       ;; for tests
+       ("junit" ,java-junit)))
+    (build-system ant-build-system)
+    (home-page "http://spice.sonatype.org/plexus-sec-dispatcher/")
+    (synopsis "Plexus Security Dispatcher Component")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-eclipse-aether-api
+  (package
+    (name "java-eclipse-aether-api")
+    (version "1.0.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/eclipse/aether-core/"
+                                  "archive/aether-1.0.2.v20150114.tar.gz"))
+              (sha256
+               (base32
+                "192x32hlyxs4p6xzaz1r1jrsqqr56akcl0lncq3av1zpbil6kqhh"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "eclipse-aether-api.jar"
+       #:source-dir "aether-api/src/main/java"
+       #:test-dir "aether-api/src/test"))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "https://projects.eclipse.org/projects/technology.aether")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public maven
+  (package
+    (name "maven")
+    (version "3.3.9")
+    (source (origin 
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/maven/"
+                                  "maven-3/" version "/source/"
+                                  "apache-maven-" version "-src.tar.gz"))
+              (sha256 (base32 "1g0iavyb34kvs3jfrx2hfnr8lr11m39sj852cy7528wva1glfl4i"))
+              (patches
+                (search-patches "maven-generate-component-xml.patch"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "maven.jar"
+       #:source-dir "apache-maven"))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public maven-artifact
+  (package
+    (inherit maven)
+    (name "maven-artifact")
+    (arguments
+     `(#:jar-name "maven-artifact.jar"
+       #:source-dir "maven-artifact/src/main/java"
+       #:test-dir "maven-artifact/src/test"
+       #:main-class "org.apache.maven.artifact.versioning.ComparableVersion"))
+    (inputs
+     `(("java-plexus-utils" ,java-plexus-utils)
+       ("java-commons-lang3" ,java-commons-lang3)))
+    (native-inputs
+     `(("junit" ,java-junit)))))
+
+(define-public maven-model
+  (package
+    (inherit maven)
+    (name "maven-model")
+    (arguments
+     `(#:jar-name "maven-model.jar"
+       #:source-dir "maven-model/src/main/java"
+       #:test-dir "maven-model/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "maven-model/src/main/java" version
+                               "false" "true")))
+             (let ((file "maven-model/src/main/mdo/maven.mdo"))
+               (and
+               (modello-single-mode file "4.0.0" "java")
+               (modello-single-mode file "4.0.0" "xpp3-reader")
+               (modello-single-mode file "4.0.0" "xpp3-writer")
+               (modello-single-mode file "4.0.0" "xpp3-extended-reader"))))))))
+    (inputs
+     `(("lang3" ,java-commons-lang3)
+       ("utils" ,java-plexus-utils)))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ;; for modello:
+       ("container" ,java-plexus-container-default)
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ;; modello plugins:
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)
+       ;; for tests
+       ("junit" ,java-junit)))))
+
+(define-public maven-settings
+  (package
+    (inherit maven)
+    (name "maven-settings")
+    (arguments
+     `(#:jar-name "maven-settings.jar"
+       #:source-dir "maven-settings/src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "maven-settings/src/main/java" version
+                               "false" "true")))
+             (let ((file "maven-settings/src/main/mdo/settings.mdo"))
+               (and
+                 (modello-single-mode file "1.1.0" "java")
+                 (modello-single-mode file "1.1.0" "xpp3-reader")
+                 (modello-single-mode file "1.1.0" "xpp3-writer"))))))))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ;; for modello:
+       ("container" ,java-plexus-container-default)
+       ("classworlds" ,java-plexus-classworlds)
+       ("utils" ,java-plexus-utils)
+       ("guava" ,java-guava)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ;; modello plugins:
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)))))
+
+(define-public maven-builder-support
+  (package
+    (inherit maven)
+    (name "maven-builder-support")
+    (arguments
+     `(#:jar-name "maven-builder-support.jar"
+       #:source-dir "maven-builder-support/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "maven-builder-support/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'fix-paths
+           (lambda _
+             (substitute* '("maven-builder-support/src/test/java/org/apache/maven/building/FileSourceTest.java"
+                            "maven-builder-support/src/test/java/org/apache/maven/building/UrlSourceTest.java")
+               (("target/test-classes") "maven-builder-support/src/test/resources"))
+             #t)))))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("lang3" ,java-commons-lang3)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))))
+
+(define-public maven-settings-builder
+  (package
+    (inherit maven)
+    (name "maven-settings-builder")
+    (arguments
+     `(#:jar-name "maven-settings-builder.jar"
+       #:source-dir "maven-settings-builder/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "maven-settings-builder/src/test"))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("annotations" ,java-plexus-component-annotations)
+       ("interpolation" ,java-plexus-interpolation)
+       ("sec-dispatcher" ,java-plexus-sec-dispatcher)
+       ("support" ,maven-builder-support)
+       ("settings" ,maven-settings)
+       ("lang3" ,java-commons-lang3)))
+    (native-inputs
+     `(("junit" ,java-junit)))))
+
+(define-public maven-plugin-lifecycle
+  (package
+    (inherit maven)
+    (name "maven-plugin-api")
+    (arguments
+     `(#:jar-name "maven-plugin-api.jar"
+       #:source-dir "maven-plugin-api/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "maven-plugin-api/test"))
+    (inputs
+     `(("artifact" ,maven-artifact)
+       ("container" ,java-plexus-container-default)
+       ("utils" ,java-plexus-utils)
+       ("classworlds" ,java-plexus-classworlds)))
+    (native-inputs '())))
+
+(define-public maven-plugin-api
+  (package
+    (inherit maven)
+    (name "maven-plugin-api")
+    (arguments
+     `(#:jar-name "maven-plugin-api.jar"
+       #:source-dir "maven-plugin-api/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "maven-plugin-api/test"))
+    (inputs
+     `(("artifact" ,maven-artifact)
+       ("container" ,java-plexus-container-default)
+       ("utils" ,java-plexus-utils)))
+    (native-inputs '())))
+
+(define-public maven-model-builder
+  (package
+    (inherit maven)
+    (name "maven-model-builder")
+    (arguments
+     `(#:jar-name "maven-model-builder.jar"
+       #:source-dir "maven-model-builder/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "maven-model-builder/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "maven-model-builder/src/main/resources"
+                               "build/classes")))
+         (add-before 'build 'generate-components.xml
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (chmod "components.sh" #o755)
+             (zero? (system* "./components.sh" "maven-model-builder/src/main/java"
+                             "build/classes/META-INF/plexus/components.xml"))))
+         (add-before 'check 'fix-paths
+           (lambda _
+             (substitute* (find-files "maven-model-builder/src/test/java" ".*.java")
+               (("src/test") "maven-model-builder/src/test"))
+             #t)))))
+    (inputs
+     `(("model" ,maven-model)
+       ("artifact" ,maven-artifact)
+       ("support" ,maven-builder-support)
+       ("annotations" ,java-plexus-component-annotations)
+       ("utils" ,java-plexus-utils)
+       ("interpolation" ,java-plexus-interpolation)
+       ("lang3" ,java-commons-lang3)
+       ("guava" ,java-guava)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("container" ,java-plexus-container-default)
+       ("xmlunit" ,java-xmlunit)
+       ("xmlunit" ,java-xmlunit-legacy)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("classworlds" ,java-plexus-classworlds)))))
+
+(define-public maven-core
+  (package
+    (inherit maven)
+    (name "maven-core")
+    (arguments
+     `(#:jar-name "maven-core.jar"
+       #:source-dir "maven-core/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "maven-core/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "maven-core/src/main/java" version
+                               "false" "true")))
+             (let ((file "maven-core/src/main/mdo/toolchains.mdo"))
+               (and
+                 (modello-single-mode file "1.1.0" "java")
+                 (modello-single-mode file "1.1.0" "xpp3-reader")
+                 (modello-single-mode file "1.1.0" "xpp3-writer"))))))))
+    (inputs
+     `(("artifact" ,maven-artifact)
+       ("model" ,maven-model)
+       ("model-builder" ,maven-model-builder)
+       ("settings" ,maven-settings)
+       ("settings-builder" ,maven-settings-builder)
+       ("container" ,java-plexus-container-default)
+       ("annotations" ,java-plexus-component-annotations)
+       ("utils" ,java-plexus-utils)
+       ("lang3" ,java-commons-lang3)
+       ("guava" ,java-guava)
+       ("aether" ,java-eclipse-aether-api)
+       ("java-javax-inject" ,java-javax-inject)
+       ("classworld" ,java-plexus-classworlds)))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ("classworlds" ,java-plexus-classworlds)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)))))
