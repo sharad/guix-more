@@ -25,7 +25,7 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages algebra)
-  #:use-module (more packages boost)
+  #:use-module (gnu packages boost)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages freedesktop)
@@ -91,9 +91,14 @@ programmers to access a standard API to open and decompress media files.")
              "--without-openal"
              "--without-oss")
        ;; tests require busted, a lua package we don't have yet
-       #:tests? #f))
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'fix-ldflags
+           (lambda _
+             (setenv "LDFLAGS" "-pthread"))))))
     (inputs
-     `(("boost" ,boost-fix)
+     `(("boost" ,boost)
        ("desktop-file-utils" ,desktop-file-utils)
        ("ffms2" ,ffms2)
        ("fftw" ,fftw)
