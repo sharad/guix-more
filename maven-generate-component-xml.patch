@@ -1,4 +1,4 @@
-From 676c4e33be256e4af2e028088dd28ae7be511df3 Mon Sep 17 00:00:00 2001
+From da9e282d834f0e2128501a8154128dc95b4c599d Mon Sep 17 00:00:00 2001
 From: Julien Lepiller <julien@lepiller.eu>
 Date: Sat, 9 Sep 2017 20:34:38 +0200
 Subject: [PATCH] Add a script to generate component.xml files.
@@ -8,16 +8,16 @@ depends on maven-core, which depends on maven-model-builder, which needs
 plexus-component-metadata. This script is meant to break this dependency
 cycle.
 ---
- components.sh | 124 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 124 insertions(+)
+ components.sh | 132 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 132 insertions(+)
  create mode 100755 components.sh
 
 diff --git a/components.sh b/components.sh
 new file mode 100755
-index 0000000..a00b25b
+index 0000000..c6748bd
 --- /dev/null
 +++ b/components.sh
-@@ -0,0 +1,124 @@
+@@ -0,0 +1,132 @@
 +## This script generates a rough plexus/components.xml file. It is meant to
 +## replace plexus-component-metadata as it eventually has a recursive dependency
 +## on itself.
@@ -29,6 +29,14 @@ index 0000000..a00b25b
 +    role=$1
 +    # Find role
 +    case $role in
++      "LoggerFactory")
++        role=org.eclipse.aether.spi.log.$role
++        ;;
++      "RemoteRepositoryManager" | "VersionResolver" | "VersionRangeResolver" \
++      | "ArtifactResolver" | "RepositoryEventDispatcher" | "MetadataResolver" \
++      | "SyncContextFactory" | "MetadataGeneratorFactory" | "MetadatResolver")
++        role=org.eclipse.aether.impl.$role
++        ;;
 +      "ModelBuilder" | "ModelProcessor")
 +        role=org.apache.maven.model.building.$role
 +        ;;

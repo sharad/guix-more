@@ -76,6 +76,18 @@ technologies. The Java Servlet, JavaServer Pages, Java Expression Language and
 Java WebSocket specifications are developed under the Java Community Process.")
     (license license:asl2.0)))
 
+;(define-public java-tomcat-7
+;  (package
+;    (inherit java-tomcat)
+;    (version "7.0.81")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "mirror://apache/tomcat/tomcat-7/v"
+;                                  version "/src/apache-tomcat-" version "-src.tar.gz"))
+;              (sha256
+;               (base32
+;                "0rjyv3jpya60ph60950gmiqa6znbiq2dvsydxgwwiyqc47xrm9zw"))))))
+
 (define-public java-openjfx
   (package
     (name "java-openjfx")
@@ -379,6 +391,16 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                     (format file "Created-By: 1.8.0_131-b11 (Oracle Corporation)")))))
             (replace 'install
               (install-jars "build"))))))))
+
+(define java-commons-collections-test-classes
+  (package
+    (inherit java-commons-collections)
+    (arguments
+     `(#:jar-name "commons-collections-test-classes.jar"
+       #:source-dir "src/test"
+       #:tests? #f))
+    (inputs
+     `(("collection" ,java-commons-collections)))))
 
 (define-public java-jdom2
   (package
@@ -3126,6 +3148,21 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-guice-servlet
+  (package
+    (inherit java-guice)
+    (name "java-guice-servlet")
+    (arguments
+     `(#:jar-name "guice-servlet.jar"
+       #:source-dir "extensions/servlet/src/"
+       #:jdk ,icedtea-8
+       #:tests? #f; FIXME: not in a java subdir
+       ))
+    (inputs
+     `(("guice" ,java-guice)
+       ("servlet" ,java-tomcat)
+       ,@(package-inputs java-guice)))))
+
 (define-public java-jcommander
   (package
     (name "java-jcommander")
@@ -4213,6 +4250,31 @@ the options available for a command line tool.")
     (description "")
     (license license:bsd-3)))
 
+(define-public java-jsr250
+  (package
+    (name "java-jsr250")
+    (version "1.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://repo1.maven.org/maven2/"
+                                  "javax/annotation/javax.annotation-api/"
+                                  version "/javax.annotation-api-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "08clh8n4n9wfglf75qsqfjs6yf79f7x6hqx38cn856pksszv50kz"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f ; no tests included
+       #:jdk ,icedtea-8
+       #:jar-name "jsr250.jar"))
+    (home-page "https://jcp.org/en/jsr/detail?id=250")
+    (synopsis "Security-related annotations")
+    (description "This package provides annotations for security.  It provides
+packages in the @code{javax.annotation} and @code{javax.annotation.security}
+namespaces.")
+    (license (list license:cddl1.0 license:gpl2)))); gpl2 only, with classpath exception
+
 (define-public java-checker-framework
   (package
     (name "java-checker-framework")
@@ -4706,7 +4768,7 @@ the options available for a command line tool.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0wapzqwpx4bh2fsqpzf3haakjz6wvfjx1vd9a4spavhlrjqk2pbb"))))
+                "15c9xmf7rhr5w4qk2jcb6swds336l4l5gyb51pcjay2ywnigk8sa"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "groovy.jar"
@@ -4743,13 +4805,37 @@ the options available for a command line tool.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:tests? #f
-       #:source-dir "src/main"
+       #:source-dir "src/main/java"
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-parser
            (lambda _
              (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
                (zero? (system* "antlr4" "java.g"))))))))))
+
+(define-public groovy-1.0
+  (package
+    (inherit groovy)
+    (name "groovy")
+    (version "1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+                                  "1_0.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0v2nygblrvzjbdnz1l14dm167g4865d1iwxlpr909fsc4784lv1v"))))
+    (arguments
+     `(#:jar-name (string-append ,name "-" ,version ".jar")
+       #:tests? #f
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-parser
+           (lambda _
+             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
+               (zero? (system* "antlr3" "groovy.g"))))))))))
 
 
 ;(define-public antlr3-3.4
@@ -5169,6 +5255,70 @@ the options available for a command line tool.")
       (uri url)
       (sha256 (base32 hash)))))
 
+(define-public java-commons-beanutils
+  (package
+    (name "java-commons-beanutils")
+    (version "1.9.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/beanutils/source/"
+                                  "commons-beanutils-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "03cs0bq3sl1sdc7py9g3qnf8n9h473nrkvd3d251kaqv6a2ab7qk"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:test-target "test"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "dist/commons-beanutils-1.9.3-SNAPSHOT.jar"
+               (string-append (assoc-ref outputs "out") "/share/java/"
+                              "commons-beanutils.jar")))))))
+    (inputs
+     `(("logging" ,java-commons-logging-minimal)
+       ("collections" ,java-commons-collections)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("collections-test" ,java-commons-collections-test-classes)))
+    (home-page "http://commons.apache.org/beanutils/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-jxpath
+  (package
+    (name "java-commons-jxpath")
+    (version "1.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/jxpath/source/"
+                                  "commons-jxpath-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "1rpgg31ayn9fwr4bfi2i1ij0npcg79ad2fv0w9hacvawsyc42cfs"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-jxpath.jar"
+       ;; tests require more dependencies, including mockrunner which depends on old software
+       #:tests? #f
+       #:source-dir "src/java"))
+    (inputs
+     `(("servlet" ,java-tomcat)
+       ("jdom" ,java-jdom)
+       ("beanutils" ,java-commons-beanutils)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "http://commons.apache.org/jxpath/")
+    (synopsis "Simple interpreter of an expression language called XPath.")
+    (description "The org.apache.commons.jxpath package defines a simple
+interpreter of an expression language called XPath.  JXPath applies XPath
+expressions to graphs of objects of all kinds: JavaBeans, Maps, Servlet
+contexts, DOM etc, including mixtures thereof.")
+    (license license:asl2.0)))
+
 (define-public java-geronimo-xbean-reflect
   (package
     (name "java-geronimo-xbean-reflect")
@@ -5262,7 +5412,7 @@ the options available for a command line tool.")
                 "0rb3zhci7w9wzd65lfnk7p3ip0n6gb58a9qpx8n7r0231gahyamf"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "container-default.jar"
+     `(#:jar-name "iq80-snappy.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:jdk ,icedtea-8
@@ -5436,7 +5586,8 @@ the options available for a command line tool.")
          (add-before 'check 'fix-paths
            (lambda _
              (substitute* "plexus-container-default/src/test/java/org/codehaus/plexus/component/composition/ComponentRealmCompositionTest.java"
-               (("src/test") "plexus-container-default/src/test")))))))
+               (("src/test") "plexus-container-default/src/test"))
+             #t)))))
     (inputs
      `(("worldclass" ,java-plexus-classworlds)
        ("xbean" ,java-geronimo-xbean-reflect)
@@ -5458,25 +5609,147 @@ the options available for a command line tool.")
     (inputs '())
     (native-inputs '())))
 
+;(define-public java-qdox
+;  (package
+;    (name "java-qdox")
+;    (version "2.0-M5")
+;    (source
+;     (origin
+;       (method url-fetch)
+;       ;; 2.0-M4, -M5 at https://github.com/paul-hammant/qdox
+;       ;; Older releases at https://github.com/codehaus/qdox/
+;       (uri (string-append "http://central.maven.org/maven2/"
+;                           "com/thoughtworks/qdox/qdox/" version
+;                           "/qdox-" version "-sources.jar"))
+;       (sha256
+;        (base32 "10ny800qmfishrqdxmngv0jylhaxjh340bia8csghl9a9cbxfrjs"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "qdox.jar"))
+;    (home-page "http://qdox.codehaus.org/")
+;    (synopsis "Parse definitions from Java source files")
+;    (description "QDox is a high speed, small footprint parser for extracting
+;class/interface/method definitions from source files complete with JavaDoc
+;@code{@@tags}.  It is designed to be used by active code generators or
+;documentation tools.")
+;    (license license:asl2.0)))
+;
+;(define-public java-qdox-1.12
+;  (package (inherit java-qdox)
+;    (version "1.12.1")
+;    (source
+;     (origin
+;       (method url-fetch)
+;       (uri (string-append "http://central.maven.org/maven2/"
+;                           "com/thoughtworks/qdox/qdox/" version
+;                           "/qdox-" version "-sources.jar"))
+;       (sha256
+;        (base32 "0hlfbqq2avf5s26wxkksqmkdyk6zp9ggqn37c468m96mjv0n9xfl"))))
+;    (arguments
+;     `(#:jar-name "qdox.jar"
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-after 'unpack 'delete-tests
+;           (lambda _
+;             (delete-file-recursively "src/com/thoughtworks/qdox/junit")
+;             #t)))))))
+
+(define-public java-plexus-cli
+  (package
+    (name "java-plexus-cli")
+    (version "1.7")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/sonatype/plexus-cli")
+                     (commit "a776afa6bca84e5107bedb69440329cdb24ed645")))
+              (file-name (string-append name "-" version))
+              (sha256
+               (base32
+                "0xjrlay605rypv3zd7y24vlwf0039bil3n2cqw54r1ddpysq46vx"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "plexus-cli.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "src/test"))
+    (inputs
+     `(("cli" ,java-commons-cli)
+       ("container" ,java-plexus-container-default)
+       ("classworlds" ,java-plexus-classworlds)))
+    (native-inputs
+     `(("utils" ,java-plexus-utils)
+       ("junit" ,java-junit)
+       ("guava" ,java-guava)))
+    (home-page "https://codehaus-plexus.github.io/plexus-cli")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-qdox
+  (package
+    (name "java-qdox")
+    ; Newer version exists, but this version is required by java-plexus-component-metadata
+    (version "2.0-M2")
+    (source
+     (origin
+       (method url-fetch)
+       ;; 2.0-M4, -M5 at https://github.com/paul-hammant/qdox
+       ;; Older releases at https://github.com/codehaus/qdox/
+       (uri (string-append "http://central.maven.org/maven2/"
+                           "com/thoughtworks/qdox/qdox/" version
+                           "/qdox-" version "-sources.jar"))
+       (sha256
+        (base32 "10xxrcaicq6axszcr2jpygisa4ch4sinyx5q7kqqxv4lknrmxp5x"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "qdox.jar"
+       #:tests? #f)); no tests
+    (home-page "http://qdox.codehaus.org/")
+    (synopsis "Parse definitions from Java source files")
+    (description "QDox is a high speed, small footprint parser for extracting
+class/interface/method definitions from source files complete with JavaDoc
+@code{@@tags}.  It is designed to be used by active code generators or
+documentation tools.")
+    (license license:asl2.0)))
+
 (define-public java-plexus-component-metadata
   (package
     (inherit java-plexus-container-default)
     (name "java-plexus-component-metadata")
     (arguments
      `(#:jar-name "plexus-component-metadata.jar"
-       #:source-dir "plexus-component-metadata/src/main/java"
-       #:test-dir "plexus-component-metadata/src/test"
-       #:jdk ,icedtea-8))
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "plexus-component-metadata")))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources"
+                               "build/classes/")
+             #t)))))
     (inputs
      `(("container" ,java-plexus-container-default)
        ("annotations" ,java-plexus-component-annotations)
        ("utils" ,java-plexus-utils)
+       ("cli" ,java-plexus-cli)
        ("classworlds" ,java-plexus-classworlds)
+       ("plugin-api" ,maven-plugin-api)
+       ("plugin-annotations" ,maven-plugin-annotations)
+       ("core" ,maven-core)
+       ("model" ,maven-model)
        ("cli" ,java-commons-cli)
-       ("qdox" ,java-qdox-1.12); TODO: package latest version
+       ("qdox" ,java-qdox)
        ("jdom2" ,java-jdom2)
        ("asm" ,java-asm)))
-    (native-inputs '())))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("guava" ,java-guava)
+       ("xbean" ,java-geronimo-xbean-reflect)))))
 
 (define-public java-sisu-build-api
   (package
@@ -5791,6 +6064,524 @@ the options available for a command line tool.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-eclipse-sisu-inject
+  (package
+    (name "java-eclipse-sisu-inject")
+    (version "0.3.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/eclipse/sisu.inject/"
+                                  "archive/releases/" version ".tar.gz"))
+              (sha256
+               (base32
+                "1d2b378bc2l3k2ylcjvbh6dkydk0s2mfpw80hk6lx9zhizfifkn3"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "eclipse-sisu-inject.jar"
+       #:source-dir "org.eclipse.sisu.inject/src"
+       #:jdk ,icedtea-8
+       #:tests? #f)); no tests
+    (inputs
+     `(("guice" ,java-guice)
+       ("guice-servlet" ,java-guice-servlet)
+       ("javax-inject" ,java-javax-inject)
+       ("servlet" ,java-tomcat)
+       ("junit" ,java-junit)
+       ("slf4j" ,java-slf4j-api)
+       ("java-jsr305" ,java-jsr305)
+       ("java-jsr250" ,java-jsr250)
+       ("cdi-api" ,java-cdi-api)
+       ("osgi-framework" ,java-osgi-framework)
+       ("osgi-util-tracker" ,java-osgi-util-tracker)
+       ("testng" ,java-testng)))
+    (home-page "https://www.eclipse.org/sisu/")
+    (synopsis "")
+    (description "")
+    (license license:epl1.0)))
+
+(define-public java-eclipse-sisu-plexus
+  (package
+    (name "java-eclipse-sisu-plexus")
+    (version "0.3.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/eclipse/sisu.plexus/"
+                                  "archive/releases/" version ".tar.gz"))
+              (sha256
+               (base32
+                "1qqk6lryblp70r464sn1rj86j3131zrazminp4zlphm510p3dpgz"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "eclipse-sisu-plexus.jar"
+       #:source-dir "org.eclipse.sisu.plexus/src"
+       #:jdk ,icedtea-8
+       #:tests? #f)); no tests
+    (inputs
+     `(("classworlds" ,java-plexus-classworlds)
+       ("util" ,java-plexus-utils)
+       ("annotations" ,java-plexus-component-annotations)
+       ("framework" ,java-osgi-framework)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("guice" ,java-guice)
+       ("javax-inject" ,java-javax-inject)
+       ("slf4j" ,java-slf4j-api)
+       ("junit" ,java-junit)))
+    (home-page "https://www.eclipse.org/sisu/")
+    (synopsis "")
+    (description "")
+    (license license:epl1.0)))
+
+(define-public java-eclipse-jetty-test-helper
+  (package
+    (name "java-eclipse-jetty-test-helper")
+    (version "4.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/eclipse/jetty.toolchain/"
+                                  "archive/jetty-test-helper-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0gxq0g3rkplcpxrjl0xrlwqanxwn0aiblk2nma3z1w0gmy0a70g0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "eclipse-jetty-test-helper.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-test-helper")))
+         (add-before 'build 'fix-build-path
+           (lambda _
+             ;; FIXME:
+             ;; This file assumes that the build directory is named "target"
+             ;; but it is not the case with our ant-build-system. Once we have
+             ;; maven though, we will have to rebuild this package because this
+             ;; assumption is correct with maven-build-system.
+             (substitute* "src/main/java/org/eclipse/jetty/toolchain/test/MavenTestingUtils.java"
+               (("\"target\"") "\"build\"")
+               (("\"tests\"") "\"test-classes\""))))
+         (add-before 'check 'fix-paths
+           (lambda _
+             (with-directory-excursion "src/test/java/org/eclipse/jetty/toolchain/test"
+               (substitute* '("FSTest.java" "OSTest.java" "TestingDirTest.java"
+                              "MavenTestingUtilsTest.java")
+                 (("target/tests") "build/test-classes")
+                 (("\"target") "\"build"))))))))
+    (inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-all)))
+    (home-page "https://www.eclipse.org/jetty")
+    (synopsis "")
+    (description "")
+    (license (list license:epl1.0 license:asl2.0))))
+
+;(define-public java-eclipse-jetty-test-helper-4.1
+;  (package
+;    (inherit java-eclipse-jetty-test-helper)
+;    (version "3.1")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/eclipse/jetty.toolchain/"
+;                                  "archive/jetty-test-helper-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "10qrsii9vzbwjfw5q8gfhzcawsq7i9251phpfr6hx7hz8qmhkdwp"))))))
+
+(define-public java-eclipse-jetty-perf-helper
+  (package
+    (inherit java-eclipse-jetty-test-helper)
+    (name "java-eclipse-jetty-perf-helper")
+    (arguments
+     `(#:jar-name "eclipse-jetty-perf-helper.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-perf-helper"))))))
+    (inputs
+     `(("hdrhistogram" ,java-hdrhistogram)))))
+
+;(define-public java-eclipse-jetty-perf-helper-3
+;  (package
+;    (inherit java-eclipse-jetty-perf-helper)
+;    (version (package-version java-eclipse-jetty-test-helper-3))
+;    (source (package-source java-eclipse-jetty-test-helper-3))))
+
+(define-public java-eclipse-jetty-util
+  (package
+    (name "java-eclipse-jetty-util")
+    (version "9.4.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/eclipse/jetty.project/"
+                                  "archive/jetty-" version ".v20170531.tar.gz"))
+              (sha256
+               (base32
+                "0wy2iarfs952hczznkxsh7kp2s9gw4wsaahrc7ym2gnp727ldpn9"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "eclipse-jetty-util.jar"
+       #:source-dir "src/main/java"
+       #:test-exclude (list "**/Abstract*.java"
+                            ;; requires network
+                            "**/InetAddressSetTest.java"
+                            ;; Assumes we are using maven
+                            "**/TypeUtilTest.java"
+                            ;; Error on the style of log
+                            "**/StdErrLogTest.java")
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-util"))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-all)
+       ("perf-helper" ,java-eclipse-jetty-perf-helper)
+       ("test-helper" ,java-eclipse-jetty-test-helper)))
+    (home-page "https://www.eclipse.org/jetty")
+    (synopsis "")
+    (description "")
+    (license (list license:epl1.0 license:asl2.0))))
+
+;; This version is required by maven-wagon
+(define-public java-eclipse-jetty-util-9.2
+  (package
+    (inherit java-eclipse-jetty-util)
+    (version "9.2.22")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/eclipse/jetty.project/"
+                                  "archive/jetty-" version ".v20170606.tar.gz"))
+              (sha256
+               (base32
+                "14lwmxx4ydachrhrf46b17siqjq4npblh0brlfq0j0cpmxq23mmi"))))
+    (arguments
+     `(#:jar-name "eclipse-jetty-util.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:test-exclude (list "**/Abstract*.java"
+                            ;; requires network
+                            "**/InetAddressSetTest.java"
+                            ;; Assumes we are using maven
+                            "**/TypeUtilTest.java"
+                            ;; We don't have an implementation for slf4j
+                            "**/LogTest.java"
+                            ;; Error on the style of log
+                            "**/StdErrLogTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-util")))
+         (add-before 'check 'fix-sources
+           (lambda _
+             (substitute* "src/test/java/org/eclipse/jetty/util/resource/AbstractFSResourceTest.java"
+               (("testdir.getDir\\(\\)") "testdir.getPath().toFile()")
+               (("testdir.getFile\\(\"foo\"\\)")
+                "testdir.getPathFile(\"foo\").toFile()")
+               (("testdir.getFile\\(name\\)")
+                "testdir.getPathFile(name).toFile()")))))))))
+
+(define-public java-eclipse-jetty-io
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-io")
+    (arguments
+     `(#:jar-name "eclipse-jetty-io.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:test-exclude (list "**/Abstract*.java"
+                            ;; Abstract class
+                            "**/EndPointTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-io"))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("util" ,java-eclipse-jetty-util)))))
+
+(define-public java-eclipse-jetty-io-9.2
+  (package
+    (inherit java-eclipse-jetty-io)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))
+    (native-inputs
+     `(("mockito" ,java-mockito-1)
+       ("cglib" ,java-cglib)
+       ("objenesis" ,java-objenesis)
+       ("asm" ,java-asm)
+       ,@(package-native-inputs java-eclipse-jetty-util-9.2)))))
+
+(define-public java-eclipse-jetty-http
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-http")
+    (arguments
+     `(#:jar-name "eclipse-jetty-http.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-http")))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes")
+             (copy-recursively "src/main/resources/" "build/classes/"))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("io" ,java-eclipse-jetty-io)
+       ("util" ,java-eclipse-jetty-util)))))
+
+(define-public java-eclipse-jetty-http-9.2
+  (package
+    (inherit java-eclipse-jetty-http)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ("io" ,java-eclipse-jetty-io-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))))
+
+(define java-eclipse-jetty-http-test-classes
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-http-test-classes")
+    (arguments
+     `(#:jar-name "eclipse-jetty-http.jar"
+       #:source-dir "src/test"
+       #:tests? #f
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-http"))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("http" ,java-eclipse-jetty-http)
+       ("io" ,java-eclipse-jetty-io)
+       ("util" ,java-eclipse-jetty-util)))))
+
+(define java-eclipse-jetty-http-test-classes-9.2
+  (package
+    (inherit java-eclipse-jetty-http-test-classes)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (inputs
+     `(("http" ,java-eclipse-jetty-http-9.2)
+       ,@(package-inputs java-eclipse-jetty-http-9.2)))))
+
+(define-public java-eclipse-jetty-jmx
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-jmx")
+    (arguments
+     `(#:jar-name "eclipse-jetty-jmx.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; FIXME: requires com.openpojo.validation
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-jmx"))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("util" ,java-eclipse-jetty-util)))))
+
+(define-public java-eclipse-jetty-jmx-9.2
+  (package
+    (inherit java-eclipse-jetty-jmx)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))))
+
+(define-public java-eclipse-jetty-server
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-server")
+    (arguments
+     `(#:jar-name "eclipse-jetty-server.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; requires a mockito version we don't have
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-server")))
+         (add-before 'build 'fix-source
+           (lambda _
+             (substitute* "src/main/java/org/eclipse/jetty/server/Request.java"
+               (("append\\(LazyList")
+                "append((CharSequence)LazyList"))
+             (substitute* "src/main/java/org/eclipse/jetty/server/handler/ContextHandler.java"
+               (("Class<\\? extends EventListener> clazz = _classLoader==null\\?Loader.loadClass\\(ContextHandler.class,className\\):_classLoader.loadClass\\(className\\);")
+                "Class<? extends EventListener> clazz = (Class<? extends EventListener>) (_classLoader==null?Loader.loadClass(ContextHandler.class,className):_classLoader.loadClass(className));")))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("http" ,java-eclipse-jetty-http)
+       ("io" ,java-eclipse-jetty-io)
+       ("jmx" ,java-eclipse-jetty-jmx)
+       ("util" ,java-eclipse-jetty-util)))
+    (native-inputs
+     `(("test-classes" ,java-eclipse-jetty-http-test-classes)
+       ,@(package-native-inputs java-eclipse-jetty-util)))))
+
+;(define-public java-eclipse-jetty-continuation-8
+;  (package
+;    (inherit java-eclipse-jetty-util-9.2)
+;    (name "java-eclipse-jetty-continuation")
+;    (arguments
+;     `(#:jar-name "eclipse-jetty-continuation.jar"
+;       #:source-dir "src/main/java"
+;       #:tests? #f; no tests
+;       #:jdk ,icedtea-8
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'configure 'chdir
+;           (lambda _
+;             (chdir "jetty-continuation")
+;             (delete-file "src/main/java/org/eclipse/jetty/continuation/Jetty6Continuation.java"))))))))
+
+(define-public java-eclipse-jetty-server-9.2
+  (package
+    (inherit java-eclipse-jetty-server)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ("jmx" ,java-eclipse-jetty-jmx-9.2)
+       ;("continuation" ,java-eclipse-jetty-continuation-8)
+       ("io" ,java-eclipse-jetty-io-9.2)
+       ("http" ,java-eclipse-jetty-http-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))
+    (native-inputs
+     `(("test-classes" ,java-eclipse-jetty-http-test-classes-9.2)
+       ,@(package-native-inputs java-eclipse-jetty-util-9.2)))))
+
+(define-public java-eclipse-jetty-servlet
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-servlet")
+    (arguments
+     `(#:jar-name "eclipse-jetty-servlet.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-servlet"))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("http" ,java-eclipse-jetty-http)
+       ("http-test" ,java-eclipse-jetty-http-test-classes)
+       ("io" ,java-eclipse-jetty-io)
+       ("jmx" ,java-eclipse-jetty-jmx)
+       ("security" ,java-eclipse-jetty-security)
+       ("server" ,java-eclipse-jetty-server)
+       ("util" ,java-eclipse-jetty-util)))))
+
+(define-public java-eclipse-jetty-servlet-9.2
+  (package
+    (inherit java-eclipse-jetty-servlet)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (arguments
+     `(#:jar-name "eclipse-jetty-servlet.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; doesn't work
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-servlet"))))))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ("jmx" ,java-eclipse-jetty-jmx-9.2)
+       ("io" ,java-eclipse-jetty-io-9.2)
+       ("http" ,java-eclipse-jetty-http-9.2)
+       ("security" ,java-eclipse-jetty-security-9.2)
+       ;("continuation" ,java-eclipse-jetty-continuation-8)
+       ("http-test" ,java-eclipse-jetty-http-test-classes-9.2)
+       ("server" ,java-eclipse-jetty-server-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))))
+
+(define-public java-eclipse-jetty-security
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-security")
+    (arguments
+     `(#:jar-name "eclipse-jetty-security.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-security"))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("http" ,java-eclipse-jetty-http)
+       ("server" ,java-eclipse-jetty-server)
+       ("util" ,java-eclipse-jetty-util)))
+    (native-inputs
+     `(("io" ,java-eclipse-jetty-io)
+       ,@(package-native-inputs java-eclipse-jetty-util)))))
+
+(define-public java-eclipse-jetty-security-9.2
+  (package
+    (inherit java-eclipse-jetty-security)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (arguments
+     `(#:jar-name "eclipse-jetty-security.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-security"))))))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ("http" ,java-eclipse-jetty-http-9.2)
+       ("server" ,java-eclipse-jetty-server-9.2)
+       ;("continuation" ,java-eclipse-jetty-continuation-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))
+    (native-inputs
+     `(("io" ,java-eclipse-jetty-io-9.2)
+       ,@(package-native-inputs java-eclipse-jetty-util-9.2)))))
+
 (define-public java-eclipse-aether-api
   (package
     (name "java-eclipse-aether-api")
@@ -5813,7 +6604,178 @@ the options available for a command line tool.")
     (home-page "https://projects.eclipse.org/projects/technology.aether")
     (synopsis "")
     (description "")
-    (license license:asl2.0)))
+    (license license:epl1.0)))
+
+(define-public java-eclipse-aether-spi
+  (package
+    (inherit java-eclipse-aether-api)
+    (name "java-eclipse-aether-spi")
+    (arguments
+     `(#:jar-name "eclipse-aether-spi.jar"
+       #:source-dir "aether-spi/src/main/java"
+       #:test-dir "aether-spi/src/test"))
+    (inputs
+     `(("api" ,java-eclipse-aether-api)))))
+
+(define-public java-eclipse-aether-test-util
+  (package
+    (inherit java-eclipse-aether-api)
+    (name "java-eclipse-aether-test-util")
+    (arguments
+     `(#:jar-name "eclipse-aether-test-util.jar"
+       #:source-dir "aether-test-util/src/main/java"
+       #:test-dir "aether-test-util/src/test"))
+    (inputs
+     `(("api" ,java-eclipse-aether-api)
+       ("spi" ,java-eclipse-aether-spi)))))
+
+(define-public java-eclipse-aether-util
+  (package
+    (inherit java-eclipse-aether-api)
+    (name "java-eclipse-aether-util")
+    (arguments
+     `(#:jar-name "eclipse-aether-util.jar"
+       #:source-dir "aether-util/src/main/java"
+       #:test-dir "aether-util/src/test"))
+    (inputs
+     `(("api" ,java-eclipse-aether-api)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("test-util" ,java-eclipse-aether-test-util)))))
+
+(define-public java-eclipse-aether-impl
+  (package
+    (inherit java-eclipse-aether-api)
+    (name "java-eclipse-aether-impl")
+    (arguments
+     `(#:jar-name "eclipse-aether-impl.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "aether-impl/src/main/java"
+       #:test-dir "aether-impl/src/test"))
+    (inputs
+     `(("api" ,java-eclipse-aether-api)
+       ("spi" ,java-eclipse-aether-spi)
+       ("util" ,java-eclipse-aether-util)
+       ("javax-inject" ,java-javax-inject)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("guice" ,java-guice)
+       ("slf4j" ,java-slf4j-api)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("guava" ,java-guava)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("aopalliance" ,java-aopalliance)
+       ("test-util" ,java-eclipse-aether-test-util)))))
+
+(define-public java-commons-compiler
+  (package
+    (name "java-commons-compiler")
+    (version "3.0.7")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/janino-compiler/janino")
+                     (commit "6fa05ea19323f46a4f2611671d2ad453c0866564")))
+              (sha256
+               (base32
+                "04kzh2pbrb1011fprnpgy1nwrx0k5aky382k9n9j2w1pj17qplz4"))
+              (modules '((guix build utils)))
+              (snippet
+               '(begin
+                  (for-each delete-file
+                            (find-files "." "\\.jar$"))
+                  #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-compiler.jar"
+       #:source-dir "commons-compiler/src/main"
+       #:tests? #f)); no tests
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-janino
+  (package
+    (inherit java-commons-compiler)
+    (name "java-janino")
+    (arguments
+     `(#:jar-name "janino.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "janino"))))))
+    (inputs
+     `(("compiler" ,java-commons-compiler)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))))
+
+(define-public java-logback-core
+  (package
+    (name "java-logback-core")
+    (version "1.2.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/qos-ch/logback/archive/v_"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1x6ga74yfgm94cfx98gybakbrlilx8i2gn6dx13l40kasmys06mi"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "logback.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:tests? #f; One test fails with Unable to set MockitoNamingPolicy on cglib generator which creates FastClasses
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "logback-core"))))))
+    (inputs
+     `(("java-mail" ,java-javax-mail)
+       ("servlet" ,java-tomcat)
+       ("compiler" ,java-commons-compiler)
+       ("janino" ,java-janino)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("mockito" ,java-mockito-1)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("objenesis" ,java-objenesis)
+       ("joda-time" ,java-joda-time)))
+    (home-page "https://logback.qos.ch")
+    (synopsis "")
+    (description "")
+    (license (list license:epl1.0 license:lgpl2.1))))
+
+(define-public java-logback-classic
+  (package
+    (inherit java-logback-core)
+    (name "java-logback-classic")
+    (arguments
+     `(#:jar-name "logback-classic.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "logback-classic")))
+         (add-after 'chdir 'remove-groovy-dep
+           (lambda _
+             (delete-file "src/main/java/ch/qos/logback/classic/boolex/GEventEvaluator.java"))))))
+    (inputs
+     `(("core" ,java-logback-core)
+       ("slf4j" ,java-slf4j-api)
+       ,@(package-inputs java-logback-core)))))
 
 (define-public maven
   (package
@@ -5829,8 +6791,28 @@ the options available for a command line tool.")
                 (search-patches "maven-generate-component-xml.patch"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "maven.jar"
-       #:source-dir "apache-maven"))
+     `(#:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (substitute* "apache-maven/src/bin/mvn"
+               (("cygwin=false;")
+                (string-append
+                  "CLASSPATH=" (getenv "CLASSPATH") "\n"
+                  "cygwin=false;"))
+               (("-classpath.*") ""))))
+         (delete 'check)
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((bin (string-append (assoc-ref outputs "out") "/bin/")))
+               (for-each (lambda (file)
+                           (install-file (string-append "apache-maven/src/bin/" file)
+                                         (string-append bin))
+                           (chmod (string-append bin file) #o755))
+                '("mvn" "mvnDebug" "mvnyjp"))))))))
+    (inputs
+     `(("classworlds" ,java-plexus-classworlds)
+       ("core" ,maven-core)))
     (home-page "")
     (synopsis "")
     (description "")
@@ -5916,6 +6898,7 @@ the options available for a command line tool.")
                  (modello-single-mode file "1.1.0" "java")
                  (modello-single-mode file "1.1.0" "xpp3-reader")
                  (modello-single-mode file "1.1.0" "xpp3-writer"))))))))
+    (inputs '())
     (native-inputs
      `(("modello" ,java-modello-core)
        ;; for modello:
@@ -5974,22 +6957,6 @@ the options available for a command line tool.")
     (native-inputs
      `(("junit" ,java-junit)))))
 
-(define-public maven-plugin-lifecycle
-  (package
-    (inherit maven)
-    (name "maven-plugin-api")
-    (arguments
-     `(#:jar-name "maven-plugin-api.jar"
-       #:source-dir "maven-plugin-api/src/main/java"
-       #:jdk ,icedtea-8
-       #:test-dir "maven-plugin-api/test"))
-    (inputs
-     `(("artifact" ,maven-artifact)
-       ("container" ,java-plexus-container-default)
-       ("utils" ,java-plexus-utils)
-       ("classworlds" ,java-plexus-classworlds)))
-    (native-inputs '())))
-
 (define-public maven-plugin-api
   (package
     (inherit maven)
@@ -5998,12 +6965,39 @@ the options available for a command line tool.")
      `(#:jar-name "maven-plugin-api.jar"
        #:source-dir "maven-plugin-api/src/main/java"
        #:jdk ,icedtea-8
-       #:test-dir "maven-plugin-api/test"))
+       #:test-dir "maven-plugin-api/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "maven-plugin-api/src/main/java" version
+                               "false" "true")))
+             (let ((file "maven-plugin-api/src/main/mdo/lifecycle.mdo"))
+               (and
+                 (modello-single-mode file "1.0.0" "java")
+                 (modello-single-mode file "1.0.0" "xpp3-reader")
+                 (modello-single-mode file "1.0.0" "xpp3-writer"))))))))
     (inputs
      `(("artifact" ,maven-artifact)
+       ("model" ,maven-model)
        ("container" ,java-plexus-container-default)
        ("utils" ,java-plexus-utils)))
-    (native-inputs '())))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ;; for modello:
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ;; modello plugins:
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)
+       ;; for tests
+       ("junit" ,java-junit)))))
 
 (define-public maven-model-builder
   (package
@@ -6049,6 +7043,99 @@ the options available for a command line tool.")
        ("xbean" ,java-geronimo-xbean-reflect)
        ("classworlds" ,java-plexus-classworlds)))))
 
+(define-public maven-repository-metadata
+  (package
+    (inherit maven)
+    (name "maven-repository-metadata")
+    (arguments
+     `(#:jar-name "maven-repository-metadata.jar"
+       #:source-dir "maven-repository-metadata/src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "maven-repository-metadata/src/main/java" version
+                               "false" "true")))
+             (let ((file "maven-repository-metadata/src/main/mdo/metadata.mdo"))
+               (and
+                 (modello-single-mode file "1.1.0" "java")
+                 (modello-single-mode file "1.1.0" "xpp3-reader")
+                 (modello-single-mode file "1.1.0" "xpp3-writer"))))))))
+    (inputs '())
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ;; for modello:
+       ("container" ,java-plexus-container-default)
+       ("utils" ,java-plexus-utils)
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ;; modello plugins:
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)
+       ;; for tests
+       ("junit" ,java-junit)))))
+
+(define-public maven-aether-provider
+  (package
+    (inherit maven)
+    (name "maven-aether-provider")
+    (arguments
+     `(#:jar-name "maven-aether-provider.jar"
+       #:source-dir "maven-aether-provider/src/main/java"
+       #:test-dir "maven-aether-provider/src/test"
+       #:tests? #f; strange failure: cannot find ContainerConfiguration.setAutoWiring()
+       ;; and PlexusConstants.SCANNING_INDEX
+       ;; Supposedly, this is in maven-compat, which depends on maven-core.
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-components.xml
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (chmod "components.sh" #o755)
+             (zero? (system* "./components.sh" "maven-aether-provider/src/main/java"
+                             "build/classes/META-INF/plexus/components.xml")))))))
+    (inputs
+     `(("spi" ,java-eclipse-aether-spi)
+       ("api" ,java-eclipse-aether-api)
+       ("impl" ,java-eclipse-aether-impl)
+       ("util" ,java-eclipse-aether-util)
+       ("model" ,maven-model)
+       ("model-builder" ,maven-model-builder)
+       ("support" ,maven-builder-support)
+       ("repository" ,maven-repository-metadata)
+       ("annotations" ,java-plexus-component-annotations)
+       ("lang3" ,java-commons-lang3)
+       ("guice" ,java-guice)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ;; for modello:
+       ("container" ,java-eclipse-sisu-plexus)
+       ("utils" ,java-plexus-utils)
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ;; modello plugins:
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)
+       ;; for tests
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("junit" ,java-junit)
+       ("mockito" ,java-mockito-1)))))
+
 (define-public maven-core
   (package
     (inherit maven)
@@ -6058,6 +7145,11 @@ the options available for a command line tool.")
        #:source-dir "maven-core/src/main/java"
        #:jdk ,icedtea-8
        #:test-dir "maven-core/src/test"
+       ;; Tests fail with
+       ;; org.codehaus.plexus.component.repository.exception.ComponentLookupException: java.util.NoSuchElementException
+       ;;   role: org.apache.maven.repository.RepositorySystem
+       ;; It seems they need maven-compat, which requires maven-core
+       #:tests? #f
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-models
@@ -6074,23 +7166,282 @@ the options available for a command line tool.")
                  (modello-single-mode file "1.1.0" "xpp3-writer"))))))))
     (inputs
      `(("artifact" ,maven-artifact)
+       ("aether" ,maven-aether-provider)
+       ("support" ,maven-builder-support)
        ("model" ,maven-model)
        ("model-builder" ,maven-model-builder)
        ("settings" ,maven-settings)
        ("settings-builder" ,maven-settings-builder)
-       ("container" ,java-plexus-container-default)
+       ("plugin-api" ,maven-plugin-api)
+       ("repository-metadat" ,maven-repository-metadata)
        ("annotations" ,java-plexus-component-annotations)
        ("utils" ,java-plexus-utils)
        ("lang3" ,java-commons-lang3)
        ("guava" ,java-guava)
-       ("aether" ,java-eclipse-aether-api)
+       ("guice" ,java-guice)
+       ("aether-api" ,java-eclipse-aether-api)
+       ("aether-spi" ,java-eclipse-aether-spi)
+       ("aether-util" ,java-eclipse-aether-util)
+       ("aether-impl" ,java-eclipse-aether-impl)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("container" ,java-eclipse-sisu-plexus)
        ("java-javax-inject" ,java-javax-inject)
        ("classworld" ,java-plexus-classworlds)))
     (native-inputs
      `(("modello" ,java-modello-core)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
        ("classworlds" ,java-plexus-classworlds)
        ("xbean" ,java-geronimo-xbean-reflect)
        ("build-api" ,java-sisu-build-api)
        ("java" ,java-modello-plugins-java)
        ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)
+       ;; tests
+       ("junit" ,java-junit)
+       ("mockito" ,java-mockito-1)
+       ("jxpath" ,java-commons-jxpath)))))
+
+(define-public maven-wagon-provider-api
+  (package
+    (name "maven-wagon-provider-api")
+    (version "3.0.0")
+    (source (origin 
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/maven/wagon/"
+                                  "wagon-" version "-source-release.zip"))
+              (sha256 (base32 "1qb0q4m7vmf290xp3fnfdi3pwl3hkskia5g3z2v82q1ch3y2knqv"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "maven-wagon-provider-api.jar"
+       #:source-dir "wagon-provider-api/src/main/java"
+       #:test-dir "wagon-provider-api/src/test"))
+    (inputs
+     `(("utils" ,java-plexus-utils)))
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("junit" ,java-junit)
+       ("easymock" ,java-easymock)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public maven-wagon-provider-test
+  (package
+    (inherit maven-wagon-provider-api)
+    (name "maven-wagon-provider-test")
+    (arguments
+     `(#:jar-name "maven-wagon-provider-test.jar"
+       #:source-dir "wagon-provider-test/src/main/java"
+       #:tests? #f; no tests
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("containers" ,java-plexus-container-default)
+       ("jetty-util" ,java-eclipse-jetty-util-9.2)
+       ("jetty-security" ,java-eclipse-jetty-security-9.2)
+       ("jetty-server" ,java-eclipse-jetty-server-9.2)
+       ("jetty-servlet" ,java-eclipse-jetty-servlet-9.2)
+       ("slf4j" ,java-slf4j-api)
+       ("servlet" ,java-tomcat)
+       ("provider-api" ,maven-wagon-provider-api)))))
+
+(define-public maven-wagon-file
+  (package
+    (inherit maven-wagon-provider-api)
+    (name "maven-wagon-file")
+    (arguments
+     `(#:jar-name "maven-wagon-file.jar"
+       #:source-dir "wagon-providers/wagon-file/src/main/java"
+       #:test-dir "wagon-providers/wagon-file/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'fix-paths
+           (lambda _
+             (substitute* "wagon-providers/wagon-file/src/test/java/org/apache/maven/wagon/providers/file/FileWagonTest.java"
+               (("target") "build"))))
+         (add-before 'build 'generate-metadata
+           (lambda _
+             (zero? (system* "java" "-cp" (getenv "CLASSPATH")
+                             "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
+                             "--source" "wagon-providers/wagon-file/src/main/java"
+                             "--output" "build/classes/META-INF/plexus/components.xml"
+                             ;; I don't know what these two options do, but if
+                             ;; not present, it ends with a NullPointerException.
+                             "--classes" "build/classes"
+                             "--descriptors" "build/classes/META-INF")))))))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("provider-api" ,maven-wagon-provider-api)))
+    (native-inputs
+     `(("provider-test" ,maven-wagon-provider-test)
+       ("metadata" ,java-plexus-component-metadata)
+       ("annotations" ,java-plexus-component-annotations)
+       ("container" ,java-plexus-container-default)
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("slf4j" ,java-slf4j-api)
+       ("utils" ,java-plexus-utils)
+       ("cli" ,java-plexus-cli)
+       ("plugin-api" ,maven-plugin-api)
+       ("plugin-annotations" ,maven-plugin-annotations)
+       ("core" ,maven-core)
+       ("model" ,maven-model)
+       ("cli" ,java-commons-cli)
+       ("qdox" ,java-qdox)
+       ("jdom2" ,java-jdom2)
+       ("asm" ,java-asm)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ,@(package-native-inputs maven-wagon-provider-api)))))
+
+(define-public maven-embedder
+  (package
+    (inherit maven)
+    (name "maven-embedder")
+    (arguments
+     `(#:jar-name "maven-embedder.jar"
+       #:source-dir "maven-embedder/src/main/java"
+       #:test-dir "maven-embedder/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "maven-embedder/src/main/java" version
+                               "false" "true")))
+             (let ((file "maven-embedder/src/main/mdo/core-extensions.mdo"))
+               (and
+                 (modello-single-mode file "1.0.0" "java")
+                 (modello-single-mode file "1.0.0" "xpp3-reader")
+                 (modello-single-mode file "1.0.0" "xpp3-writer"))))))))
+    (inputs
+     `(("core" ,maven-core)
+       ("artifact" ,maven-artifact)
+       ("plugin-api" ,maven-plugin-api)
+       ("support" ,maven-builder-support)
+       ("model" ,maven-model)
+       ("model-builder" ,maven-model-builder)
+       ("settings" ,maven-settings)
+       ("settings-builder" ,maven-settings-builder)
+       ("classworlds" ,java-plexus-classworlds)
+       ("util" ,java-plexus-utils)
+       ("container" ,java-plexus-container-default)
+       ("cipher" ,java-plexus-cipher)
+       ("annotations" ,java-plexus-component-annotations)
+       ("sec-dispatcher" ,java-plexus-sec-dispatcher)
+       ("aether-util" ,java-eclipse-aether-util)
+       ("aether-api" ,java-eclipse-aether-api)
+       ("logback" ,java-logback-classic)
+       ("cli" ,java-commons-cli)
+       ("io" ,java-commons-io)
+       ("lang3" ,java-commons-lang3)
+       ("guava" ,java-guava)
+       ("guice" ,java-guice)
+       ("inject" ,java-javax-inject)
+       ("slf4j" ,java-slf4j-api)))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
        ("xpp3" ,java-modello-plugins-xpp3)))))
+
+(define-public maven-compat
+  (package
+    (inherit maven)
+    (name "maven-compat")
+    (arguments
+     `(#:jar-name "maven-compat.jar"
+       #:source-dir "maven-compat/src/main/java"
+       #:jdk ,icedtea-8
+       #:test-dir "maven-compat/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (zero? (system* "java"
+                               "org.codehaus.modello.ModelloCli"
+                               file mode "maven-compat/src/main/java" version
+                               "false" "true")))
+             (let ((file "maven-compat/src/main/mdo/profiles.mdo"))
+               (and
+                 (modello-single-mode file "1.0.0" "java")
+                 (modello-single-mode file "1.0.0" "xpp3-reader")
+                 (modello-single-mode file "1.0.0" "xpp3-writer")))
+             (let ((file "maven-compat/src/main/mdo/paramdoc.mdo"))
+               (and
+                 (modello-single-mode file "1.0.0" "java")
+                 (modello-single-mode file "1.0.0" "xpp3-reader")
+                 (modello-single-mode file "1.0.0" "xpp3-writer"))))))))
+    (inputs
+     `(("artifact" ,maven-artifact)
+       ("repo" ,maven-repository-metadata)
+       ("support" ,maven-builder-support)
+       ("model" ,maven-model)
+       ("model-builder" ,maven-model-builder)
+       ("settings" ,maven-settings)
+       ("settings-builder" ,maven-settings-builder)
+       ("core" ,maven-core)
+       ("wagon" ,maven-wagon-provider-api)
+       ("wagon-file" ,maven-wagon-file)
+       ("interpolation" ,java-plexus-interpolation)
+       ("util" ,java-eclipse-aether-util)
+       ("api" ,java-eclipse-aether-api)))
+    (native-inputs
+     `(("modello" ,java-modello-core)
+       ("utils" ,java-plexus-utils)
+       ("annot" ,java-plexus-component-annotations)
+       ("classworlds" ,java-plexus-classworlds)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("build-api" ,java-sisu-build-api)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("aether-spi" ,java-eclipse-aether-spi)
+       ("inject" ,java-javax-inject)
+       ("guice" ,java-guice)
+       ("guava" ,java-guava)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("java" ,java-modello-plugins-java)
+       ("xml" ,java-modello-plugins-xml)
+       ("xpp3" ,java-modello-plugins-xpp3)
+       ;; tests
+       ("junit" ,java-junit)
+       ("impl" ,java-eclipse-aether-impl)
+       ("lang3" ,java-commons-lang3)
+       ("aether-provider" ,maven-aether-provider)))))
+
+(define-public maven-plugin-annotations
+  (package
+    (name "maven-plugin-annotations")
+    (version "3.5")
+    (source (origin 
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/maven/"
+                                  "plugin-tools/maven-plugin-tools-" version
+                                  "-source-release.zip"))
+              (sha256 (base32 "1ryqhs62j5pas93brhf5dsnvp99hxbvssf681yj5rk3r9h24hqm2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "maven-plugin-annotations.jar"
+       #:source-dir "maven-plugin-annotations/src/main/java"
+       #:tests? #f))
+    (inputs
+     `(("artifact" ,maven-artifact)))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
