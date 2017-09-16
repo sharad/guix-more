@@ -4185,7 +4185,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0djdw7j66lqjx8bx9zja0hsx10c6nsj3z0z20jmavwfr6bpp0345"))))
+                "04dp7hx84c955w5g4ry7kbjaz74appczia8fz5r8pydwhwzl8fgw"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
@@ -4705,6 +4705,621 @@ namespaces.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-jettison
+  (package
+    (name "java-jettison")
+    (version "1.3.7")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/codehaus/jettison/archive/"
+                                  "jettison-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0rdhfyxywvga5wiwasc04iqnxyixn3rd8wj01c9ymhvwc3h6dpqg"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jettison.jar"
+       #:source-dir "src/main/java"
+       #:test-exclude (list "**/Abstract*.java"
+                            ;; Abstract class
+                            "**/DOMTest.java"
+                            "**/BadgerFishDOMTest.java"
+                            "**/MappedDOMTest.java")))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;(define-public java-xml-commons
+;  (package
+;    (name "java-xml-commons")
+;    (version "1.4.01")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "mirror://apache/xerces/xml-commons/source/"
+;                                  "xml-commons-external-" version "-src.tar.gz"))
+;              (sha256
+;               (base32
+;                "0rhq32a7dl9yik7zx9h0naz2iz068qgcdiayak91wp4wr26xhjyk"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "xml-commons.jar"
+;       #:source-dir "."
+;       #:tests? #f)); no tests
+;    (home-page "")
+;    (synopsis "")
+;    (description "")
+;    (license (list license:asl2.0; apache/...
+;                   license:public-domain; sax/...
+;                   license:bsd-3; w3c/...
+;                   ))))
+;;; actually http://www.w3.org/Consortium/Legal/2002/copyright-software-20021231
+
+(define-public java-apache-xml-commons-resolver
+  (package
+    (name "java-apache-xml-commons-resolver")
+    (version "1.2")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://apache/xerces/xml-commons/"
+                           "xml-commons-resolver-" version ".tar.gz"))
+       (sha256
+        (base32 "1zhy4anc3fg9f8y348bj88vmab15aavrg6nf419ifb25asyygnsm"))
+       (modules '((guix build utils)))
+       (snippet
+        '(begin
+           (for-each delete-file (find-files "." ".*\\.(jar|zip)"))
+           #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name (string-append "xml-resolver.jar")
+       #:tests? #f)); no tests
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "http://xerces.apache.org/xml-commons/")
+    (synopsis "")
+    (description "TODO")
+    (license license:asl2.0)))
+
+(define-public java-jaxp
+  (package
+    (name "java-jaxp")
+    (version "1.4.01")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://apache/xerces/xml-commons/source/"
+                           "xml-commons-external-" version "-src.tar.gz"))
+       (sha256
+        (base32 "0rhq32a7dl9yik7zx9h0naz2iz068qgcdiayak91wp4wr26xhjyk"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jaxp.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "."
+       #:tests? #f)); no tests
+    ;; TODO: Debian builds several jars out of this: jaxp-1.4.jar,
+    ;; xml-apis.jar and xml-apis-1.4.01.jar. Additionally it adds maven-repo
+    ;; data (.pom). The poms get fetch directly using wget, see
+    ;; <https://anonscm.debian.org/viewvc/pkg-java/trunk/libjaxp1.3-java/debian/rules?revision=15402&view=markup>
+    (home-page "http://xerces.apache.org/xml-commons/")
+    (synopsis "Java XML parser and transformer APIs (DOM, SAX, JAXP, TrAX)")
+    (description "xml-apis.jar from the Apache XML Commons project is used by
+the Xerces-J XML parser and Xalan-J XSLT processor and specifies these APIs:
+
+@begin{itemize}
+@item Document Object Model (DOM) level 3
+@item Simple API for XML (SAX) 2.0.2
+@item Java APIs for XML Processing (JAXP) 1.3.04
+@item Transformation API for XML (TrAX) 1.3.04
+@item Document Object Model (DOM) Level 3 Load and Save
+@item JSR 206 Java API for XML Processing 1.3
+@end{itemize}
+
+These classes are also used in Sun's reference implementation. A GPL'ed
+implementation of these APIs can be found in the java-gnujaxp package. ")
+    (license license:asl2.0)))
+
+(define-public java-xerces
+  (package
+    (name "java-xerces")
+    (version "2.11.0")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "mirror://apache/xerces/j/source/"
+                           "Xerces-J-src." version ".tar.gz"))
+       (sha256
+        (base32 "1006igwy2lqrmjvdk64v8dg6qbk9c29pm8xxx7r87n0vnpvmx6pm"))
+       (patches (search-patches 
+                 "java-xerces-xjavac_taskdef.patch"
+                 "java-xerces-build_dont_unzip.patch"
+                 "java-xerces-bootclasspath.patch"
+                 "java-xerces-manifest_classpath.patch"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'create-build.properties
+          (lambda* (#:key inputs #:allow-other-keys)
+            (let ((jaxp (assoc-ref inputs "java-jaxp"))
+                  (resolver (assoc-ref inputs "resolver")))
+              (with-output-to-file "build.properties"
+                (lambda _
+                  (format #t
+                   "jar.jaxp = ~a/share/java/jaxp.jar~@
+                   jar.apis-ext = ~a/share/java/jaxp.jar~@
+                   jar.resolver = ~a/share/java/xml-resolver.jar~%"
+                   jaxp jaxp resolver))))))
+         (replace 'install (install-jars "build")))))
+    (native-inputs
+     `(("resolver" ,java-apache-xml-commons-resolver)
+       ("java-jaxp" ,java-jaxp)))
+    (home-page "https://xerces.apache.org/xerces2-j/")
+    (synopsis "Validating XML parser for Java with DOM level 3 support")
+    (description "The Xerces2 Java parser is the reference implementation of
+XNI, the Xerces Native Interface, and also a fully conforming XML Schema
+processor.
+
+Xerces2-J supports the following standards and APIs:
+
+ * eXtensible Markup Language (XML) 1.0 Second Edition Recommendation
+ * Namespaces in XML Recommendation
+ * Document Object Model (DOM) Level 2 Core, Events, and Traversal and
+   Range Recommendations
+ * Simple API for XML (SAX) 2.0.1 Core and Extension
+ * Java APIs for XML Processing (JAXP) 1.2.01
+ * XML Schema 1.0 Structures and Datatypes Recommendations
+ * Experimental implementation of the Document Object Model (DOM) Level 3
+   Core and Load/Save Working Drafts
+ * Provides a partial implementation of the XML Inclusions (XInclude) W3C
+   Candidate Recommendation
+
+Xerces is now able to parse documents written according to the XML 1.1
+Candidate Recommendation, except that it does not yet provide an option to
+enable normalization checking as described in section 2.13 of this
+specification. It also handles namespaces according to the XML Namespaces 1.1
+Candidate Recommendation, and will correctly serialize XML 1.1 documents if
+the DOM level 3 load/save API's are in use.
+
+TODO Verify signature")
+    (license license:asl2.0)))
+
+;; This is very old (2002)!
+(define-public java-xmlpull
+  (package
+    (name "java-xmlpull")
+    (version "1.0.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www.xmlpull.org/v1/download/xmlpull_"
+                                  (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
+                                  "_src.tgz"))
+              (sha256
+               (base32
+                "1m2gymkvvpclz6x6f3vz3xkh00p94d28iy6k1j54nklf5crm979p"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (string-append (assoc-ref outputs "out") "/share/java")))
+               (mkdir-p out)
+               (copy-file "build/lib/xmlpull_1_0_5.jar"
+                          (string-append out "/xmlpull.jar"))))))))
+    (home-page "http://www.xmlpull.org/")
+    (synopsis "")
+    (description "")
+    (license license:public-domain)))
+
+(define-public java-xmlpull2
+  (package
+    (name "java-xmlpull2")
+    (version "2.1.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www.extreme.indiana.edu/xgws/xsoap/"
+                                  "PullParser/PullParser" version ".tgz"))
+              (sha256
+               (base32
+                "1kw9nhyqb7bzhn2zjbwlpi5vp5rzj89amzi3hadw2acyh2dmd0md"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:build-target "impl"
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (string-append (assoc-ref outputs "out") "/share/java")))
+               (mkdir-p out)
+               (copy-file "build/lib/PullParser-standard-2.1.10.jar"
+                          (string-append out "/xmlpull2-standard.jar"))
+               (copy-file "build/lib/PullParser-2.1.10.jar"
+                          (string-append out "/xmlpull2.jar"))))))))
+    (home-page ""); No available homepage
+    (synopsis "")
+    (description "")
+    (license license:public-domain)))
+
+(define-public java-xpp3
+  (package
+    (name "java-xpp3")
+    (version "1.1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www.extreme.indiana.edu/dist/"
+                                  "java-repository/xpp3/distributions/xpp3-"
+                                  version "_src.tgz"))
+              (sha256
+               (base32
+                "1b99zrhyij5qwyhilyjdl1ykxvhk902vsvflh6gx4fir8hfvdl5p"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:build-target "jar"
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (string-append (assoc-ref outputs "out") "/share/java")))
+               (mkdir-p out)
+               (copy-file (string-append "build/xpp3-" ,version ".jar")
+                          (string-append out "/xpp3.jar"))))))))
+    (home-page ""); No available homepage
+    (synopsis "")
+    (description "")
+    (license license:public-domain)))
+
+;; for com.sun.msv
+(define-public java-xsdlib
+  (package
+    (name "java-xsdlib")
+    (version "2013.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/com/sun/msv/"
+                                  "datatype/xsd/xsdlib/" version "/xsdlib-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "185i48p1xp09wbq03i9zgfl701qa262rq46yf4cajzmk3336kqim"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:jar-name "xsdlib.jar"
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("xerces" ,java-xerces)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-2)))
+
+(define-public java-commons-bcel
+  (package
+    (name "java-commons-bcel")
+    (version "6.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/bcel/source/bcel-"
+                                  version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0n39601zcj7ymjihfv53r260mf3n8kj6bqhxv90dw5sgc7qbjqxr"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-bcel.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       ;; FIXME: requires org.openjdk.jmh.* and com.sun.jna.platform.win32 for tests
+       #:tests? #f))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("collections" ,java-commons-collections4)
+       ("lang3" ,java-commons-lang3)
+       ("io" ,java-commons-io)))
+    (home-page "https://commons.apache.org/proper/commons-bcel/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;(define-public java-jflex
+;  (package
+;    (name "java-jflex")
+;    (version "1.6.1")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/jflex-de/jflex/archive/"
+;                                  version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1wdfx4yl8cy2karbm4vpmk29xjlv6vn8y9b0sgfax26bl0bx7zxs"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "jflex.jar"
+;       #:jdk ,icedtea-8
+;       #:source-dir "jflex/src/main/java"
+;       #:test-dir "jflex/src/test"))
+;    (home-page "jflex.de")
+;    (synopsis "")
+;    (description "")
+;    (license license:bsd-3)))
+
+(define-public java-cup-runtime
+  (package
+    (name "java-cup-runtime")
+    (version "11b")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://versioncontrolseidl.in.tum.de/parsergenerators/cup.git")
+                     (commit "fe729fe8c27441f046dab19135a38b9dde4c4e5e")))
+              (sha256
+               (base32
+                "09xigxm7b44hz79xhqpfykvjrk4q90p33j2l07w69izx9sn0y42b"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   (for-each delete-file (find-files "." ".*\\.tar.gz"))
+                   #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "cup-runtime.jar"
+       #:source-dir "src/java/java_cup/runtime"
+       #:tests? #f; no tests for runtime
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'remove-build-xml
+           (lambda _
+             (delete-file "build.xml"))))))
+    (home-page "http://www2.cs.tum.edu/projects/cup")
+    (synopsis "")
+    (description "")
+    (license license:expat))); http://www2.cs.tum.edu/projects/cup/licence.html
+
+;; Requires java-cup, but it requires jflex which in turn requires java-cup.
+(define-public java-xalan
+  (package
+    (name "java-xalan")
+    (version "2.7.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/xalan/xalan-j/source/xalan-j_"
+                                  (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
+                                  "-src.tar.gz"))
+              (sha256
+               (base32
+                "166vg9i11qzi0vbv09abfb50q8caq8wr6zrwg0cwqws9k394l62w"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   (for-each delete-file (find-files "." ".*\\.tar.gz"))
+                   #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "xalan.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f)); no tests
+    (inputs
+     `(("bcel" ,java-commons-bcel)
+       ("xerces" ,java-xerces)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-2)))
+
+(define-public java-dom4j
+  (package
+    (name "java-dom4j")
+    (version "2.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/dom4j/dom4j/archive/"
+                                  "version-" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "04snvb8m4290l0z1nkzdhlgxhfzi36wfkk674fn90q75s80s72j6"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "dom4j.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:tests? #f; we can't build xalan
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-jaxen-sources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "jaxen-sources")
+             (with-directory-excursion "jaxen-sources"
+               (system* "jar" "xf" (assoc-ref inputs "jaxen-sources")))
+             (mkdir-p "src/main/java/org/jaxen/dom4j")
+             (copy-file "jaxen-sources/org/jaxen/dom4j/DocumentNavigator.java"
+                        "src/main/java/org/jaxen/dom4j/DocumentNavigator.java")
+             (copy-file "jaxen-sources/org/jaxen/dom4j/Dom4jXPath.java"
+                        "src/main/java/org/jaxen/dom4j/Dom4jXPath.java")))
+         (add-before 'build 'fix-old-xpp2
+           (lambda _
+             ;; This package normally depends on xpp2 2.0, but we can only package
+             ;; version 2.1.10.
+             (substitute* "src/main/java/org/dom4j/xpp/ProxyXmlStartTag.java"
+               (("public void resetStartTag")
+                (string-append
+                  "public boolean removeAttributeByRawName(String name) {\n"
+                  "  return false;\n"
+                  "}\n"
+                  "public boolean removeAttributeByName(String name, String name2) {\n"
+                  "  return false;\n"
+                  "}\n"
+                  "\n"
+                  "public void resetStartTag"))
+               (("Atttribute") "Attribute")))))))
+    (inputs
+     `(("jaxen" ,java-jaxen-no-rec-deps)
+       ("jaxen-sources" ,(package-source java-jaxen-no-rec-deps))
+       ("xmlpull" ,java-xmlpull)
+       ("xmlpull2" ,java-xmlpull2)
+       ("xsdlib" ,java-xsdlib)))
+    (native-inputs
+     `(("testng" ,java-testng)
+       ("xerces" ,java-xerces)))
+    (home-page "https://github.com/dom4j/dom4j/")
+    ; Note: dom4j.org is outdated
+    (synopsis "Flexible XML framework for Java")
+    (description "")
+    (license license:expat))) ;; TODO: some 4-clause license
+
+(define-public java-jaxen-no-rec-deps
+  (package
+    (name "java-jaxen-no-rec-deps")
+    (version "1.1.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://repo1.maven.org/maven2/jaxen/jaxen/"
+                                  version "/jaxen-" version "-sources.jar"))
+              (sha256
+               (base32
+                "18pa8mks3gfhazmkyil8wsp6j1g1x7rggqxfv4k2mnixkrj5x1kx"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jaxen.jar"
+       #:source-dir "src"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-dom4j
+           (lambda _
+             (delete-file-recursively "src/org/jaxen/dom4j")
+             (delete-file-recursively "src/org/jaxen/xom"))))))
+    (inputs
+     `(("jdom" ,java-jdom)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-jaxen
+  (package
+    (inherit java-jaxen-no-rec-deps)
+    (name "java-jaxen")
+    (inputs
+     `(("jodm" ,java-jdom)
+       ("xom" ,java-xom)
+       ("dom4j" ,java-dom4j)))))
+
+(define-public java-xom
+  (package
+    (name "java-xom")
+    (version "127")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/elharo/xom/archive/XOM_"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "04m69db1irqja12a9rfxrac8cbn9psqa1k136wh4ls4pxfsdr5wg"))
+              (modules '((guix build utils)))
+              (snippet
+               '(begin
+                  (for-each delete-file
+                            (find-files "." "\\.jar$"))
+                  #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "xom.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'fix-tagsoup-dep
+           (lambda _
+             (delete-file "src/nu/xom/tools/XHTMLJavaDoc.java"))))))
+    (inputs
+     `(("jdom" ,java-jdom)
+       ("junit" ,java-junit)
+       ("servlet" ,java-tomcat)
+       ("jaxen" ,java-jaxen-no-rec-deps)
+       ("xerces" ,java-xerces)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1)))
+
+(define-public java-kxml2
+  (package
+    (name "java-kxml2")
+    (version "2.4.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/stefanhaustein/kxml2/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0afahxsifpxgwyp3ybr1ablfwswxw8n2msfhsrrj22rpb3yzai3x"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "kxml2.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("xmlpull" ,java-xpp3)))
+    (home-page "http://kxml.org")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public java-stax
+  (package
+    (name "java-stax")
+    (version "1.2.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://repo1.maven.org/maven2/stax/stax/"
+                                  version "/stax-" version "-sources.jar"))
+              (sha256
+               (base32
+                "04ba4qvbrps45j8bldbakxq31k7gjlsay9pppa9yn13fr00q586z"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "stax.jar"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'fix-utf8
+           (lambda _
+             (with-fluids ((%default-port-encoding "ISO-8859-1"))
+               (substitute* "src/com/wutka/dtd/Scanner.java"
+                 (("//.*") "\n"))))))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-xstream
   (package
     (name "java-xstream")
@@ -4722,7 +5337,21 @@ namespaces.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:tests? #f
+       #:jdk ,icedtea-8
        #:source-dir "xstream/src/java"))
+    (inputs
+     `(("jdom" ,java-jdom)
+       ("jdom2" ,java-jdom2)
+       ("cglib" ,java-cglib)
+       ("time" ,java-joda-time)
+       ("jettison" ,java-jettison)
+       ("xom" ,java-xom)
+       ("xmlpull3" ,java-xpp3)
+       ("dom4j" ,java-dom4j)
+       ("stax2" ,java-stax2-api)
+       ("woodstox" ,java-woodstox-core)
+       ("kxml2" ,java-kxml2)
+       ("stax" ,java-stax)))
     (native-inputs
      `(("unzip" ,unzip)))
     (home-page "https://x-stream.github.io")
@@ -4774,11 +5403,13 @@ namespaces.")
      `(#:jar-name "groovy.jar"
        #:tests? #f))
     (native-inputs
-     `(("junit" ,java-junit)))
+     `(("junit" ,java-junit)
+       ("antlr" ,antlr2)))
     (inputs
      `(("commons-cli" ,java-commons-cli)
-       ("antlr" ,antlr3)
-       ("asm" ,java-asm)))
+       ("asm" ,java-asm)
+       ("servlet" ,java-tomcat)
+       ("xstream" ,java-xstream)))
     (home-page "")
     (synopsis "")
     (description "")
@@ -4786,9 +5417,8 @@ namespaces.")
                    ;; actually CDDL 1.1
                    license:cddl1.0))))
 
-;; requires jline, javax.servlet, org.fusesource.jansi, org.livetribe,
+;; requires jline, org.fusesource.jansi, org.livetribe,
 ;;   com.thoughtworks.xstream, org.apache.ivy, bsf
-;;   antlr
 (define-public groovy-1.8.9
   (package
     (inherit groovy)
@@ -4811,7 +5441,7 @@ namespaces.")
          (add-before 'build 'generate-parser
            (lambda _
              (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
-               (zero? (system* "antlr4" "java.g"))))))))))
+               (zero? (system* "antlr" "java.g"))))))))))
 
 (define-public groovy-1.0
   (package
@@ -4829,13 +5459,13 @@ namespaces.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:tests? #f
-       #:source-dir "src/main/java"
+       #:source-dir "src/main"
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-parser
            (lambda _
              (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
-               (zero? (system* "antlr3" "groovy.g"))))))))))
+               (zero? (system* "antlr" "groovy.g"))))))))))
 
 
 ;(define-public antlr3-3.4
@@ -4998,7 +5628,9 @@ namespaces.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0y7lzkvx9wbbmwg45mb4icx7i66z6894qfygrbbs26sr5xxyml9h"))))
+                "0y7lzkvx9wbbmwg45mb4icx7i66z6894qfygrbbs26sr5xxyml9h"))
+              (patches
+                (search-patches "java-antlr4-Add-standalone-generator.patch"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
@@ -5007,6 +5639,54 @@ namespaces.")
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
+         (add-after 'install 'bin-install
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((jar (string-append (assoc-ref outputs "out") "/share/java"))
+                   (bin (string-append (assoc-ref outputs "out") "/bin")))
+               (mkdir-p bin)
+               (with-output-to-file (string-append bin "/antlr4")
+                 (lambda _
+                   (display
+                     (string-append "#!" (which "sh") "\n"
+                                    "java -cp " jar "/" ,name "-" ,version ".jar:"
+                                    (string-concatenate
+                                      (find-files (assoc-ref inputs "stringtemplate")
+                                                  ".*\\.jar"))
+                                    ":"
+                                    (string-concatenate
+                                      (find-files (assoc-ref inputs "stringtemplate4")
+                                                  ".*\\.jar"))
+                                    ":"
+                                    (string-concatenate
+                                      (find-files (assoc-ref inputs "antlr3")
+                                                  ".*\\.jar"))
+                                    " org.antlr.v4.Tool $*"))))
+               (chmod (string-append bin "/antlr4") #o755))))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "tool/resources/" "build/classes")))
+         (add-before 'build 'generate-unicode
+           (lambda _
+             (and
+               ;; First: build the generator
+               (zero? (system*
+                        "javac" "-cp" (getenv "CLASSPATH")
+                        "tool/src/org/antlr/v4/unicode/UnicodeRenderer.java"
+                        "tool/src/org/antlr/v4/unicode/UnicodeDataTemplateController.java"))
+               ;; Then use it
+               (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
+                                                           ":tool/src:runtime/Java")
+                               "org.antlr.v4.unicode.UnicodeRenderer"
+                               "tool/resources/org/antlr/v4/tool/templates"
+                               "unicodedata"
+                               "tool/src/org/antlr/v4/unicode/UnicodeData.java"))
+               (begin
+                 ;; It seems there is a bug with our ST4
+                 (substitute* "tool/src/org/antlr/v4/unicode/UnicodeData.java"
+                   (("\\\\>") ">"))
+                 ;; Remove the additional file
+                 (delete-file "tool/src/org/antlr/v4/unicode/UnicodeRenderer.java")
+                 #t))))
          (add-before 'build 'generate-grammar
            (lambda* (#:key inputs #:allow-other-keys)
              (with-directory-excursion "tool/src/org/antlr/v4/parse"
@@ -5026,10 +5706,23 @@ namespaces.")
        ("java-json" ,java-json)
        ("treelayout" ,java-treelayout)
        ("stringtemplate4" ,java-stringtemplate)))
+    (native-inputs
+     `(("runtime" ,java-antlr4-runtime)))
     (home-page "https://antlr.org")
     (synopsis "")
     (description "")
     (license license:bsd-3)))
+
+(define-public java-antlr4-runtime
+  (package
+    (inherit java-antlr4)
+    (name "java-antlr4-runtime")
+    (arguments
+     `(#:jar-name "java-antlr4-runtime.jar"
+       #:source-dir "runtime/Java/src/org"
+       #:tests? #f
+       #:jdk ,icedtea-8))
+    (native-inputs '())))
 
 ;; requires groovy 2.4.7.
 ;(define-public gradle
