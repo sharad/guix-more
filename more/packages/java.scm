@@ -2643,6 +2643,33 @@ the service-log.")
       "")
     (license license:asl2.0)))
 
+(define-public java-osgi-service-packageadmin
+  (package
+    (name "java-osgi-service-packageadmin")
+    (version "1.2.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://central.maven.org/maven2/org/osgi/"
+                                  "org.osgi.service.packageadmin/"
+                                  version "/org.osgi.service.packageadmin-"
+                                  version "-sources.jar"))
+              (sha256
+               (base32
+                "041mpxzi7g36wmcily6y4ccn3jx15akpdy8gmhyb7m98x7qfvn52"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "osgi-service-packageadmin.jar"
+       #:tests? #f)); no tests
+    (inputs
+     `(("framework" ,java-osgi-framework)))
+    (home-page "http://www.osgi.org")
+    (synopsis "")
+    (description
+      "OSGi, for Open Services Gateway initiative framework, is a module system
+and service platform for the Java programming language.  This package contains
+the packageadmin service.")
+    (license license:asl2.0)))
+
 (define-public java-aqute-bndlib
   (package
     (name "java-aqute-bndlib")
@@ -5359,6 +5386,160 @@ TODO Verify signature")
     (description "")
     (license license:x11)))
 
+(define-public java-hawtjni
+  (package
+    (name "java-hawtjni")
+    (version "1.15")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/fusesource/hawtjni/archive/"
+                                  "hawtjni-project-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1bqfd732rmh6svyx17fpw9175gc9gzkcbyps2yyrf50c3zzjas6g"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "hawtjni.jar"
+       #:source-dir "hawtjni-generator/src/main/java:hawtjni-runtime/src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'build-native
+           (lambda* (#:key inputs #:allow-other-keys)
+             (with-directory-excursion "hawtjni-generator/src/main/resources/"
+               (system* "gcc" "-c" "hawtjni.c" "-o" "hawtjni.o"
+                        "-fPIC" "-O2"
+                        (string-append "-I" (assoc-ref inputs "jdk") "/include/linux"))
+               (system* "gcc" "-c" "hawtjni-callback.c" "-o" "hawtjni-callback.o"
+                        "-fPIC" "-O2"
+                        (string-append "-I" (assoc-ref inputs "jdk") "/include/linux"))
+               (zero? (system* "gcc" "-o" "libhawtjni.so" "-shared"
+                               "hawtjni.o" "hawtjni-callback.o")))))
+         (add-after 'install 'install-native
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (lib (string-append out "/lib"))
+                    (inc (string-append out "/include")))
+               (mkdir-p lib)
+               (mkdir-p inc)
+               (with-directory-excursion "hawtjni-generator/src/main/resources/"
+                 (copy-file "libhawtjni.so" (string-append lib "/libhawtjni.so"))
+                 (copy-file "hawtjni.h" (string-append inc "/hawtjni.h")))))))))
+    (inputs
+     `(("cli" ,java-commons-cli)
+       ("asm" ,java-asm)
+       ("finder" ,java-geronimo-xbean-finder)))
+    (home-page "https://fusesource.github.io/hawtjni/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jansi-native
+  (package
+    (name "java-jansi-native")
+    (version "1.7")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/fusesource/jansi-native/"
+                                  "archive/jansi-native-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0j2ydlgxbzbgshqkwghbxxxnbnx1mmjgd6k5fw6xfvxw1z956yqf"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jansi-native.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'build-native
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "src/main/native-package/src/jansi_ttyname.c"
+               (("#include \"jansi_.*") ""))
+             ;; TODO: there are more required files for windows in windows/
+             (with-directory-excursion "src/main/native-package/src"
+               (system* "gcc" "-c" "jansi_ttyname.c" "-o" "jansi_ttyname.o"
+                        (string-append "-I" (assoc-ref inputs "hawtjni") "/include")
+                        (string-append "-I" (assoc-ref inputs "jdk") "/include/linux")
+                        "-fPIC" "-O2")
+               (system* "gcc" "-o" "libjansi.so" "-shared" "jansi_ttyname.o"))
+             ;; TODO: detect one of linux{32,64}, freebsd{32,64}, osx, windows{32,64}
+             (mkdir-p "build/classes/META-INF/native/linux64")
+             (copy-file "src/main/native-package/src/libjansi.so"
+                        "build/classes/META-INF/native/linux64/libjansi.so")))
+         (add-after 'install 'install-native
+           (lambda* (#:key outputs #:allow-other-keys)
+             (mkdir-p (string-append (assoc-ref outputs "out") "/bin"))
+             (copy-file "src/main/native-package/src/jansi.h"
+                        (string-append (assoc-ref outputs "out")
+                                       "/bin/jansi.h")))))))
+    (inputs
+     `(("hawtjni" ,java-hawtjni)))
+    (home-page "https://fusesource.github.io/jansi/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jansi
+  (package
+    (name "java-jansi")
+    (version "1.16")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/fusesource/jansi/archive/"
+                                  "jansi-project-" version ".tar.gz"))
+              (sha256
+               (base32
+                "11kh3144i3fzp21dpy8zg52mjmsr214k7km9p8ly0rqk2px0qq2z"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jansi.jar"
+       #:source-dir "jansi/src/main/java"
+       #:test-dir "jansi/src/test"))
+    (inputs
+     `(("jansi-native" ,java-jansi-native)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "https://fusesource.github.io/jansi/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jline
+  (package
+    (name "java-jline")
+    (version "1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jline/jline1/archive/jline-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0bi3p6vrh7a6v0fbpb6rx9plpmx5zk3lr352xzdbz2jcxg499wir"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jline.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes/jline")
+             (for-each (lambda (f) (copy-file (string-append "src/main/resources/jline/" f)
+                                              (string-append "build/classes/jline/" f)))
+               '("CandidateListCompletionHandler.properties"
+                 "keybindings-mac.properties"
+                 "keybindings.properties"
+                 "windowsbindings.properties")))))))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://jline.github.io")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 ;; vanished from the face of the earth :/
 (define-public java-jsonp
   (package
@@ -5397,11 +5578,33 @@ TODO Verify signature")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "15c9xmf7rhr5w4qk2jcb6swds336l4l5gyb51pcjay2ywnigk8sa"))))
+                "15c9xmf7rhr5w4qk2jcb6swds336l4l5gyb51pcjay2ywnigk8sa"))
+              (patches
+                (search-patches
+                  "groovy-Add-exceptionutilsgenerator.patch"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "groovy.jar"
-       #:tests? #f))
+       #:source-dir "src/main:subprojects/groovy-test/src/main/java"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-parser
+           (lambda _
+             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
+               (zero? (system* "antlr" "java.g")))
+             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
+               (mkdir "parser")
+               (with-directory-excursion "parser"
+                 (zero? (system* "antlr" "../groovy.g"))))))
+         (add-before 'build 'generate-exception-utils
+           (lambda _
+             (system* "javac" "-cp" (getenv "CLASSPATH")
+                      "config/ant/src/org/codehaus/groovy/ExceptionUtilsGenerator.java")
+             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
+                                                         ":config/ant/src")
+                             "org.codehaus.groovy.ExceptionUtilsGenerator"
+                             "build/classes/org/codehaus/groovy/runtime/ExceptionUtils.class")))))))
     (native-inputs
      `(("junit" ,java-junit)
        ("antlr" ,antlr2)))
@@ -5409,64 +5612,15 @@ TODO Verify signature")
      `(("commons-cli" ,java-commons-cli)
        ("asm" ,java-asm)
        ("servlet" ,java-tomcat)
-       ("xstream" ,java-xstream)))
+       ("xstream" ,java-xstream)
+       ("jansi" ,java-jansi)
+       ("jline" ,java-jline)))
     (home-page "")
     (synopsis "")
     (description "")
     (license (list license:gpl2
                    ;; actually CDDL 1.1
                    license:cddl1.0))))
-
-;; requires jline, org.fusesource.jansi, org.livetribe,
-;;   com.thoughtworks.xstream, org.apache.ivy, bsf
-(define-public groovy-1.8.9
-  (package
-    (inherit groovy)
-    (name "groovy")
-    (version "1.8.9")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
-                                  "1_8_9.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "16z3jv5yw11wwwzbs6x41g83gqazhngg30ys2kpy7cpfm3rsqi71"))))
-    (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:tests? #f
-       #:source-dir "src/main/java"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'generate-parser
-           (lambda _
-             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
-               (zero? (system* "antlr" "java.g"))))))))))
-
-(define-public groovy-1.0
-  (package
-    (inherit groovy)
-    (name "groovy")
-    (version "1.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
-                                  "1_0.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0v2nygblrvzjbdnz1l14dm167g4865d1iwxlpr909fsc4784lv1v"))))
-    (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:tests? #f
-       #:source-dir "src/main"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'generate-parser
-           (lambda _
-             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
-               (zero? (system* "antlr" "groovy.g"))))))))))
-
 
 ;(define-public antlr3-3.4
 ;  (package
@@ -6053,6 +6207,71 @@ contexts, DOM etc, including mixtures thereof.")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-geronimo-xbean-bundleutils
+  (package
+    (inherit java-geronimo-xbean-reflect)
+    (name "java-geronimo-xbean-bundleutils")
+    (arguments
+     `(#:jar-name "geronimo-xbean-bundleutils.jar"
+       #:source-dir "xbean-bundleutils/src/main/java"
+       #:test-dir "xbean-bundleutils/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-java
+           (lambda _
+             (substitute* "xbean-bundleutils/src/main/java/org/apache/xbean/osgi/bundle/util/DelegatingBundleContext.java"
+               (("import org.osgi.framework.ServiceRegistration;")
+                (string-append "import org.osgi.framework.ServiceRegistration;\n"
+                               "import org.osgi.framework.ServiceFactory;\n"
+                               "import java.util.Collection;\n"
+                               "import org.osgi.framework.ServiceObjects;"))
+               (("public Bundle getBundle\\(\\)")
+                (string-append "@Override\n"
+                               "public <S> ServiceObjects<S> getServiceObjects(ServiceReference<S> reference) {\n"
+                               " throw new UnsupportedOperationException();\n"
+                               "}\n"
+                               "@Override\n"
+                               "public <S> ServiceRegistration<S> registerService(Class<S> clazz, ServiceFactory<S> factory, Dictionary<String, ?> properties) {"
+                               " throw new UnsupportedOperationException();\n"
+                               "}\n"
+                               "public Bundle getBundle()"))))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("asm" ,java-asm)
+       ("framework" ,java-osgi-framework)
+       ("eclipse-osgi" ,java-eclipse-osgi)
+       ("packageadmin" ,java-osgi-service-packageadmin)))))
+
+(define-public java-geronimo-xbean-asm-util
+  (package
+    (inherit java-geronimo-xbean-reflect)
+    (name "java-geronimo-xbean-asm-util")
+    (arguments
+     `(#:jar-name "geronimo-xbean-asm-util.jar"
+       #:source-dir "xbean-asm-util/src/main/java"
+       #:tests? #f)); no tests
+    (inputs
+     `(("asm" ,java-asm)))))
+
+(define-public java-geronimo-xbean-finder
+  (package
+    (inherit java-geronimo-xbean-reflect)
+    (name "java-geronimo-xbean-finder")
+    (arguments
+     `(#:jar-name "geronimo-xbean-finder.jar"
+       #:source-dir "xbean-finder/src/main/java"
+       #:test-dir "xbean-finder/src/test"))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("asm" ,java-asm)
+       ("bundleutils" ,java-geronimo-xbean-bundleutils)
+       ("asm-util" ,java-geronimo-xbean-asm-util)
+       ("packageadmin" ,java-osgi-service-packageadmin)
+       ("framework" ,java-osgi-framework)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))))
 
 (define-public java-plexus-io
   (package

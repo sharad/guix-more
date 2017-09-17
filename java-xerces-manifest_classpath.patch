@@ -1,0 +1,11 @@
+Index: b/src/manifest.xerces
+===================================================================
+--- a/src/manifest.xerces
++++ b/src/manifest.xerces
+@@ -1,5 +1,6 @@
+ Manifest-Version: 1.0
+ Created-By: @java.version@ (@java.vendor@)
++Class-Path: xml-apis-ext.jar xml-resolver.jar jaxp-1.4.jar
+ 
+ Name: org/apache/xerces/impl/Version.class
+ Comment: @impl.name@ 
