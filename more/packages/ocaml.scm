@@ -19,11 +19,13 @@
 (define-module (more packages ocaml)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix git-download)
   #:use-module (guix utils)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system ocaml)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages assembly)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bison)
   #:use-module (gnu packages boost)
@@ -35,6 +37,7 @@
   #:use-module (gnu packages ocaml)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages protobuf)
+  #:use-module (gnu packages python)
   #:use-module (gnu packages texinfo)
   #:use-module (more packages smt))
 
@@ -601,3 +604,90 @@ parametrized transition systems with states represented as arrays indexed by an
 arbitrary number of processes.  Cache coherence protocols and mutual exclusion
 algorithms are typical examples of such systems.")
     (license license:asl2.0)))
+
+(define-public ocaml-c2newspeak
+  (package
+    (name "ocaml-c2newspeak")
+    (version "1")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/airbus-seclab/c2newspeak")
+                     (commit "6f7adf13fefb7f8d4dc668b8290226e3c6a30063")))
+              (file-name (string-append name "-" version))
+              (sha256
+               (base32
+                "1apaz0b84865xfba0mxbskbnaq6llqsn3qhy8b0sssbdxzw5w1x4"))))
+    (build-system ocaml-build-system)
+    (arguments
+     `(#:test-target "check"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-before 'install 'modify-installed-file-list
+           (lambda _
+             (substitute* "src/newspeak.Makefile"
+               (("c2newspeak/typedC.cmi")
+                "c2newspeak/typedC.cmi c2newspeak/typedC.cmx c2newspeak/typedC.o"))))
+         (add-after 'install 'install-bin
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "bin/c2newspeak" (string-append (assoc-ref outputs "out") "/bin")))))))
+    (home-page "https://github.com/airbus-seclab/c2newspeak")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
+
+(define-public ocaml-bincat
+  (package
+    (name "ocaml-bincat")
+    (version "0.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/airbus-seclab/bincat/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1762wrvf7fv16kxfvpblj4b0pwbwny1b39263q4jnqni12474djl"))))
+    (build-system ocaml-build-system)
+    (arguments
+     `(#:tests? #f; some failures for unknown reasons
+       #:make-flags
+       (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
+             "LDCONFIG=true"
+             (string-append "CFLAGS+=-I " (assoc-ref %build-inputs "ocaml")
+                            "/lib/ocaml"))
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-before 'build 'python-path
+           (lambda _
+             (setenv "PYTHONPATH" (string-append (getenv "PYTHONPATH")
+                                                 ":../python"))))
+         (add-before 'build 'fix-makefile
+           (lambda _
+             (substitute* "ocaml/src/Makefile"
+               (("GITVERSION:=.*") "GITVERSION:=0.6\n")
+               ;; typedC library is embedded in newspeak.cmxa
+               (("typedC.cmx") ""))))
+         (add-before 'check 'fix-test
+           (lambda _
+             (setenv "PATH" (string-append (getenv "PATH") ":" (getcwd) "/ocaml/src"))
+             (chmod "test/eggloader_x86" #o755))))))
+    (inputs
+     `(("c2newspeak" ,ocaml-c2newspeak)
+       ("zarith" ,ocaml-zarith)
+       ("menhir" ,ocaml-menhir)
+       ("ocamlgraph" ,ocamlgraph)
+       ("gmp" ,gmp)))
+    (native-inputs
+     `(("python" ,python-2)
+       ("pytest" ,python2-pytest)
+       ("sphinx" ,python2-sphinx)
+       ("nasm" ,nasm)))
+    (home-page "https://github.com/airbus-seclab/bincat")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
+
