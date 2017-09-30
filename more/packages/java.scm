@@ -5612,6 +5612,21 @@ TODO Verify signature")
          ;                  (string-append (getenv "CLASSPATH") ":build/classes")
          ;                  "org.codehaus.groovy.tools.FileSystemCompiler"
          ;                  (find-files "src/test" ".*\\.(groovy|java)$")))))
+         (add-after 'install 'install-sh
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* "src/bin/startGroovy"
+               ((" -classpath .*")
+                (string-append " -classpath " (getenv "CLASSPATH") ":"
+                               (assoc-ref outputs "out") "/share/java/groovy.jar \\")))
+             (let ((bin (string-append (assoc-ref outputs "out") "/bin")))
+               (for-each (lambda (script)
+                           (install-file (string-append "src/bin/" script) bin)
+                           (chmod (string-append bin "/" script) #o755))
+                 '("grape" "groovy" "groovyc" "groovyConsole" "groovydoc"
+                   "groovysh" "java2groovy" "startGroovy")))
+             (install-file "src/conf/groovy-starter.conf"
+                           (string-append (assoc-ref outputs "out") "/conf"))
+             #t))
          (add-before 'check 'add-groovy-classes
            (lambda _
              (substitute* "build.xml"
@@ -6418,7 +6433,7 @@ contexts, DOM etc, including mixtures thereof.")
              ""))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "container-default.jar"
+     `(#:jar-name "plexus-archiver.jar"
        #:source-dir "src/main/java"
        #:jdk ,icedtea-8
        #:test-dir "src/test"
@@ -6920,7 +6935,12 @@ documentation tools.")
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
            (lambda _
-             (copy-recursively "src/main/resources" "build/classes"))))))
+             (copy-recursively "src/main/resources" "build/classes")
+             (mkdir-p "build/classes/META-INF/sisu")
+             (with-output-to-file "build/classes/META-INF/sisu/javax.inject.Named"
+               (lambda _
+                 (display "org.sonatype.plexus.components.cipher.DefaultPlexusCipher\n")))
+             #t)))))
     (inputs
      `(("cdi-api" ,java-cdi-api)
        ("inject" ,java-javax-inject)))
@@ -6961,6 +6981,36 @@ documentation tools.")
                (modello-single-mode file "1.0.0" "java")
                (modello-single-mode file "1.0.0" "xpp3-reader")
                (modello-single-mode file "1.0.0" "xpp3-writer")))))
+         (add-before 'build 'generate-components.xml
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (with-output-to-file "build/classes/META-INF/plexus/components.xml"
+               (lambda _
+                 (display
+                   (string-append
+                     "<component-set>\n"
+                     "  <components>\n"
+                     "    <component>\n"
+                     "      <role>org.sonatype.plexus.components.sec.dispatcher.SecDispatcher</role>\n"
+                     "      <role-hint>default</role-hint>\n"
+                     "      <implementation>org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher</implementation>\n"
+                     "      <description></description>\n"
+                     "      <requirements>\n"
+                     "        <requirement>\n"
+                     "          <role>org.sonatype.plexus.components.cipher.PlexusCipher</role>\n"
+                     "          <field-name>_cipher</field-name>\n"
+                     "        </requirement>\n"
+                     "        <requirement>\n"
+                     "          <role>org.sonatype.plexus.components.sec.dispatcher.PasswordDecryptor</role>\n"
+                     "          <field-name>_decryptors</field-name>\n"
+                     "        </requirement>\n"
+                     "      </requirements>\n"
+                     "      <configuration>\n"
+                     "        <_configuration-file>~/.settings-security.xml</_configuration-file>\n"
+                     "      </configuration>\n"
+                     "    </component>\n"
+                     "  </components>\n"
+                     "</component-set>\n"))))))
          (add-before 'check 'fix-paths
            (lambda _
              (mkdir-p "target")
@@ -7507,125 +7557,125 @@ documentation tools.")
      `(("io" ,java-eclipse-jetty-io-9.2)
        ,@(package-native-inputs java-eclipse-jetty-util-9.2)))))
 
-(define-public java-eclipse-aether-api
-  (package
-    (name "java-eclipse-aether-api")
-    (version "1.0.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/eclipse/aether-core/"
-                                  "archive/aether-1.0.2.v20150114.tar.gz"))
-              (sha256
-               (base32
-                "192x32hlyxs4p6xzaz1r1jrsqqr56akcl0lncq3av1zpbil6kqhh"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "eclipse-aether-api.jar"
-       #:source-dir "aether-api/src/main/java"
-       #:test-dir "aether-api/src/test"))
-    (native-inputs
-     `(("junit" ,java-junit)
-       ("hamcrest" ,java-hamcrest-core)))
-    (home-page "https://projects.eclipse.org/projects/technology.aether")
-    (synopsis "")
-    (description "")
-    (license license:epl1.0)))
-
-(define-public java-eclipse-aether-spi
-  (package
-    (inherit java-eclipse-aether-api)
-    (name "java-eclipse-aether-spi")
-    (arguments
-     `(#:jar-name "eclipse-aether-spi.jar"
-       #:source-dir "aether-spi/src/main/java"
-       #:test-dir "aether-spi/src/test"))
-    (inputs
-     `(("api" ,java-eclipse-aether-api)))))
-
-(define-public java-eclipse-aether-test-util
-  (package
-    (inherit java-eclipse-aether-api)
-    (name "java-eclipse-aether-test-util")
-    (arguments
-     `(#:jar-name "eclipse-aether-test-util.jar"
-       #:source-dir "aether-test-util/src/main/java"
-       #:test-dir "aether-test-util/src/test"))
-    (inputs
-     `(("api" ,java-eclipse-aether-api)
-       ("spi" ,java-eclipse-aether-spi)))))
-
-(define-public java-eclipse-aether-util
-  (package
-    (inherit java-eclipse-aether-api)
-    (name "java-eclipse-aether-util")
-    (arguments
-     `(#:jar-name "eclipse-aether-util.jar"
-       #:source-dir "aether-util/src/main/java"
-       #:test-dir "aether-util/src/test"))
-    (inputs
-     `(("api" ,java-eclipse-aether-api)))
-    (native-inputs
-     `(("junit" ,java-junit)
-       ("hamcrest" ,java-hamcrest-core)
-       ("test-util" ,java-eclipse-aether-test-util)))))
-
-(define-public java-eclipse-aether-impl
-  (package
-    (inherit java-eclipse-aether-api)
-    (name "java-eclipse-aether-impl")
-    (arguments
-     `(#:jar-name "eclipse-aether-impl.jar"
-       #:jdk ,icedtea-8
-       #:source-dir "aether-impl/src/main/java"
-       #:test-dir "aether-impl/src/test"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'generate-sisu
-           (lambda _
-             (mkdir-p "build/classes/META-INF/sisu")
-             (with-output-to-file "build/classes/META-INF/sisu/javax.inject.Named"
-               (lambda _
-                 (display
-                   (string-append
-                     "org.eclipse.aether.internal.impl.DefaultRemoteRepositoryManager\n"
-                     "org.eclipse.aether.internal.impl.Maven2RepositoryLayoutFactory\n"
-                     "org.eclipse.aether.internal.impl.DefaultLocalRepositoryProvider\n"
-                     "org.eclipse.aether.internal.impl.DefaultOfflineController\n"
-                     "org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory\n"
-                     "org.eclipse.aether.internal.impl.DefaultRepositoryLayoutProvider\n"
-                     "org.eclipse.aether.internal.impl.DefaultFileProcessor\n"
-                     "org.eclipse.aether.internal.impl.LoggerFactoryProvider\n"
-                     "org.eclipse.aether.internal.impl.DefaultTransporterProvider\n"
-                     "org.eclipse.aether.internal.impl.DefaultSyncContextFactory\n"
-                     "org.eclipse.aether.internal.impl.EnhancedLocalRepositoryManagerFactory\n"
-                     "org.eclipse.aether.internal.impl.DefaultArtifactResolver\n"
-                     "org.eclipse.aether.internal.impl.DefaultRepositoryEventDispatcher\n"
-                     "org.eclipse.aether.internal.impl.DefaultUpdatePolicyAnalyzer\n"
-                     "org.eclipse.aether.internal.impl.DefaultInstaller\n"
-                     "org.eclipse.aether.internal.impl.DefaultMetadataResolver\n"
-                     "org.eclipse.aether.internal.impl.DefaultRepositorySystem\n"
-                     "org.eclipse.aether.internal.impl.DefaultChecksumPolicyProvider\n"
-                     "org.eclipse.aether.internal.impl.DefaultDeployer\n"
-                     "org.eclipse.aether.internal.impl.DefaultDependencyCollector\n"
-                     "org.eclipse.aether.internal.impl.DefaultUpdateCheckManager\n"
-                     "org.eclipse.aether.internal.impl.slf4j.Slf4jLoggerFactory\n"
-                     "org.eclipse.aether.internal.impl.DefaultRepositoryConnectorProvider")))))))))
-    (inputs
-     `(("api" ,java-eclipse-aether-api)
-       ("spi" ,java-eclipse-aether-spi)
-       ("util" ,java-eclipse-aether-util)
-       ("javax-inject" ,java-javax-inject)
-       ("sisu-inject" ,java-eclipse-sisu-inject)
-       ("guice" ,java-guice)
-       ("slf4j" ,java-slf4j-api)))
-    (native-inputs
-     `(("junit" ,java-junit)
-       ("hamcrest" ,java-hamcrest-core)
-       ("guava" ,java-guava)
-       ("cglib" ,java-cglib)
-       ("asm" ,java-asm)
-       ("aopalliance" ,java-aopalliance)
-       ("test-util" ,java-eclipse-aether-test-util)))))
+;(define-public java-eclipse-aether-api
+;  (package
+;    (name "java-eclipse-aether-api")
+;    (version "1.0.2")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/eclipse/aether-core/"
+;                                  "archive/aether-1.0.2.v20150114.tar.gz"))
+;              (sha256
+;               (base32
+;                "192x32hlyxs4p6xzaz1r1jrsqqr56akcl0lncq3av1zpbil6kqhh"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "eclipse-aether-api.jar"
+;       #:source-dir "aether-api/src/main/java"
+;       #:test-dir "aether-api/src/test"))
+;    (native-inputs
+;     `(("junit" ,java-junit)
+;       ("hamcrest" ,java-hamcrest-core)))
+;    (home-page "https://projects.eclipse.org/projects/technology.aether")
+;    (synopsis "")
+;    (description "")
+;    (license license:epl1.0)))
+;
+;(define-public java-eclipse-aether-spi
+;  (package
+;    (inherit java-eclipse-aether-api)
+;    (name "java-eclipse-aether-spi")
+;    (arguments
+;     `(#:jar-name "eclipse-aether-spi.jar"
+;       #:source-dir "aether-spi/src/main/java"
+;       #:test-dir "aether-spi/src/test"))
+;    (inputs
+;     `(("api" ,java-eclipse-aether-api)))))
+;
+;(define-public java-eclipse-aether-test-util
+;  (package
+;    (inherit java-eclipse-aether-api)
+;    (name "java-eclipse-aether-test-util")
+;    (arguments
+;     `(#:jar-name "eclipse-aether-test-util.jar"
+;       #:source-dir "aether-test-util/src/main/java"
+;       #:test-dir "aether-test-util/src/test"))
+;    (inputs
+;     `(("api" ,java-eclipse-aether-api)
+;       ("spi" ,java-eclipse-aether-spi)))))
+;
+;(define-public java-eclipse-aether-util
+;  (package
+;    (inherit java-eclipse-aether-api)
+;    (name "java-eclipse-aether-util")
+;    (arguments
+;     `(#:jar-name "eclipse-aether-util.jar"
+;       #:source-dir "aether-util/src/main/java"
+;       #:test-dir "aether-util/src/test"))
+;    (inputs
+;     `(("api" ,java-eclipse-aether-api)))
+;    (native-inputs
+;     `(("junit" ,java-junit)
+;       ("hamcrest" ,java-hamcrest-core)
+;       ("test-util" ,java-eclipse-aether-test-util)))))
+;
+;(define-public java-eclipse-aether-impl
+;  (package
+;    (inherit java-eclipse-aether-api)
+;    (name "java-eclipse-aether-impl")
+;    (arguments
+;     `(#:jar-name "eclipse-aether-impl.jar"
+;       #:jdk ,icedtea-8
+;       #:source-dir "aether-impl/src/main/java"
+;       #:test-dir "aether-impl/src/test"
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'build 'generate-sisu
+;           (lambda _
+;             (mkdir-p "build/classes/META-INF/sisu")
+;             (with-output-to-file "build/classes/META-INF/sisu/javax.inject.Named"
+;               (lambda _
+;                 (display
+;                   (string-append
+;                     "org.eclipse.aether.internal.impl.DefaultRemoteRepositoryManager\n"
+;                     "org.eclipse.aether.internal.impl.Maven2RepositoryLayoutFactory\n"
+;                     "org.eclipse.aether.internal.impl.DefaultLocalRepositoryProvider\n"
+;                     "org.eclipse.aether.internal.impl.DefaultOfflineController\n"
+;                     "org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory\n"
+;                     "org.eclipse.aether.internal.impl.DefaultRepositoryLayoutProvider\n"
+;                     "org.eclipse.aether.internal.impl.DefaultFileProcessor\n"
+;                     "org.eclipse.aether.internal.impl.LoggerFactoryProvider\n"
+;                     "org.eclipse.aether.internal.impl.DefaultTransporterProvider\n"
+;                     "org.eclipse.aether.internal.impl.DefaultSyncContextFactory\n"
+;                     "org.eclipse.aether.internal.impl.EnhancedLocalRepositoryManagerFactory\n"
+;                     "org.eclipse.aether.internal.impl.DefaultArtifactResolver\n"
+;                     "org.eclipse.aether.internal.impl.DefaultRepositoryEventDispatcher\n"
+;                     "org.eclipse.aether.internal.impl.DefaultUpdatePolicyAnalyzer\n"
+;                     "org.eclipse.aether.internal.impl.DefaultInstaller\n"
+;                     "org.eclipse.aether.internal.impl.DefaultMetadataResolver\n"
+;                     "org.eclipse.aether.internal.impl.DefaultRepositorySystem\n"
+;                     "org.eclipse.aether.internal.impl.DefaultChecksumPolicyProvider\n"
+;                     "org.eclipse.aether.internal.impl.DefaultDeployer\n"
+;                     "org.eclipse.aether.internal.impl.DefaultDependencyCollector\n"
+;                     "org.eclipse.aether.internal.impl.DefaultUpdateCheckManager\n"
+;                     "org.eclipse.aether.internal.impl.slf4j.Slf4jLoggerFactory\n"
+;                     "org.eclipse.aether.internal.impl.DefaultRepositoryConnectorProvider")))))))))
+;    (inputs
+;     `(("api" ,java-eclipse-aether-api)
+;       ("spi" ,java-eclipse-aether-spi)
+;       ("util" ,java-eclipse-aether-util)
+;       ("javax-inject" ,java-javax-inject)
+;       ("sisu-inject" ,java-eclipse-sisu-inject)
+;       ("guice" ,java-guice)
+;       ("slf4j" ,java-slf4j-api)))
+;    (native-inputs
+;     `(("junit" ,java-junit)
+;       ("hamcrest" ,java-hamcrest-core)
+;       ("guava" ,java-guava)
+;       ("cglib" ,java-cglib)
+;       ("asm" ,java-asm)
+;       ("aopalliance" ,java-aopalliance)
+;       ("test-util" ,java-eclipse-aether-test-util)))))
 
 (define-public java-commons-compiler
   (package
@@ -7833,14 +7883,15 @@ documentation tools.")
 (define-public maven-shared-utils
   (package
     (name "maven-shared-utils")
-    (version "3.2.0")
+    ; latest is 3.2.0, but is not supported by maven-embedder
+    (version "3.1.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://archive.apache.org/dist/maven/shared/"
                                   "maven-shared-utils-" version "-source-release.zip"))
               (sha256
                (base32
-                "05gkhmdq4b0xgnpxq27c9kpmn2gicmcmyb4sririafk5py7y1yj6"))))
+                "0vfaas4g09ch0agrd1dcxcmhdd3w971ssvfr9mx9gi2lp5nv8w66"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-shared-utils.jar"
@@ -7891,19 +7942,65 @@ documentation tools.")
                 (string-append
                   "CLASSPATH=" (getenv "CLASSPATH") "\n"
                   "cygwin=false;"))
-               (("-classpath.*") ""))))
+               (("-classpath.*") "-classpath ${CLASSPATH} \\\n"))))
          (delete 'check)
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
-             (let ((bin (string-append (assoc-ref outputs "out") "/bin/")))
+             (let ((bin (string-append (assoc-ref outputs "out") "/bin/"))
+                   (conf (string-append (assoc-ref outputs "out") "/conf/")))
+               (mkdir-p (string-append (assoc-ref outputs "out") "/lib"))
                (for-each (lambda (file)
                            (install-file (string-append "apache-maven/src/bin/" file)
-                                         (string-append bin))
+                                         bin)
                            (chmod (string-append bin file) #o755))
-                '("mvn" "mvnDebug" "mvnyjp"))))))))
+                '("mvn" "mvnDebug" "mvnyjp"))
+               (install-file "apache-maven/src/bin/m2.conf" bin)
+               (copy-recursively "apache-maven/src/conf" conf)))))))
     (inputs
      `(("classworlds" ,java-plexus-classworlds)
-       ("core" ,maven-core)))
+       ("artifact" ,maven-artifact)
+       ("embedder" ,maven-embedder)
+       ("core" ,maven-core)
+       ("compat" ,maven-compat)
+       ("builder" ,maven-builder-support)
+       ("model" ,maven-model)
+       ("model-builder" ,maven-model-builder)
+       ("settings" ,maven-settings)
+       ("settings-builder" ,maven-settings-builder)
+       ("plugin-api" ,maven-plugin-api)
+       ("metadata", maven-repository-metadata)
+       ("shared-utils" ,maven-shared-utils)
+       ("api" ,maven-resolver-api)
+       ("spi" ,maven-resolver-spi)
+       ("util" ,maven-resolver-util)
+       ("impl" ,maven-resolver-impl)
+       ("resolver-connector-basic" ,maven-resolver-connector-basic)
+       ("resolver-provider" ,maven-resolver-provider)
+       ("transport-wagon" ,maven-resolver-transport-wagon)
+       ("wagon" ,maven-wagon-provider-api)
+       ("wagon-file" ,maven-wagon-file)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("guice" ,java-guice)
+       ("aop" ,java-aopalliance)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)
+       ("annots" ,java-plexus-component-annotations)
+       ("plexus-utils" ,java-plexus-utils)
+       ("interpolation" ,java-plexus-interpolation)
+       ("sec-dispatcher" ,java-plexus-sec-dispatcher)
+       ("cipher" ,java-plexus-cipher)
+       ("guava" ,java-guava)
+       ("jansi" ,java-jansi)
+       ("jsr250" ,java-jsr250)
+       ("cdi" ,java-cdi-api)
+       ("cli" ,java-commons-cli)
+       ("io" ,java-commons-io)
+       ("lang3" ,java-commons-lang3)
+       ("slf4j" ,java-slf4j-api)
+       ;; TODO: replace with maven-slf4j-provider
+       ("simple" ,java-slf4j-simple)))
     (home-page "")
     (synopsis "")
     (description "")
@@ -7954,7 +8051,14 @@ documentation tools.")
     (native-inputs
      `(("modello" ,java-modello-core)
        ;; for modello:
-       ("container" ,java-plexus-container-default)
+       ;("container" ,java-plexus-container-default)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("annots" ,java-plexus-component-annotations)
+       ("guice" ,java-guice)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)
        ("classworlds" ,java-plexus-classworlds)
        ("guava" ,java-guava)
        ("xbean" ,java-geronimo-xbean-reflect)
@@ -7993,7 +8097,14 @@ documentation tools.")
     (native-inputs
      `(("modello" ,java-modello-core)
        ;; for modello:
-       ("container" ,java-plexus-container-default)
+       ;("container" ,java-plexus-container-default)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("annots" ,java-plexus-component-annotations)
+       ("guice" ,java-guice)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)
        ("classworlds" ,java-plexus-classworlds)
        ("utils" ,java-plexus-utils)
        ("guava" ,java-guava)
@@ -8036,7 +8147,15 @@ documentation tools.")
      `(#:jar-name "maven-settings-builder.jar"
        #:source-dir "maven-settings-builder/src/main/java"
        #:jdk ,icedtea-8
-       #:test-dir "maven-settings-builder/src/test"))
+       #:test-dir "maven-settings-builder/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-components.xml
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (chmod "components.sh" #o755)
+             (zero? (system* "./components.sh" "maven-settings-builder/src/main/java"
+                             "build/classes/META-INF/plexus/components.xml")))))))
     (inputs
      `(("utils" ,java-plexus-utils)
        ("annotations" ,java-plexus-component-annotations)
@@ -8074,7 +8193,14 @@ documentation tools.")
     (inputs
      `(("artifact" ,maven-artifact)
        ("model" ,maven-model)
-       ("container" ,java-plexus-container-default)
+       ;("container" ,java-plexus-container-default)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("annots" ,java-plexus-component-annotations)
+       ("guice" ,java-guice)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)
        ("utils" ,java-plexus-utils)))
     (native-inputs
      `(("modello" ,java-modello-core)
@@ -8128,7 +8254,13 @@ documentation tools.")
     (native-inputs
      `(("junit" ,java-junit)
        ("hamcrest" ,java-hamcrest-core)
-       ("container" ,java-plexus-container-default)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("annots" ,java-plexus-component-annotations)
+       ("guice" ,java-guice)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)
        ("xmlunit" ,java-xmlunit)
        ("xmlunit" ,java-xmlunit-legacy)
        ("xbean" ,java-geronimo-xbean-reflect)
@@ -8161,7 +8293,14 @@ documentation tools.")
     (native-inputs
      `(("modello" ,java-modello-core)
        ;; for modello:
-       ("container" ,java-plexus-container-default)
+       ;("container" ,java-plexus-container-default)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("annots" ,java-plexus-component-annotations)
+       ("guice" ,java-guice)
+       ("cglib" ,java-cglib)
+       ("asm" ,java-asm)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)
        ("utils" ,java-plexus-utils)
        ("classworlds" ,java-plexus-classworlds)
        ("guava" ,java-guava)
@@ -8186,12 +8325,6 @@ documentation tools.")
        #:tests? #f; dependency loop on maven-core (@Component RepositorySystem)
        #:phases
        (modify-phases %standard-phases
-         (add-before 'build 'generate-sisu-named
-           (lambda _
-             (mkdir-p "build/classes/META-INF/sisu")
-             (chmod "sisu.sh" #o755)
-             (zero? (system* "./sisu.sh" "maven-resolver-provider/src/main/java"
-                             "build/classes/META-INF/sisu/javax.inject.Named"))))
          (add-before 'build 'generate-components.xml
            (lambda _
              (mkdir-p "build/classes/META-INF/plexus")
@@ -8207,29 +8340,66 @@ documentation tools.")
        ("model-builder" ,maven-model-builder)
        ("support" ,maven-builder-support)
        ("repository" ,maven-repository-metadata)
+       ("utils" ,java-plexus-utils)
        ("annotations" ,java-plexus-component-annotations)
        ("lang3" ,java-commons-lang3)
        ("guice" ,java-guice)
-       ("sisu-inject" ,java-eclipse-sisu-inject)
-       ("javax-inject" ,java-javax-inject)))
-    (native-inputs
-     `(("modello" ,java-modello-core)
-       ;; for modello:
-       ("container" ,java-eclipse-sisu-plexus)
-       ("utils" ,java-plexus-utils)
-       ("classworlds" ,java-plexus-classworlds)
        ("guava" ,java-guava)
-       ("xbean" ,java-geronimo-xbean-reflect)
-       ("build-api" ,java-sisu-build-api)
-       ;; modello plugins:
-       ("java" ,java-modello-plugins-java)
-       ("xml" ,java-modello-plugins-xml)
-       ("xpp3" ,java-modello-plugins-xpp3)
-       ;; for tests
-       ("cglib" ,java-cglib)
-       ("asm" ,java-asm)
-       ("junit" ,java-junit)
-       ("mockito" ,java-mockito-1)))))
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("javax-inject" ,java-javax-inject)))))
+
+;(define-public maven-resolver-provider
+;  (package
+;    (inherit maven-resolver-provider-boot)
+;    (arguments
+;     `(#:jar-name "maven-resolver-provider.jar"
+;       #:source-dir "src/main/java"
+;       #:jdk ,icedtea-8
+;       #:test-exclude (list "**/DefaultArtifactDescriptorReaderTest.java")
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'configure 'chdir
+;           (lambda _
+;             ;; Tests assume we're in this directory
+;             (chdir "maven-resolver-provider")))
+;         (add-before 'build 'generate-components.xml
+;           (lambda _
+;             (mkdir-p "build/classes/META-INF/plexus")
+;             (chmod "../components.sh" #o755)
+;             (zero? (system* "../components.sh" "src/main/java"
+;                             "build/classes/META-INF/plexus/components.xml"))))
+;         (add-before 'check 'fix-assumptions
+;           (lambda _
+;             ;; Errors about the version of some files
+;             (substitute* "src/test/java/org/apache/maven/repository/internal/DefaultArtifactDescriptorReaderTest.java"
+;               (("20130404.090532-2") "SNAPSHOT")))))))
+;         ;(add-before 'check 'copy-test-classes
+;         ;  (lambda _
+;         ;    (system* "ant" "compile-tests")
+;         ;    (mkdir-p "target/test-classes")
+;         ;    (copy-recursively "build/test-classes" "target/test-classes")
+;         ;    ;(copy-recursively "src/test/resources/repo" "target/test-classes/repo")
+;         ;    #t)))))
+;    (native-inputs
+;     `(;; For building tests:
+;       ("maven-core" ,maven-core-boot)
+;       ("container" ,java-eclipse-sisu-plexus)
+;       ("junit" ,java-junit)
+;       ("mockito" ,java-mockito-1)
+;       ;; For running tests:
+;       ("hamcrest" ,java-hamcrest-core)
+;       ("aop" ,java-aopalliance)
+;       ("classworlds" ,java-plexus-classworlds)
+;       ("plugin" ,maven-plugin-api)
+;       ("cglib" ,java-cglib)
+;       ("asm" ,java-asm)
+;       ("interpolation" ,java-plexus-interpolation)
+;       ("artifact" ,maven-artifact)
+;       ("objenesis" ,java-objenesis)
+;       ("transport-wagon" ,maven-resolver-transport-wagon)
+;       ("wagon-file" ,maven-wagon-file)
+;       ("wagon-api" ,maven-wagon-provider-api)
+;       ("connector-basic" ,maven-resolver-connector-basic)))))
 
 (define maven-core-boot
   (package
@@ -8285,10 +8455,10 @@ documentation tools.")
        ("lang3" ,java-commons-lang3)
        ("guava" ,java-guava)
        ("guice" ,java-guice)
-       ("aether-api" ,java-eclipse-aether-api)
-       ("aether-spi" ,java-eclipse-aether-spi)
-       ("aether-util" ,java-eclipse-aether-util)
-       ("aether-impl" ,java-eclipse-aether-impl)
+       ("aether-api" ,maven-resolver-api)
+       ("aether-spi" ,maven-resolver-spi)
+       ("aether-util" ,maven-resolver-util)
+       ("aether-impl" ,maven-resolver-impl)
        ("sisu-inject" ,java-eclipse-sisu-inject)
        ("container" ,java-eclipse-sisu-plexus)
        ("java-javax-inject" ,java-javax-inject)
@@ -8319,14 +8489,40 @@ documentation tools.")
             (add-after 'build 'generate-metadata
               (lambda _
                 (delete-file "build/classes/META-INF/plexus/components.xml")
-                (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
-                                "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
-                                "--source" "maven-core/src/main/java"
-                                "--output" "build/classes/META-INF/plexus/components.xml"
-                                ;; I don't know what these two options do, but if
-                                ;; not present, it ends with a NullPointerException.
-                                "--classes" "build/classes"
-                                "--descriptors" "build/classes/META-INF"))))
+                (and (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
+                                     "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
+                                     "--source" "maven-core/src/main/java"
+                                     "--output" "build/classes/META-INF/plexus/components.xml"
+                                     ;; I don't know what these two options do, but if
+                                     ;; not present, it ends with a NullPointerException.
+                                     "--classes" "build/classes"
+                                     "--descriptors" "build/classes/META-INF"))
+                     ;; Maven requires role-hint to be "maven", but plexus-sec-dispatcher
+                     ;; provides role-hint default.
+                     (substitute* "build/classes/META-INF/plexus/components.xml"
+                       (("</components>")
+                        (string-append
+                          "  <component>\n"
+                          "    <role>org.sonatype.plexus.components.sec.dispatcher.SecDispatcher</role>\n"
+                          "    <role-hint>maven</role-hint>\n"
+                          "    <implementation>org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher</implementation>\n"
+                          "    <description>Maven Security dispatcher</description>\n"
+                          "    <requirements>\n"
+                          "      <requirement>\n"
+                          "        <role>org.sonatype.plexus.components.cipher.PlexusCipher</role>\n"
+                          "        <field-name>_cipher</field-name>\n"
+                          "      </requirement>\n"
+                          "      <requirement>\n"
+                          "        <role>org.sonatype.plexus.components.sec.dispatcher.PasswordDecryptor</role>\n"
+                          "        <field-name>_decryptors</field-name>\n"
+                          "      </requirement>\n"
+                          "    </requirements>\n"
+                          "    <configuration>\n"
+                          "      <_configuration-file>~/.m2/settings-security.xml</_configuration-file>\n"
+                          "    </configuration>\n"
+                          "  </component>\n"
+                          "</components>")))
+                     #t)))
             (add-after 'generate-metadata 'fix-metadata
               (lambda _
                 (substitute* "build/classes/META-INF/plexus/components.xml"
@@ -8404,9 +8600,6 @@ documentation tools.")
            (lambda _
              (substitute* "wagon-providers/wagon-file/src/test/java/org/apache/maven/wagon/providers/file/FileWagonTest.java"
                (("target") "build"))))
-         (add-after 'generate-metadata 'rebuild
-           (lambda _
-             (zero? (system* "ant" "jar"))))
          (add-after 'build 'generate-metadata
            (lambda _
              (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
@@ -8416,7 +8609,10 @@ documentation tools.")
                              ;; I don't know what these two options do, but if
                              ;; not present, it ends with a NullPointerException.
                              "--classes" "build/classes"
-                             "--descriptors" "build/classes/META-INF")))))))
+                             "--descriptors" "build/classes/META-INF"))))
+         (add-after 'generate-metadata 'rebuild
+           (lambda _
+             (zero? (system* "ant" "jar")))))))
     (inputs
      `(("utils" ,java-plexus-utils)
        ("provider-api" ,maven-wagon-provider-api)))
@@ -8497,14 +8693,15 @@ documentation tools.")
        ("model-builder" ,maven-model-builder)
        ("settings" ,maven-settings)
        ("settings-builder" ,maven-settings-builder)
+       ("maven-shared-utils" ,maven-shared-utils)
        ("classworlds" ,java-plexus-classworlds)
        ("util" ,java-plexus-utils)
-       ("container" ,java-plexus-container-default)
+       ("container" ,java-eclipse-sisu-plexus)
        ("cipher" ,java-plexus-cipher)
        ("annotations" ,java-plexus-component-annotations)
        ("sec-dispatcher" ,java-plexus-sec-dispatcher)
-       ("aether-util" ,java-eclipse-aether-util)
-       ("aether-api" ,java-eclipse-aether-api)
+       ("aether-util" ,maven-resolver-util)
+       ("aether-api" ,maven-resolver-api)
        ("logback" ,java-logback-core)
        ("logback-classic" ,java-logback-classic)
        ("cli" ,java-commons-cli)
@@ -8661,7 +8858,15 @@ documentation tools.")
      `(#:jar-name "maven-resolver-connector-basic.jar"
        #:source-dir "maven-resolver-connector-basic/src/main/java"
        #:test-dir "maven-resolver-connector-basic/src/test"
-       #:jdk ,icedtea-8))
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-sisu
+           (lambda _
+             (mkdir-p "build/classes/META-INF/sisu")
+             (with-output-to-file "build/classes/META-INF/sisu/javax.inject.Named"
+               (lambda _
+                 (display "org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory\n"))))))))
     (inputs
      `(("api" ,maven-resolver-api)
        ("spi" ,maven-resolver-spi)
@@ -8680,13 +8885,63 @@ documentation tools.")
      `(#:jar-name "maven-resolver-transport-wagon.jar"
        #:source-dir "maven-resolver-transport-wagon/src/main/java"
        #:test-dir "maven-resolver-transport-wagon/src/test"
-       #:jdk ,icedtea-8))
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-sisu
+           (lambda _
+             (mkdir-p "build/classes/META-INF/sisu")
+             (with-output-to-file "build/classes/META-INF/sisu/javax.inject.Named"
+               (lambda _
+                 (display "org.eclipse.aether.transport.wagon.WagonTransporterFactory\n")))
+             #t))
+         (add-before 'build 'generate-components.xml
+           (lambda _
+             (mkdir-p "build/classes/META-INF/plexus")
+             (with-output-to-file "build/classes/META-INF/plexus/components.xml"
+               (lambda _
+                 (display
+                   (string-append
+                     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                     "<component-set>\n"
+                     "  <components>\n"
+                     "    <component>\n"
+                     "      <role>org.eclipse.aether.transport.wagon.WagonConfigurator</role>\n"
+                     "      <role-hint>plexus</role-hint>\n"
+                     "      <implementation>org.eclipse.aether.internal.transport.wagon.PlexusWagonConfigurator</implementation>\n"
+                     "      <description />\n"
+                     "      <isolated-realm>false</isolated-realm>\n"
+                     "      <requirements>\n"
+                     "        <requirement>\n"
+                     "          <role>org.codehaus.plexus.PlexusContainer</role>\n"
+                     "          <role-hint />\n"
+                     "          <field-name>container</field-name>\n"
+                     "        </requirement>\n"
+                     "      </requirements>\n"
+                     "    </component>\n"
+                     "    <component>\n"
+                     "      <role>org.eclipse.aether.transport.wagon.WagonProvider</role>\n"
+                     "      <role-hint>plexus</role-hint>\n"
+                     "      <implementation>org.eclipse.aether.internal.transport.wagon.PlexusWagonProvider</implementation>\n"
+                     "      <description />\n"
+                     "      <isolated-realm>false</isolated-realm>\n"
+                     "      <requirements>\n"
+                     "        <requirement>\n"
+                     "          <role>org.codehaus.plexus.PlexusContainer</role>\n"
+                     "          <role-hint />\n"
+                     "          <field-name>container</field-name>\n"
+                     "        </requirement>\n"
+                     "      </requirements>\n"
+                     "    </component>\n"
+                     "  </components>\n"
+                     "</component-set>\n"))))
+             #t)))))
     (inputs
      `(("api" ,maven-resolver-api)
        ("spi" ,maven-resolver-spi)
        ("util" ,maven-resolver-util)
        ("inject" ,java-javax-inject)
-       ("wagon-ap" ,maven-wagon-provider-api)
+       ("wagon-api" ,maven-wagon-provider-api)
        ("annotation" ,java-plexus-component-annotations)
        ("classworld" ,java-plexus-classworlds)
        ("plexus-util" ,java-plexus-utils)
@@ -8702,30 +8957,64 @@ documentation tools.")
        ("aopalliance" ,java-aopalliance)
        ("guice" ,java-guice)))))
 
+(define-public maven-slf4j-provider
+  (package
+    (inherit maven)
+    (name "maven-slf4j-provider")
+    (arguments
+     `(#:jar-name "maven-slf4j-provider"
+       #:source-dir "maven-slf4j-provider/src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-simple-sources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "maven-slf4j-provider/target/generated-sources")
+             (with-directory-excursion "maven-slf4j-provider/target/generated-sources"
+               (system* "tar" "xf" (assoc-ref inputs "simple")))
+             (with-directory-excursion "maven-slf4j-provider/"
+               (zero? (system* "java" "-cp" (getenv "CLASSPATH")
+                               "groovy.ui.GroovyMain" "-Db/c gasedir=/tmp"
+                               "src/main/script/patch-slf4j-simple.groovy"))))))))
+    (inputs
+     `(("slf4j" ,java-slf4j-api)
+       ("simple" ,(package-source java-slf4j-simple))
+       ("maven-shared-utils" ,maven-shared-utils)))
+    (native-inputs
+     `(("groovy" ,groovy)
+       ("asm" ,java-asm)
+       ("antlr" ,antlr2)
+       ("cli" ,java-commons-cli)))))
+
 (define-public maven-compat
   (package
     (inherit maven)
     (name "maven-compat")
     (arguments
      `(#:jar-name "maven-compat.jar"
-       #:source-dir "maven-compat/src/main/java"
+       #:source-dir "src/main/java"
        #:jdk ,icedtea-8
-       #:test-dir "maven-compat/src/test"
+       #:test-dir "src/test"
        #:phases
        (modify-phases %standard-phases
+         ;; Tests assume we're in this directory
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "maven-compat")))
          (add-before 'build 'generate-models
            (lambda* (#:key inputs #:allow-other-keys)
              (define (modello-single-mode file version mode)
                (zero? (system* "java"
                                "org.codehaus.modello.ModelloCli"
-                               file mode "maven-compat/src/main/java" version
+                               file mode "src/main/java" version
                                "false" "true")))
-             (let ((file "maven-compat/src/main/mdo/profiles.mdo"))
+             (let ((file "src/main/mdo/profiles.mdo"))
                (and
                  (modello-single-mode file "1.0.0" "java")
                  (modello-single-mode file "1.0.0" "xpp3-reader")
                  (modello-single-mode file "1.0.0" "xpp3-writer")))
-             (let ((file "maven-compat/src/main/mdo/paramdoc.mdo"))
+             (let ((file "src/main/mdo/paramdoc.mdo"))
                (and
                  (modello-single-mode file "1.0.0" "java")
                  (modello-single-mode file "1.0.0" "xpp3-reader")
@@ -8734,7 +9023,7 @@ documentation tools.")
            (lambda _
              (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
                              "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
-                             "--source" "maven-compat/src/main/java"
+                             "--source" "src/main/java"
                              "--output" "build/classes/META-INF/plexus/components.xml"
                              ;; I don't know what these two options do, but if
                              ;; not present, it ends with a NullPointerException.
@@ -8749,7 +9038,7 @@ documentation tools.")
                                                          ":build/classes"
                                                          ":build/test-classes")
                              "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
-                             "--source" "maven-compat/src/test/java"
+                             "--source" "src/test/java"
                              "--output" "build/test-classes/META-INF/plexus/components.xml"
                              ;; I don't know what these two options do, but if
                              ;; not present, it ends with a NullPointerException.
@@ -8774,7 +9063,6 @@ documentation tools.")
        ("resolver-spi" ,maven-resolver-spi)
        ("interpolation" ,java-plexus-interpolation)))
     (native-inputs
-;; maven-resolver-{api,util,impl,connector-basic,transport-wagon}
      `(("modello" ,java-modello-core)
        ("utils" ,java-plexus-utils)
        ("annot" ,java-plexus-component-annotations)
@@ -8799,8 +9087,14 @@ documentation tools.")
        ("plugin-api" ,maven-plugin-api)
        ("qdox" ,java-qdox)
        ;; tests
+       ("cipher" ,java-plexus-cipher)
+       ("sec-dispatcher" ,java-plexus-sec-dispatcher)
+       ("jsr250", java-jsr250)
+       ("cdi-api" ,java-cdi-api)
        ("junit" ,java-junit)
        ("impl" ,maven-resolver-impl)
+       ("connector-basic" ,maven-resolver-connector-basic)
+       ("transport-wagon" ,maven-resolver-transport-wagon)
        ("lang3" ,java-commons-lang3)
        ("aop" ,java-aopalliance)
        ("resolver-provider" ,maven-resolver-provider)

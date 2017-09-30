@@ -17,7 +17,7 @@ new file mode 100755
 index 0000000..c6748bd
 --- /dev/null
 +++ b/components.sh
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,148 @@
 +## This script generates a rough plexus/components.xml file. It is meant to
 +## replace plexus-component-metadata as it eventually has a recursive dependency
 +## on itself.
@@ -29,12 +29,28 @@ index 0000000..c6748bd
 +    role=$1
 +    # Find role
 +    case $role in
++      "SettingsWriter" | "SettingsReader")
++        role=org.apache.maven.settings.io.$role
++        ;;
++      "SecDispatcher")
++        role=org.sonatype.plexus.components.sec.dispatcher.$role
++        ;;
++      "SettingsDecrypter")
++        role=org.apache.maven.settings.crypto.$role
++        ;;
++      "SettingsBuilder")
++        role=org.apache.maven.settings.building.$role
++        ;;
++      "SettingsValidator")
++        role=org.apache.maven.settings.validation.$role
++        ;;
 +      "LoggerFactory")
 +        role=org.eclipse.aether.spi.log.$role
 +        ;;
 +      "RemoteRepositoryManager" | "VersionResolver" | "VersionRangeResolver" \
 +      | "ArtifactResolver" | "RepositoryEventDispatcher" | "MetadataResolver" \
-+      | "SyncContextFactory" | "MetadataGeneratorFactory" | "MetadatResolver")
++      | "SyncContextFactory" | "MetadataGeneratorFactory" | "MetadatResolver" \
++      | "ArtifactDescriptorReader")
 +        role=org.eclipse.aether.impl.$role
 +        ;;
 +      "ModelBuilder" | "ModelProcessor")
