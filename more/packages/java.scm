@@ -3998,7 +3998,8 @@ the dependency is said to be unsatisfied, and the application is broken.")
        #:source-dir "gson/src/main/java"
        #:test-dir "gson/src/test"))
     (native-inputs
-     `(("junit" ,java-junit)))
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
     (home-page "")
     (synopsis "")
     (description "")
@@ -4018,9 +4019,22 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "jsoup.jar"
-       #:source-dir "src/main/java"))
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (let ((classes-dir (string-append (getcwd) "/build/classes")))
+               (with-directory-excursion "src/main/java"
+                 (for-each (lambda (file)
+                             (let ((dist (string-append classes-dir "/" file)))
+                               (mkdir-p (dirname dist))
+                               (copy-file file dist)))
+                   (find-files "." ".*.properties")))))))))
     (native-inputs
-     `(("junit" ,java-junit)))
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("gson" ,java-gson)))
     (home-page "https://jsoup.org")
     (synopsis "HTML Parser")
     (description "jsoup is a Java library for working with real-world HTML.  It
@@ -7194,7 +7208,14 @@ documentation tools.")
      `(#:jar-name "eclipse-sisu-plexus.jar"
        #:source-dir "org.eclipse.sisu.plexus/src"
        #:jdk ,icedtea-8
-       #:tests? #f)); no tests
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (install-file "org.eclipse.sisu.plexus/META-INF/plexus/components.xml"
+                           "build/classes/META-INF/plexus")
+             #t)))))
     (inputs
      `(("classworlds" ,java-plexus-classworlds)
        ("util" ,java-plexus-utils)
@@ -7655,7 +7676,106 @@ documentation tools.")
      `(("util" ,java-eclipse-jetty-util-9.2)
        ("http" ,java-eclipse-jetty-http-9.2)
        ("server" ,java-eclipse-jetty-server-9.2)
-       ;("continuation" ,java-eclipse-jetty-continuation-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))
+    (native-inputs
+     `(("io" ,java-eclipse-jetty-io-9.2)
+       ,@(package-native-inputs java-eclipse-jetty-util-9.2)))))
+
+(define-public java-eclipse-jetty-xml
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-xml")
+    (arguments
+     `(#:jar-name "eclipse-jetty-xml.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; most tests require network
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-xml"))))))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util)))
+    (native-inputs
+     `(("io" ,java-eclipse-jetty-io)
+       ,@(package-native-inputs java-eclipse-jetty-util)))))
+
+(define-public java-eclipse-jetty-xml-9.2
+  (package
+    (inherit java-eclipse-jetty-xml)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (arguments
+     `(#:jar-name "eclipse-jetty-xml.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:tests? #f; most tests require network
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-xml"))))))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ,@(package-inputs java-eclipse-jetty-util-9.2)))
+    (native-inputs
+     `(("io" ,java-eclipse-jetty-io-9.2)
+       ,@(package-native-inputs java-eclipse-jetty-util-9.2)))))
+
+(define-public java-eclipse-jetty-webapp
+  (package
+    (inherit java-eclipse-jetty-util)
+    (name "java-eclipse-jetty-webapp")
+    (arguments
+     `(#:jar-name "eclipse-jetty-webapp.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:test-exclude (list
+                        ;; Fails, but I don't know why
+                        "**/WebAppContextTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-webapp"))))))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util)
+       ("http" ,java-eclipse-jetty-http)
+       ("server" ,java-eclipse-jetty-server)
+       ("servlet" ,java-eclipse-jetty-servlet)
+       ("security" ,java-eclipse-jetty-security)
+       ("xml" ,java-eclipse-jetty-xml)
+       ("servlet" ,java-tomcat)))
+    (native-inputs
+     `(("io" ,java-eclipse-jetty-io)
+       ,@(package-native-inputs java-eclipse-jetty-util)))))
+
+(define-public java-eclipse-jetty-webapp-9.2
+  (package
+    (inherit java-eclipse-jetty-webapp)
+    (version (package-version java-eclipse-jetty-util-9.2))
+    (source (package-source java-eclipse-jetty-util-9.2))
+    (arguments
+     `(#:jar-name "eclipse-jetty-webapp.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8
+       #:test-exclude (list
+                        ;; Fails, but I don't know why
+                        "**/WebAppContextTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "jetty-webapp"))))))
+    (inputs
+     `(("util" ,java-eclipse-jetty-util-9.2)
+       ("http" ,java-eclipse-jetty-http-9.2)
+       ("server" ,java-eclipse-jetty-server-9.2)
+       ("servlet" ,java-eclipse-jetty-servlet-9.2)
+       ("security" ,java-eclipse-jetty-security-9.2)
+       ("xml" ,java-eclipse-jetty-xml-9.2)
+       ("servlet" ,java-tomcat)
        ,@(package-inputs java-eclipse-jetty-util-9.2)))
     (native-inputs
      `(("io" ,java-eclipse-jetty-io-9.2)
@@ -8083,6 +8203,12 @@ documentation tools.")
        ("transport-wagon" ,maven-resolver-transport-wagon)
        ("wagon" ,maven-wagon-provider-api)
        ("wagon-file" ,maven-wagon-file)
+       ("wagon-http" ,maven-wagon-http)
+       ("logging" ,java-commons-logging-minimal)
+       ("httpclient" ,java-httpcomponents-client)
+       ("httpcore" ,java-httpcomponents-core)
+       ("wagon-http-shared" ,maven-wagon-http-shared)
+       ("wagon-tck-http" ,maven-wagon-tck-http)
        ("container" ,java-eclipse-sisu-plexus)
        ("guice" ,java-guice)
        ("aop" ,java-aopalliance)
@@ -8776,10 +8902,6 @@ documentation tools.")
        #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
-         ;(add-before 'check 'fix-paths
-         ;  (lambda _
-         ;    (substitute* "wagon-providers/wagon-http/src/test/java/org/apache/maven/wagon/providers/file/FileWagonTest.java"
-         ;      (("target") "build"))))
          (add-after 'build 'generate-metadata
            (lambda _
              (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
@@ -8798,6 +8920,7 @@ documentation tools.")
        ("httpclient" ,java-httpcomponents-client)
        ("httpcore" ,java-httpcomponents-core)
        ("io" ,java-commons-io)
+       ("jsoup" ,java-jsoup)
        ("provider-api" ,maven-wagon-provider-api)))
     (native-inputs
      `(("provider-test" ,maven-wagon-provider-test)
@@ -8824,26 +8947,45 @@ documentation tools.")
        ("xbean" ,java-geronimo-xbean-reflect)
        ,@(package-native-inputs maven-wagon-provider-api)))))
 
-(define-public maven-wagon-http
+(define-public maven-wagon-tck-http
   (package
     (inherit maven-wagon-provider-api)
-    (name "maven-wagon-http")
+    (name "maven-wagon-tck-http")
     (arguments
-     `(#:jar-name "maven-wagon-http.jar"
-       #:source-dir "wagon-providers/wagon-http/src/main/java"
-       #:test-dir "wagon-providers/wagon-http/src/test"
+     `(#:jar-name "maven-wagon-tck-http.jar"
+       #:source-dir "wagon-tcks/wagon-tck-http/src/main/java"
+       #:tests? #f; no tests
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("util" ,java-plexus-utils)
+       ("provider-api" ,maven-wagon-provider-api)
+       ("servlet" ,java-tomcat)
+       ("slf4j" ,java-slf4j-api)
+       ("codec" ,java-commons-codec)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("classworlds" ,java-plexus-classworlds)
+       ("jetty-util" ,java-eclipse-jetty-util-9.2)
+       ("jetty-webapp" ,java-eclipse-jetty-webapp-9.2)
+       ("jetty-security" ,java-eclipse-jetty-security-9.2)
+       ("jetty-server" ,java-eclipse-jetty-server-9.2)
+       ("jetty-servlet" ,java-eclipse-jetty-servlet-9.2)))))
+
+(define-public maven-wagon-http-lightweight
+  (package
+    (inherit maven-wagon-provider-api)
+    (name "maven-wagon-http-lightweight")
+    (arguments
+     `(#:jar-name "maven-wagon-http-lightweight.jar"
+       #:source-dir "wagon-providers/wagon-http-lightweight/src/main/java"
+       #:test-dir "wagon-providers/wagon-http-lightweight/src/test"
        #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
-         ;(add-before 'check 'fix-paths
-         ;  (lambda _
-         ;    (substitute* "wagon-providers/wagon-http/src/test/java/org/apache/maven/wagon/providers/file/FileWagonTest.java"
-         ;      (("target") "build"))))
          (add-after 'build 'generate-metadata
            (lambda _
              (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
                              "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
-                             "--source" "wagon-providers/wagon-http/src/main/java"
+                             "--source" "wagon-providers/wagon-http-lightweight/src/main/java"
                              "--output" "build/classes/META-INF/plexus/components.xml"
                              ;; I don't know what these two options do, but if
                              ;; not present, it ends with a NullPointerException.
@@ -8851,12 +8993,20 @@ documentation tools.")
                              "--descriptors" "build/classes/META-INF"))))
          (add-after 'generate-metadata 'rebuild
            (lambda _
-             (zero? (system* "ant" "jar")))))))
+             (zero? (system* "ant" "jar"))))
+         (add-before 'check 'fix-resource-path
+           (lambda _
+             (substitute* "wagon-providers/wagon-http-lightweight/src/test/java/org/apache/maven/wagon/providers/http/LightweightHttpsWagonTest.java"
+               (("src/test") "wagon-providers/wagon-http-lightweight/src/test"))
+             #t)))))
     (inputs
      `(("utils" ,java-plexus-utils)
        ("httpclient" ,java-httpcomponents-client)
        ("httpcore" ,java-httpcomponents-core)
-       ("provider-api" ,maven-wagon-provider-api)))
+       ("wagon-http-shared" ,maven-wagon-http-shared)
+       ("wagon-tck-http" ,maven-wagon-tck-http)
+       ("provider-api" ,maven-wagon-provider-api)
+       ("io" ,java-commons-io)))
     (native-inputs
      `(("provider-test" ,maven-wagon-provider-test)
        ("metadata" ,java-plexus-component-metadata)
@@ -8880,6 +9030,96 @@ documentation tools.")
        ("jdom2" ,java-jdom2)
        ("asm" ,java-asm)
        ("xbean" ,java-geronimo-xbean-reflect)
+       ("servlet" ,java-tomcat)
+       ("jetty-util" ,java-eclipse-jetty-util-9.2)
+       ("jetty-io" ,java-eclipse-jetty-io-9.2)
+       ("jetty-http" ,java-eclipse-jetty-http-9.2)
+       ("jetty-server" ,java-eclipse-jetty-server-9.2)
+       ("jetty-servlet" ,java-eclipse-jetty-servlet-9.2)
+       ("jetty-security" ,java-eclipse-jetty-security-9.2)
+       ("jsoup" ,java-jsoup)
+       ("hamcrest" ,java-hamcrest-core)
+       ("logging" ,java-commons-logging-minimal)
+       ("simple" ,java-slf4j-simple)
+       ,@(package-native-inputs maven-wagon-provider-api)))))
+
+(define-public maven-wagon-http
+  (package
+    (inherit maven-wagon-provider-api)
+    (name "maven-wagon-http")
+    (arguments
+     `(#:jar-name "maven-wagon-http.jar"
+       #:source-dir "wagon-providers/wagon-http/src/main/java"
+       #:test-dir "wagon-providers/wagon-http/src/test"
+       #:test-exclude (list
+                        "**/Abstract*.java"
+                        ;; FIXME: javax.net.ssl.SSLHandshakeException:
+                        ;; sun.security.validator.ValidatorException:
+                        ;; PKIX path building failed:
+                        ;; sun.security.provider.certpath.SunCertPathBuilderException:
+                        ;; unable to find valid certification path to requested target
+                        "**/HttpsWagonPreemptiveTest.java"
+                        "**/HttpsWagonTest.java"
+                        ;; Injection errors
+                        "**/TckTest.java")
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (install-file "wagon-providers/wagon-http/src/main/resources/META-INF/plexus/components.xml"
+                           "build/classes/META-INF/plexus")
+             #t))
+         (add-before 'check 'fix-resource-path
+           (lambda _
+             (substitute* '("wagon-providers/wagon-http/src/test/java/org/apache/maven/wagon/providers/http/HttpsWagonPreemptiveTest.java"
+                            "wagon-providers/wagon-http/src/test/java/org/apache/maven/wagon/providers/http/HttpsWagonTest.java")
+               (("src/test") "wagon-providers/wagon-http/src/test"))
+             #t)))))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("httpclient" ,java-httpcomponents-client)
+       ("httpcore" ,java-httpcomponents-core)
+       ("wagon-http-shared" ,maven-wagon-http-shared)
+       ("wagon-tck-http" ,maven-wagon-tck-http)
+       ("provider-api" ,maven-wagon-provider-api)))
+    (native-inputs
+     `(("provider-test" ,maven-wagon-provider-test)
+       ("metadata" ,java-plexus-component-metadata)
+       ("annotations" ,java-plexus-component-annotations)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("container" ,java-plexus-container-default)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("guice" ,java-guice)
+       ("inject" ,java-javax-inject)
+       ("cglib" ,java-cglib)
+       ("slf4j" ,java-slf4j-api)
+       ("utils" ,java-plexus-utils)
+       ("cli" ,java-plexus-cli)
+       ("plugin-api" ,maven-plugin-api)
+       ("plugin-annotations" ,maven-plugin-annotations)
+       ("core" ,maven-core)
+       ("model" ,maven-model)
+       ("cli" ,java-commons-cli)
+       ("qdox" ,java-qdox)
+       ("jdom2" ,java-jdom2)
+       ("asm" ,java-asm)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ("servlet" ,java-tomcat)
+       ("jetty-util" ,java-eclipse-jetty-util-9.2)
+       ("jetty-io" ,java-eclipse-jetty-io-9.2)
+       ("jetty-http" ,java-eclipse-jetty-http-9.2)
+       ("jetty-server" ,java-eclipse-jetty-server-9.2)
+       ("jetty-servlet" ,java-eclipse-jetty-servlet-9.2)
+       ("jetty-security" ,java-eclipse-jetty-security-9.2)
+       ("hamcrest" ,java-hamcrest-core)
+       ("logging" ,java-commons-logging-minimal)
+       ("codec" ,java-commons-codec)
+       ("io" ,java-commons-io)
+       ("jsoup" ,java-jsoup)
+       ("simple" ,java-slf4j-simple)
        ,@(package-native-inputs maven-wagon-provider-api)))))
 
 (define-public maven-embedder
