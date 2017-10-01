@@ -21,7 +21,7 @@ index 0000000..979f373
 +## This script must be run in the source directory (usually src/main/java).
 +
 +for file in `(cd $1; find -name '*.java')`; do
-+  annot=`grep "@Named" $1/$file`
++  annot=`grep "^@Named" $1/$file`
 +  if [ "$annot" != "" ]; then
 +    echo $file | sed -e 's|^\./||' -e 's|\.java||' -e 's|/|.|g'
 +  fi

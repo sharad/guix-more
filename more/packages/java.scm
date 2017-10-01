@@ -3894,6 +3894,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
               (sha256
                (base32
                 "1wlpn3cfy3d4inxy6g7wxcsa8p7sshn6aldk9y4ia3lb879rd97r"))))
+    (build-system ant-build-system)
     (arguments
      `(#:build-target "compile"
        #:test-target "test"
@@ -3918,11 +3919,114 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (propagated-inputs
      `(("java-commons-logging" ,java-commons-logging-minimal)
        ("java-commons-codec" ,java-commons-codec)))
-    (build-system ant-build-system)
     (home-page "https://hc.apache.org")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-httpcomponents-core
+  (package
+    (name "java-httpcomponents-core")
+    (version "4.4.7")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/httpcomponents/httpcore/"
+                                  "source/httpcomponents-core-" version
+                                  "-src.tar.gz"))
+              (sha256
+               (base32
+                "18isvannj51a3lz71qn8wmj9x9l0ryw6x5sc56pp12nxnpnf175a"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "httpcomponents-core.jar"
+       #:source-dir "httpcore/src/main"
+       #:test-dir "httpcore/src/test"))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("logging" ,java-commons-logging-minimal)
+       ("lang3" ,java-commons-lang3)
+       ("mockito" ,java-mockito-1)))
+    (home-page "https://hc.apache.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-httpcomponents-client
+  (package
+    (name "java-httpcomponents-client")
+    (version "4.5.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/httpcomponents/httpclient/"
+                                  "source/httpcomponents-client-" version
+                                  "-src.tar.gz"))
+              (sha256
+               (base32
+                "1428399s7qy3cim5wc6f3ks4gl9nf9vkjpfmnlap3jflif7g2pj1"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "httpcomponents-client.jar"
+       #:source-dir "httpclient/src/main"
+       #:test-dir "httpclient/src/test"))
+    (inputs
+     `(("core" ,java-httpcomponents-core)
+       ("codec" ,java-commons-codec)
+       ("logging" ,java-commons-logging-minimal)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("mockito" ,java-mockito-1)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "https://hc.apache.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-gson
+  (package
+    (name "java-gson")
+    (version "2.8.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/google/gson/archive/"
+                                  "gson-parent-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1j4qnp7v046q0k48c4kyf69sxaasx2h949d3cqwsm3kzxms3x0f9"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "gson.jar"
+       #:source-dir "gson/src/main/java"
+       #:test-dir "gson/src/test"))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jsoup
+  (package
+    (name "java-jsoup")
+    (version "1.10.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jhy/jsoup/archive/jsoup-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0xbzw7rjv7s4nz1xk9b2cnin6zkpaldmc3svk71waa7hhjgp0a20"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jsoup.jar"
+       #:source-dir "src/main/java"))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://jsoup.org")
+    (synopsis "HTML Parser")
+    (description "jsoup is a Java library for working with real-world HTML.  It
+provides a very convenient API for extracting and manipulating data, using the
+best of DOM, CSS, and jquery-like methods.")
+    (license license:expat)))
 
 (define-public java-commons-pool
   (package
@@ -8407,34 +8511,42 @@ documentation tools.")
     (name "maven-core-boot")
     (arguments
      `(#:jar-name "maven-core.jar"
-       #:source-dir "maven-core/src/main/java"
+       #:source-dir "src/main/java"
        #:jdk ,icedtea-8
-       #:test-dir "maven-core/src/test"
        ;; Tests fail with
        ;; org.codehaus.plexus.component.repository.exception.ComponentLookupException: java.util.NoSuchElementException
        ;;   role: org.apache.maven.repository.RepositorySystem
        ;; It seems they need maven-compat, which requires maven-core
        #:tests? #f
+       ;#:fake-maven? #t
+       ;#:version ,(package-version maven)
+       ;#:pom-file "pom.xml"
+       ;#:group-id "org.apache.maven"
+       ;#:artifact-id "maven-core"
        #:phases
        (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Required for generating components.xml in maven-core
+             (chdir "maven-core")))
          (add-before 'build 'copy-resources
            (lambda _
              (mkdir-p "build/classes/")
-             (copy-recursively "maven-core/src/main/resources" "build/classes")))
+             (copy-recursively "src/main/resources" "build/classes")))
          (add-before 'build 'generate-sisu-named
            (lambda _
              (mkdir-p "build/classes/META-INF/sisu")
-             (chmod "sisu.sh" #o755)
-             (zero? (system* "./sisu.sh" "maven-core/src/main/java"
+             (chmod "../sisu.sh" #o755)
+             (zero? (system* "../sisu.sh" "src/main/java"
                              "build/classes/META-INF/sisu/javax.inject.Named"))))
          (add-before 'build 'generate-models
            (lambda* (#:key inputs #:allow-other-keys)
              (define (modello-single-mode file version mode)
                (zero? (system* "java"
                                "org.codehaus.modello.ModelloCli"
-                               file mode "maven-core/src/main/java" version
+                               file mode "src/main/java" version
                                "false" "true")))
-             (let ((file "maven-core/src/main/mdo/toolchains.mdo"))
+             (let ((file "src/main/mdo/toolchains.mdo"))
                (and
                  (modello-single-mode file "1.1.0" "java")
                  (modello-single-mode file "1.1.0" "xpp3-reader")
@@ -8491,44 +8603,56 @@ documentation tools.")
                 (delete-file "build/classes/META-INF/plexus/components.xml")
                 (and (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
                                      "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
-                                     "--source" "maven-core/src/main/java"
-                                     "--output" "build/classes/META-INF/plexus/components.xml"
+                                     "--source" "build/classes/META-INF/plexus"
+                                     "--output" "build/classes/META-INF/plexus/components.t.xml"
                                      ;; I don't know what these two options do, but if
                                      ;; not present, it ends with a NullPointerException.
                                      "--classes" "build/classes"
-                                     "--descriptors" "build/classes/META-INF"))
-                     ;; Maven requires role-hint to be "maven", but plexus-sec-dispatcher
-                     ;; provides role-hint default.
-                     (substitute* "build/classes/META-INF/plexus/components.xml"
-                       (("</components>")
-                        (string-append
-                          "  <component>\n"
-                          "    <role>org.sonatype.plexus.components.sec.dispatcher.SecDispatcher</role>\n"
-                          "    <role-hint>maven</role-hint>\n"
-                          "    <implementation>org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher</implementation>\n"
-                          "    <description>Maven Security dispatcher</description>\n"
-                          "    <requirements>\n"
-                          "      <requirement>\n"
-                          "        <role>org.sonatype.plexus.components.cipher.PlexusCipher</role>\n"
-                          "        <field-name>_cipher</field-name>\n"
-                          "      </requirement>\n"
-                          "      <requirement>\n"
-                          "        <role>org.sonatype.plexus.components.sec.dispatcher.PasswordDecryptor</role>\n"
-                          "        <field-name>_decryptors</field-name>\n"
-                          "      </requirement>\n"
-                          "    </requirements>\n"
-                          "    <configuration>\n"
-                          "      <_configuration-file>~/.m2/settings-security.xml</_configuration-file>\n"
-                          "    </configuration>\n"
-                          "  </component>\n"
-                          "</components>")))
-                     #t)))
-            (add-after 'generate-metadata 'fix-metadata
-              (lambda _
-                (substitute* "build/classes/META-INF/plexus/components.xml"
-                  (("<field-name>") "<role-hint /><field-name>"))
-                #t))
-            (add-after 'fix-metadata 'rebuild
+                                     "--descriptors" "build/classes"))
+                     ;; Now we merge all other components from hand-written xml
+                     ;; FIXME: This should be taken care of by plexus-component-metadata directly
+                     (zero? (system* "sh" "-c"
+                                     (string-append "(cat build/classes/META-INF/plexus/components.t.xml |"
+                                                    "sed -e 's|</component-set>||' -e 's|</components>||' ; "
+                                                    "cat src/main/resources/META-INF/plexus/artifact-handlers.xml |"
+                                                    " sed -e 's|<?xml.*||' -e 's|<component-set>||' -e 's|<components>||'"
+                                                    " -e 's|</component-set>||' -e 's|</components>||'; "
+                                                    "cat src/main/resources/META-INF/plexus/components.xml |"
+                                                    " sed -e 's|<?xml.*||' -e 's|<component-set>||' -e 's|<components>||'"
+                                                    " -e 's|</component-set>||' -e 's|</components>||'; "
+                                                    "cat src/main/resources/META-INF/plexus/default-bindings.xml |"
+                                                    " sed -e 's|<?xml.*||' -e 's|<component-set>||' -e 's|<components>||' )>"
+                                                    "build/classes/META-INF/plexus/components.xml"))))))
+                     ;(substitute* "build/classes/META-INF/plexus/components.xml"
+                     ;  (("</components>")
+                     ;   (string-append
+                     ;     "  <component>\n"
+                     ;     "    <role>org.sonatype.plexus.components.sec.dispatcher.SecDispatcher</role>\n"
+                     ;     "    <role-hint>maven</role-hint>\n"
+                     ;     "    <implementation>org.sonatype.plexus.components.sec.dispatcher.DefaultSecDispatcher</implementation>\n"
+                     ;     "    <description>Maven Security dispatcher</description>\n"
+                     ;     "    <requirements>\n"
+                     ;     "      <requirement>\n"
+                     ;     "        <role>org.sonatype.plexus.components.cipher.PlexusCipher</role>\n"
+                     ;     "        <field-name>_cipher</field-name>\n"
+                     ;     "      </requirement>\n"
+                     ;     "      <requirement>\n"
+                     ;     "        <role>org.sonatype.plexus.components.sec.dispatcher.PasswordDecryptor</role>\n"
+                     ;     "        <field-name>_decryptors</field-name>\n"
+                     ;     "      </requirement>\n"
+                     ;     "    </requirements>\n"
+                     ;     "    <configuration>\n"
+                     ;     "      <_configuration-file>~/.m2/settings-security.xml</_configuration-file>\n"
+                     ;     "    </configuration>\n"
+                     ;     "  </component>\n"
+                     ;     "</components>")))
+                     ;#t)))
+            ;(add-after 'generate-metadata 'fix-metadata
+            ;  (lambda _
+            ;    (substitute* "build/classes/META-INF/plexus/components.xml"
+            ;      (("<field-name>") "<role-hint /><field-name>"))
+            ;    #t))
+            (add-after 'generate-metadata 'rebuild
               (lambda _
                 (zero? (system* "ant" "jar"))))))))
     (native-inputs
@@ -8615,6 +8739,123 @@ documentation tools.")
              (zero? (system* "ant" "jar")))))))
     (inputs
      `(("utils" ,java-plexus-utils)
+       ("provider-api" ,maven-wagon-provider-api)))
+    (native-inputs
+     `(("provider-test" ,maven-wagon-provider-test)
+       ("metadata" ,java-plexus-component-metadata)
+       ("annotations" ,java-plexus-component-annotations)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("guice" ,java-guice)
+       ("inject" ,java-javax-inject)
+       ("cglib" ,java-cglib)
+       ("slf4j" ,java-slf4j-api)
+       ("utils" ,java-plexus-utils)
+       ("cli" ,java-plexus-cli)
+       ("plugin-api" ,maven-plugin-api)
+       ("plugin-annotations" ,maven-plugin-annotations)
+       ("core" ,maven-core)
+       ("model" ,maven-model)
+       ("cli" ,java-commons-cli)
+       ("qdox" ,java-qdox)
+       ("jdom2" ,java-jdom2)
+       ("asm" ,java-asm)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ,@(package-native-inputs maven-wagon-provider-api)))))
+
+(define-public maven-wagon-http-shared
+  (package
+    (inherit maven-wagon-provider-api)
+    (name "maven-wagon-http-shared")
+    (arguments
+     `(#:jar-name "maven-wagon-http-shared.jar"
+       #:source-dir "wagon-providers/wagon-http-shared/src/main/java"
+       #:test-dir "wagon-providers/wagon-http-shared/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         ;(add-before 'check 'fix-paths
+         ;  (lambda _
+         ;    (substitute* "wagon-providers/wagon-http/src/test/java/org/apache/maven/wagon/providers/file/FileWagonTest.java"
+         ;      (("target") "build"))))
+         (add-after 'build 'generate-metadata
+           (lambda _
+             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
+                             "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
+                             "--source" "wagon-providers/wagon-http-shared/src/main/java"
+                             "--output" "build/classes/META-INF/plexus/components.xml"
+                             ;; I don't know what these two options do, but if
+                             ;; not present, it ends with a NullPointerException.
+                             "--classes" "build/classes"
+                             "--descriptors" "build/classes/META-INF"))))
+         (add-after 'generate-metadata 'rebuild
+           (lambda _
+             (zero? (system* "ant" "jar")))))))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("httpclient" ,java-httpcomponents-client)
+       ("httpcore" ,java-httpcomponents-core)
+       ("io" ,java-commons-io)
+       ("provider-api" ,maven-wagon-provider-api)))
+    (native-inputs
+     `(("provider-test" ,maven-wagon-provider-test)
+       ("metadata" ,java-plexus-component-metadata)
+       ("annotations" ,java-plexus-component-annotations)
+       ("container" ,java-eclipse-sisu-plexus)
+       ("sisu-inject" ,java-eclipse-sisu-inject)
+       ("classworlds" ,java-plexus-classworlds)
+       ("guava" ,java-guava)
+       ("guice" ,java-guice)
+       ("inject" ,java-javax-inject)
+       ("cglib" ,java-cglib)
+       ("slf4j" ,java-slf4j-api)
+       ("utils" ,java-plexus-utils)
+       ("cli" ,java-plexus-cli)
+       ("plugin-api" ,maven-plugin-api)
+       ("plugin-annotations" ,maven-plugin-annotations)
+       ("core" ,maven-core)
+       ("model" ,maven-model)
+       ("cli" ,java-commons-cli)
+       ("qdox" ,java-qdox)
+       ("jdom2" ,java-jdom2)
+       ("asm" ,java-asm)
+       ("xbean" ,java-geronimo-xbean-reflect)
+       ,@(package-native-inputs maven-wagon-provider-api)))))
+
+(define-public maven-wagon-http
+  (package
+    (inherit maven-wagon-provider-api)
+    (name "maven-wagon-http")
+    (arguments
+     `(#:jar-name "maven-wagon-http.jar"
+       #:source-dir "wagon-providers/wagon-http/src/main/java"
+       #:test-dir "wagon-providers/wagon-http/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         ;(add-before 'check 'fix-paths
+         ;  (lambda _
+         ;    (substitute* "wagon-providers/wagon-http/src/test/java/org/apache/maven/wagon/providers/file/FileWagonTest.java"
+         ;      (("target") "build"))))
+         (add-after 'build 'generate-metadata
+           (lambda _
+             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
+                             "org.codehaus.plexus.metadata.PlexusMetadataGeneratorCli"
+                             "--source" "wagon-providers/wagon-http/src/main/java"
+                             "--output" "build/classes/META-INF/plexus/components.xml"
+                             ;; I don't know what these two options do, but if
+                             ;; not present, it ends with a NullPointerException.
+                             "--classes" "build/classes"
+                             "--descriptors" "build/classes/META-INF"))))
+         (add-after 'generate-metadata 'rebuild
+           (lambda _
+             (zero? (system* "ant" "jar")))))))
+    (inputs
+     `(("utils" ,java-plexus-utils)
+       ("httpclient" ,java-httpcomponents-client)
+       ("httpcore" ,java-httpcomponents-core)
        ("provider-api" ,maven-wagon-provider-api)))
     (native-inputs
      `(("provider-test" ,maven-wagon-provider-test)
