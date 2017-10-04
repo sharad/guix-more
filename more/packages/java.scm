@@ -423,10 +423,11 @@ methods.  It is similar in speed with deflate but offers more dense compression.
            (install-jars "build")))))
     (home-page "http://jdom.org/")
     (synopsis "Access, manipulate, and output XML data")
-    (description " Java-based solution for accessing, manipulating, and
+    (description "Java-based solution for accessing, manipulating, and
 outputting XML data from Java code.")
     (license license:bsd-4)))
 
+;; As of 2010-09-01, the ORO project is retired
 (define-public java-jakarta-oro
   (package
     (name "java-jakarta-oro")
@@ -450,8 +451,13 @@ outputting XML data from Java code.")
          (replace 'install
            (install-jars ,(string-append "jakarta-oro-" version))))))
     (home-page "https://jakarta.apache.org/oro/")
-    (synopsis "")
-    (description "")
+    (synopsis "Text-processing for Java")
+    (description "The Jakarta-ORO Java classes are a set of text-processing
+Java classes that provide Perl5 compatible regular expressions, AWK-like
+regular expressions, glob expressions, and utility classes for performing
+substitutions, splits, filtering filenames, etc.  This library is the successor
+of the OROMatcher, AwkTools, PerlTools, and TextTools libraries originally
+from ORO, Inc.")
     (license license:asl2.0)))
 
 (define-public java-jdom
@@ -494,15 +500,12 @@ outputting XML data from Java code.")
     (arguments
      `(#:jar-name "mvel2.jar"
        #:source-dir "src/main/java"
+       #:test-exclude
+       (list "**/Abstract*.java"
+             ;; Base class with no tests
+             "**/MVELThreadTest.java")
        #:phases
        (modify-phases %standard-phases
-         (add-before 'check 'exclude-non-tests
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               "<exclude name=\"**/Abstract*Test.java\" />"
-                               "<exclude name=\"**/MVELThreadTest.java\" />")))))
          (add-after 'install 'install-bin
            (lambda* (#:key outputs #:allow-other-keys)
              (let ((bin (string-append (assoc-ref outputs "out") "/bin")))
@@ -519,8 +522,15 @@ outputting XML data from Java code.")
      `(("junit" ,java-junit)
        ("hamcrest" ,java-hamcrest-core)))
     (home-page "https://github.com/mvel/mvel")
-    (synopsis "")
-    (description "")
+    (synopsis "MVFLEX Expression Language")
+    (description "MVEL has largely been inspired by Java syntax, but has some
+fundamental differences aimed at making it more efficient as an expression
+language, such as operators that directly support collection, array and string
+matching, as well as regular expressions.  MVEL is used to evaluate expressions
+written using Java syntax.
+
+In addition to the expression language, MVEL serves as a templating language for
+configuration and string construction.")
     (license license:asl2.0)))
 
 (define-public java-lz4
@@ -549,8 +559,9 @@ outputting XML data from Java code.")
     (native-inputs
      `(("mvel" ,java-mvel2)))
     (home-page "https://jpountz.github.io/lz4-java"); or http://blog.jpountz.net/
-    (synopsis "")
-    (description "")
+    (synopsis "Compression algorithm")
+    (description "LZ4 - Java is a Java port of the popular lz4 compression
+algorithms and xxHash hashing algorithm.")
     (license license:asl2.0)))
 
 (define-public java-bouncycastle-bcprov
@@ -579,7 +590,7 @@ outputting XML data from Java code.")
      `(("unzip" ,unzip)
        ("junit" ,java-junit)))
     (home-page "https://www.bouncycastle.org")
-    (synopsis "")
+    (synopsis "Cryptographic library")
     (description "")
     (license license:expat)))
 
@@ -611,7 +622,7 @@ outputting XML data from Java code.")
     (inputs
      `(("bcprov" ,java-bouncycastle-bcprov)))
     (home-page "https://www.bouncycastle.org")
-    (synopsis "")
+    (synopsis "Cryptographic library")
     (description "")
     (license license:expat)))
 
@@ -636,7 +647,7 @@ outputting XML data from Java code.")
     (native-inputs
      `(("junit" ,java-junit)))
     (home-page "https://www.bouncycastle.org")
-    (synopsis "")
+    (synopsis "Cryptographic library")
     (description "")
     (license license:expat)))
 
@@ -953,20 +964,15 @@ outputting XML data from Java code.")
        #:jdk ,icedtea-8
        #:source-dir "clients/src/main/java"
        #:test-dir "clients/src/test"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'exclude-base
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               ;; not a class
-                               "<exclude name=\"**/IntegrationTest.java\" />"
-                               ;; requires network
-                               "<exclude name=\"**/ClientUtilsTest.java\" />"
-                               ;; something is wrong with our powermock
-                               "<exclude name=\"**/KafkaProducerTest.java\" />"
-                               "<exclude name=\"**/BufferPoolTest.java\" />"))))))))
+       #:test-exclude
+       (list
+         ;; This file does not contain a class
+         "**/IntegrationTest.java"
+         ;; Requires network
+         "**/ClientUtilsTest.java"
+         ;; End with errors that seem related to our powermock
+         "**/KafkaProducerTest.java"
+         "**/BufferPoolTest.java")))
     (inputs
      `(("java-slf4j-api" ,java-slf4j-api)
        ("java-lz4" ,java-lz4)))
@@ -1434,6 +1440,18 @@ file when the JVM loads it.")
      `(#:jar-name "jackson-core.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
+       #:test-exclude
+       (list
+         ;; Expected failure.  pom.xml excludes these
+         "**/failing/**"
+         ;; Base classes that are not tests themeselves
+         "**/BaseTest.java"
+         "**/ConcurrencyReadTest.java"
+         "**/ManualCharAccessTest.java"
+         "**/ManualCharAccessTest.java"
+         "**/TrailingCommasTest.java"
+         "**/AsyncMissingValuesInObjectTest.java"
+         "**/AsyncMissingValuesInArrayTest.java")
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -1448,38 +1466,12 @@ file when the JVM loads it.")
                  (("@projectartifactid@") "jackson-core")))))
          (add-before 'build 'copy-resources
            (lambda _
-             (mkdir-p "build/classes/META-INF")
-             (for-each (lambda (file)
-                         (copy-file file (string-append "build/classes/META-INF/"
-                                                        (basename file))))
-               (find-files "src/main/resources/META-INF/" ".*"))))
+             (copy-recursively "src/main/resources"
+                               "build/classes")))
          (add-before 'check 'copy-test-resources
            (lambda _
-             (mkdir-p "build/test-classes")
-             (for-each (lambda (file)
-                         (copy-file file (string-append "build/classes"
-                                                        (basename file))))
-               (find-files "src/test/resources/" ".*\\.json"))))
-         (add-before 'check 'exclude-base
-           (lambda _
-             ;; not really tests
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               "<exclude name=\"**/failing/**\" />"
-                               "<exclude name=\"**/BaseTest.java\" />"
-                               "<exclude name=\"**/ConcurrencyReadTest.java\" />"
-                               "<exclude name=\"**/ManualCharAccessTest.java\" />"
-                               "<exclude name=\"**/TrailingCommasTest.java\" />"
-                               "<exclude name=\"**/AsyncMissingValuesInObjectTest.java\" />"
-                               "<exclude name=\"**/AsyncMissingValuesInArrayTest.java\" />")))))
-         (add-before 'build 'copy-resources
-           (lambda _
-             (mkdir-p "build/classes/META-INF")
-             (for-each (lambda (file)
-                         (copy-file file (string-append "build/classes/META-INF/"
-                                                        (basename file))))
-               (find-files "src/main/resources/META-INF/" ".*")))))))
+             (copy-recursively "src/test/resources"
+                               "build/test-classes"))))))
     (native-inputs
      `(("junit" ,java-junit)
        ("hamcrest" ,java-hamcrest-core)))
@@ -1551,6 +1543,9 @@ file when the JVM loads it.")
      `(#:jar-name "jackson-modules-base.jar"
        #:source-dir "jaxb/src/main/java"
        #:test-dir "jaxb/src/test"
+       #:test-exclude
+       ;; Base class for tests
+       (list "**/BaseJaxbTest.java")
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -1564,20 +1559,9 @@ file when the JVM loads it.")
                  (("@projectversion@") ,version)
                  (("@projectgroupid@") "com.fasterxml.jackson.module.jaxb")
                  (("@projectartifactid@") "jackson-module-jaxb")))))
-         (add-before 'check 'disable-failing
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               ;; The base class for tests, not a test in itself
-                               "<exclude name=\"**/BaseJaxbTest.java\" />")))))
          (add-before 'build 'copy-resources
            (lambda _
-             (mkdir-p "build/classes/META-INF")
-             (for-each (lambda (file)
-                         (copy-file file (string-append "build/classes/META-INF/"
-                                                        (basename file))))
-               (find-files "jaxb/src/main/resources/META-INF/" ".*")))))))
+             (copy-recursively "jaxb/src/main/resources" "build/classes"))))))
     (inputs
      `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
        ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
@@ -1602,30 +1586,21 @@ file when the JVM loads it.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "woodstox.jar"
+       #:test-exclude
+       (list "**/Base*.java" "failing/**")
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'remove-msv-dep
            (lambda _
              ;; we don't need osgi, and it depends on msv
              (delete-file-recursively "src/main/java/com/ctc/wstx/osgi")
-             ;; msv's latest release is from 2011
+             ;; msv's latest release is from 2011 and we don't need it
              (delete-file-recursively "src/main/java/com/ctc/wstx/msv")
              (delete-file-recursively "src/test/java/wstxtest/osgi")
              (delete-file-recursively "src/test/java/wstxtest/msv")))
-         (add-before 'check 'remove-failing
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               "<exclude name=\"**/Base*.java\" />"
-                               "<exclude name=\"failing/**\" />")))))
          (add-before 'build 'copy-resources
            (lambda _
-             (mkdir-p "build/classes/META-INF")
-             (for-each (lambda (file)
-                         (copy-file file (string-append "build/classes/META-INF/"
-                                                        (basename file))))
-               (find-files "src/main/resources/META-INF/" ".*")))))))
+             (copy-recursively "src/main/resources" "build/classes"))))))
     (inputs
      `(("stax2" ,java-stax2-api)))
     (native-inputs
@@ -1788,19 +1763,7 @@ interface and high-performance Typed Access API.")
        (modify-phases %standard-phases
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
-             (let ((dir (string-append (getcwd) "/../test-resources/")))
-               (with-directory-excursion (assoc-ref inputs "resources")
-                 (for-each (lambda (file)
-                             (mkdir-p (dirname (string-append dir file)))
-                             (copy-file file (string-append dir file)))
-                   (find-files "." ".*"))))))
-         (add-before 'check 'disable-non-tests
-           (lambda _
-             ;; not really tests
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               "<exclude name=\"**/Abstract*Test.java\" />"))))))))
+             (copy-recursively (assoc-ref inputs "resources") "../test-resources"))))))
     (native-inputs
      `(("junit" ,java-junit)
        ("mockito" ,java-mockito-1)
@@ -1845,6 +1808,19 @@ interface and high-performance Typed Access API.")
        #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
+       #:test-include (list "**/*Tests.java")
+       #:test-exclude
+       (list
+         "**/Abstract*.java"
+         ;; Test failures
+         "**/LocalVariableTableParameterNameDiscovererTests.java"
+         "**/StandardReflectionParameterNameDiscoverTests.java"
+         "**/SpringFactoriesLoaderTests.java"
+         "**/PropertySourceTests.java"
+         "**/StaxEventXMLReaderTests.java"
+         "**/StaxStreamHandlerTests.java"
+         ;; Unable to set MockitoNamingPolicy on cglib generator which creates FastClasses
+         "**/util/StreamUtilsTests.java")
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'chdir
@@ -1862,24 +1838,9 @@ interface and high-performance Typed Access API.")
                 "import net.sf.cglib.core.DefaultNamingPolicy;\npublic class"))))
          (add-before 'check 'remove-log4j-1-dep
            (lambda _
-             ;; this tests requires log4j-1 (not log4j-1.2-api)
+             ;; These tests require log4j-1 (log4j-1.2-api doesn't work)
              (delete-file "src/test/java/org/springframework/util/MockLog4jAppender.java")
              (delete-file "src/test/java/org/springframework/util/Log4jConfigurerTests.java")))
-         (add-before 'check 'select-tests
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Tests.java\" />"
-                               ;; these tests fail
-                               "<exclude name=\"**/LocalVariableTableParameterNameDiscovererTests.java\" />"
-                               "<exclude name=\"**/StandardReflectionParameterNameDiscoverTests.java\" />"
-                               "<exclude name=\"**/SpringFactoriesLoaderTests.java\" />"
-                               "<exclude name=\"**/PropertySourceTests.java\" />"
-                               "<exclude name=\"**/StaxEventXMLReaderTests.java\" />"
-                               "<exclude name=\"**/StaxStreamHandlerTests.java\" />"
-                               ;; Unable to set MockitoNamingPolicy on cglib generator which creates FastClasses
-                               "<exclude name=\"**/util/StreamUtilsTests.java\" />"
-                               "<exclude name=\"**/Abstract*.java\" />")))))
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
              (let ((dir (string-append (getcwd) "/build/test-classes/")))
@@ -2037,9 +1998,9 @@ interface and high-performance Typed Access API.")
       `(#:tests? #f
         ,@(package-arguments java-snakeyaml)))))
 
-(define-public java-ops4j-lang
+(define-public java-ops4j-base-lang
   (package
-    (name "java-ops4j-lang")
+    (name "java-ops4j-base-lang")
     (version "1.5.0")
     (source (origin
               (method url-fetch)
@@ -2050,7 +2011,7 @@ interface and high-performance Typed Access API.")
                 "18hl3lpchgpv8yh5rlk39l2gif5dlfgb8gxjmncf39pr2dprkniw"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "java-ops4j-lang.jar"
+     `(#:jar-name "java-ops4j-base-lang.jar"
        #:source-dir "ops4j-base-lang/src/main/java"
        #:tests? #f; no tests
        #:phases
@@ -2063,97 +2024,108 @@ interface and high-performance Typed Access API.")
                (lambda _
                  (display
                    (string-append
-                     "This jar was not created by maven!\n"
-                     "This file was created to satisfy a test dependency in "
-                     "ops4j-pax-exam-core-spi.\n")))))))))
+                     "version=" ,version "\n"
+                     "groupId=org.ops4j.base"
+                     "artifactId=ops4j-base-lang\n")))))))))
     (home-page "https://ops4j1.jira.com/wiki/spaces/base/overview")
-    (synopsis "")
-    (description "")
+    (synopsis "Utility classes and extensions to be used in OPS4J projects")
+    (description "OPS4J stands for Open Participation Software for Java.  This
+package contains utilities and extensions related to @code{java.lang}.")
     (license license:asl2.0)))
 
-(define-public java-ops4j-monitors
+(define-public java-ops4j-base-monitors
   (package
-    (inherit java-ops4j-lang)
-    (name "java-ops4j-monitors")
+    (inherit java-ops4j-base-lang)
+    (name "java-ops4j-base-monitors")
     (arguments
-     `(#:jar-name "java-ops4j-monitors.jar"
+     `(#:jar-name "java-ops4j-base-monitors.jar"
        #:source-dir "ops4j-base-monitors/src/main/java"
        #:tests? #f)); no tests
     (inputs
-     `(("lang" ,java-ops4j-lang)))))
+     `(("lang" ,java-ops4j-base-lang)))
+    (description "OPS4J stands for Open Participation Software for Java.  This
+package contains utilities and extensions related to monitoring.")))
 
-(define-public java-ops4j-io
+(define-public java-ops4j-base-io
   (package
-    (inherit java-ops4j-lang)
-    (name "java-ops4j-io")
+    (inherit java-ops4j-base-lang)
+    (name "java-ops4j-base-io")
     (arguments
-     `(#:jar-name "java-ops4j-io.jar"
+     `(#:jar-name "java-ops4j-base-io.jar"
        #:source-dir "ops4j-base-io/src/main/java"
        #:test-dir "ops4j-base-io/src/test"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'disable-failing
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               "<exclude name=\"**/ListerTest.java\" />"))))))))
+       #:test-exclude
+       (list "**/ListerTest.java")))
     (inputs
-     `(("lang" ,java-ops4j-monitors)
-       ("lang" ,java-ops4j-lang)))
+     `(("lang" ,java-ops4j-base-monitors)
+       ("lang" ,java-ops4j-base-lang)))
     (native-inputs
      `(("junit" ,java-junit)
-       ("hamcrest" ,java-hamcrest-core)))))
+       ("hamcrest" ,java-hamcrest-core)))
+    (description "OPS4J stands for Open Participation Software for Java.  This
+package contains utilities and extensions related to handling streams and files.")))
 
-(define-public java-ops4j-util
+(define-public java-ops4j-base-util
   (package
-    (inherit java-ops4j-lang)
-    (name "java-ops4j-util")
+    (inherit java-ops4j-base-lang)
+    (name "java-ops4j-base-util")
     (arguments
-     `(#:jar-name "java-ops4j-util.jar"
+     `(#:jar-name "java-ops4j-base-util.jar"
        #:source-dir "ops4j-base-util/src/main/java"
        #:test-dir "ops4j-base-util/src/test"))
     (inputs
-     `(("lang" ,java-ops4j-lang)))
+     `(("lang" ,java-ops4j-base-lang)))
     (native-inputs
-     `(("junit" ,java-junit)))))
+     `(("junit" ,java-junit)))
+    (description "OPS4J stands for Open Participation Software for Java.  This
+package contains utilities and extensions related to environment, i18n and
+mime types.")))
 
-(define-public java-ops4j-util-property
+(define-public java-ops4j-base-util-property
   (package
-    (inherit java-ops4j-lang)
-    (name "java-ops4j-util-property")
+    (inherit java-ops4j-base-lang)
+    (name "java-ops4j-base-util-property")
     (arguments
-     `(#:jar-name "java-ops4j-util-property.jar"
+     `(#:jar-name "java-ops4j-base-util-property.jar"
        #:source-dir "ops4j-base-util-property/src/main/java"
        #:tests? #f)); no tests
     (inputs
-     `(("lang" ,java-ops4j-lang)
-       ("util" ,java-ops4j-util)))))
+     `(("lang" ,java-ops4j-base-lang)
+       ("util" ,java-ops4j-base-util)))
+    (description "OPS4J stands for Open Participation Software for Java.  This
+package contains utilities and extensions related to resolving properties from
+different sources.")))
 
-(define-public java-ops4j-store
+(define-public java-ops4j-base-store
   (package
-    (inherit java-ops4j-lang)
-    (name "java-ops4j-store")
+    (inherit java-ops4j-base-lang)
+    (name "java-ops4j-base-store")
     (arguments
-     `(#:jar-name "java-ops4j-store.jar"
+     `(#:jar-name "java-ops4j-base-store.jar"
        #:source-dir "ops4j-base-store/src/main/java"
        #:tests? #f)); no tests
     (inputs
-     `(("lang" ,java-ops4j-lang)
+     `(("lang" ,java-ops4j-base-lang)
        ("slf4j" ,java-slf4j-api)
-       ("io" ,java-ops4j-io)))))
+       ("io" ,java-ops4j-base-io)))
+    (description "OPS4J stands for Open Participation Software for Java.  This
+package contains utilities for storing and retrieving data from an
+@code{InputStream}.")))
 
-(define-public java-ops4j-spi
+(define-public java-ops4j-base-spi
   (package
-    (inherit java-ops4j-lang)
-    (name "java-ops4j-spi")
+    (inherit java-ops4j-base-lang)
+    (name "java-ops4j-base-spi")
     (arguments
-     `(#:jar-name "java-ops4j-spi.jar"
+     `(#:jar-name "java-ops4j-base-spi.jar"
        #:source-dir "ops4j-base-spi/src/main/java"
        #:test-dir "ops4j-base-spi/src/test"))
     (native-inputs
      `(("junit" ,java-junit)
-       ("hamcrest" ,java-hamcrest-core)))))
+       ("hamcrest" ,java-hamcrest-core)))
+    (description "OPS4J stands for Open Participation Software for Java.  This
+package contains utilities for obtaining services via the Java SE 6
+@code{ServiceLoader}.")))
 
 (define-public java-aqute-bndlib
   (package
@@ -2163,6 +2135,7 @@ interface and high-performance Typed Access API.")
               (method url-fetch)
               (uri (string-append "https://github.com/bndtools/bnd/archive/"
                                   version ".REL.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
                 "09vgb6axikbz66zi9falijbnzh1qnp9ysfns123dmzdb01cbza9q"))))
@@ -2185,9 +2158,11 @@ interface and high-performance Typed Access API.")
        ("java-osgi-namespace-service" ,java-osgi-namespace-service)
        ("promise" ,java-osgi-util-promise)
        ("osgi" ,java-osgi-core)))
-    (home-page "")
-    (synopsis "")
-    (description "")
+    (home-page "http://bnd.bndtools.org/")
+    (synopsis "Tools for OSGi")
+    (description "Bnd is a swiss army knife for OSGi, it creates manifest
+headers based on analyzing the class code, it verifies the project settings,
+it manages project dependencies, gives diffs jars, and much more.")
     (license license:asl2.0)))
 
 (define-public java-aqute-libg
@@ -2228,24 +2203,22 @@ interface and high-performance Typed Access API.")
     (arguments
      `(#:jar-name "java-ops4j-pax-tinybundles.jar"
        #:source-dir "src/main/java"
+       #:test-exclude
+       ;; Abstract base classes for other tests
+       (list "**/BndTest.java" "**/CoreTest.java")
        #:phases
        (modify-phases %standard-phases
          (add-before 'check 'fix-version
            (lambda _
-             ;; I think the test has a hard reference to an old version of bndlib
-             ;; we are not using. This is the version referenced in the pom.xml.
+             ;; This test has a reference to an old version of bndlib we are not
+             ;; packaging.  It uses the version referenced in pom.xml.  We replace
+             ;; it with our own version.
              (substitute* "src/test/java/org/ops4j/pax/tinybundles/bnd/BndTest.java"
-               (("2.4.0.201411031534") "3.4.0"))
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               ;; Base classes for other tests
-                               "<exclude name=\"**/BndTest.java\" />"
-                               "<exclude name=\"**/CoreTest.java\" />"))))))))
+               (("2.4.0.201411031534") "3.4.0")))))))
     (inputs
-     `(("lang" ,java-ops4j-lang)
-       ("io" ,java-ops4j-io)
-       ("store" ,java-ops4j-store)
+     `(("lang" ,java-ops4j-base-lang)
+       ("io" ,java-ops4j-base-io)
+       ("store" ,java-ops4j-base-store)
        ("slf4j" ,java-slf4j-api)
        ("libg" ,java-aqute-libg)
        ("bndlib" ,java-aqute-bndlib)))
@@ -2257,8 +2230,12 @@ interface and high-performance Typed Access API.")
        ("framework" ,java-osgi-framework)))
     (build-system ant-build-system)
     (home-page "https://ops4j1.jira.com/wiki/spaces/ops4j/pages/12060312/Tinybundles")
-    (synopsis "")
-    (description "")
+    (synopsis "Java APIs to create OSGi related artifacts")
+    (description "Tinybundles is all about creating OSGi related artifacts like
+Bundles, Fragments and Deployment Packages with Java Api.  It is very convinient
+to create such artifacts on-the-fly inside Tests (like in Pax Exam).  On the
+other hand, this library can be a foundation of real end user tools that need
+to create those artifacts.")
     (license license:asl2.0)))
 
 (define-public java-ops4j-pax-exam-core
@@ -2278,18 +2255,20 @@ interface and high-performance Typed Access API.")
        #:test-dir "core/pax-exam/src/test"))
     (inputs
      `(("slf4j" ,java-slf4j-api)
-       ("lang" ,java-ops4j-lang)
-       ("io" ,java-ops4j-io)
-       ("util-property" ,java-ops4j-util-property)
-       ("util-store" ,java-ops4j-store)
+       ("lang" ,java-ops4j-base-lang)
+       ("io" ,java-ops4j-base-io)
+       ("util-property" ,java-ops4j-base-util-property)
+       ("util-store" ,java-ops4j-base-store)
        ("java-osgi-core" ,java-osgi-core)))
     (native-inputs
      `(("junit" ,java-junit)
        ("hamcrest" ,java-hamcrest-core)))
     (build-system ant-build-system)
     (home-page "https://ops4j1.jira.com/wiki/spaces/PAXEXAM4/overview")
-    (synopsis "")
-    (description "")
+    (synopsis "In-Container Testing for OSGi, Java EE and CDI")
+    (description "Pax Exam creates OSGi bundles for testing purposes.  It lets
+the user take control of the OSGi framework, the test framework (e.g. JUnit) and
+the system under test at the same time.")
     (license license:asl2.0)))
 
 (define-public java-ops4j-pax-exam-core-spi
@@ -2298,46 +2277,44 @@ interface and high-performance Typed Access API.")
     (name "java-ops4j-pax-exam-core-spi")
     (arguments
      `(#:jar-name "java-ops4j-pax-exam-spi.jar"
-       #:source-dir "core/pax-exam-spi/src/main/java"
-       #:test-dir "core/pax-exam-spi/src/test"
+       #:source-dir "src/main/java"
+       #:test-exclude
+       (list
+         ;; Abstract base class, not a test
+         "**/BaseStagedReactorTest.java"
+         ;; Depends on org.mortbay.jetty.testwars:test-war-dump
+         "**/WarBuilderTest.java")
        #:phases
        (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Tests assume we are in this directory
+             (chdir "core/pax-exam-spi")))
          (add-before 'check 'fix-tests
            (lambda _
+             ;; One test checks that this file is present.
              (mkdir-p "build/classes/META-INF/maven/org.ops4j.pax.exam/pax-exam-spi")
              (with-output-to-file "build/classes/META-INF/maven/org.ops4j.pax.exam/pax-exam-spi/pom.properties"
                (lambda _
-                 (display "This jar was not created by maven!\n")))
-             (substitute* "core/pax-exam-spi/src/test/java/org/ops4j/pax/exam/spi/war/FileFinderTest.java"
-               (("src/main") "core/pax-exam-spi/src/main")
-               (("src/test") "core/pax-exam-spi/src/test")
-               (("\"src\"") "\"core/pax-exam-spi/src\""))
-             (substitute* "core/pax-exam-spi/src/test/java/org/ops4j/pax/exam/spi/war/JarBuilderTest.java"
-               (("src/test") "core/pax-exam-spi/src/test"))
-             (substitute* "core/pax-exam-spi/src/test/java/org/ops4j/pax/exam/spi/war/WarBuilderTest.java"
-               (("src/test") "core/pax-exam-spi/src/test")
-               (("target/") "build/"))
-             (substitute* "core/pax-exam-spi/src/test/java/org/ops4j/pax/exam/spi/war/WarTestProbeBuilderTest.java"
-               (("src/test") "core/pax-exam-spi/src/test")
-               (("target/") "build/"))
-             (substitute* "core/pax-exam-spi/src/test/java/org/ops4j/pax/exam/spi/war/ZipBuilderTest.java"
+                 (display
+                   (string-append "artifactId = pax-exam-spi\n"
+                                  "version = " ,(package-version java-ops4j-pax-exam-core-spi)))))
+             ;; Maven puts compilation results in the target directory, while we
+             ;; put them in the build directory.
+             (substitute* '("src/test/java/org/ops4j/pax/exam/spi/war/WarBuilderTest.java"
+                            "src/test/java/org/ops4j/pax/exam/spi/war/WarTestProbeBuilderTest.java"
+                            "src/test/java/org/ops4j/pax/exam/spi/war/ZipBuilderTest.java")
                (("target") "build"))
-             (substitute* "core/pax-exam-spi/src/test/java/org/ops4j/pax/exam/spi/reactors/BaseStagedReactorTest.java"
-               (("AssertionError") "IllegalArgumentException"))
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               ;; Base class, not a test
-                               "<exclude name=\"**/BaseStagedReactorTest.java\" />"
-                               ;; Depends on org.mortbay.jetty.testwars:test-war-dump
-                               "<exclude name=\"**/WarBuilderTest.java\" />"))))))))
+             ;; One test is expected to fail, but it doesn't throw the expected exception
+             (substitute* "src/test/java/org/ops4j/pax/exam/spi/reactors/BaseStagedReactorTest.java"
+               (("AssertionError") "IllegalArgumentException")))))))
     (inputs
      `(("java-ops4j-pax-exam-core" ,java-ops4j-pax-exam-core)
-       ("lang" ,java-ops4j-lang)
-       ("monitors" ,java-ops4j-monitors)
-       ("store" ,java-ops4j-store)
-       ("io" ,java-ops4j-io)
-       ("spi" ,java-ops4j-spi)
+       ("lang" ,java-ops4j-base-lang)
+       ("monitors" ,java-ops4j-base-monitors)
+       ("store" ,java-ops4j-base-store)
+       ("io" ,java-ops4j-base-io)
+       ("spi" ,java-ops4j-base-spi)
        ("osgi" ,java-osgi-core)
        ("slf4j" ,java-slf4j-api)
        ("tinybundles" ,java-ops4j-pax-tinybundles)))
@@ -2380,6 +2357,7 @@ interface and high-performance Typed Access API.")
     (arguments
      `(#:jar-name "jackson-dataformat-yaml.jar"
        #:source-dir "src/main/java"
+       #:test-exclude (list "**/failing/**.java")
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-PackageVersion.java
@@ -2391,13 +2369,7 @@ interface and high-performance Typed Access API.")
                  (("@package@") "com.fasterxml.jackson.dataformat.yaml")
                  (("@projectversion@") ,version)
                  (("@projectgroupid@") "com.fasterxml.jackson.dataformat.yaml")
-                 (("@projectartifactid@") "jackson-dataformat-yaml")))))
-         (add-before 'check 'activate-all-tests
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               "<exclude name=\"**/failing/**.java\" />"))))))))
+                 (("@projectartifactid@") "jackson-dataformat-yaml"))))))))
     (inputs
      `(("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
        ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
@@ -2891,20 +2863,13 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (arguments
      `(#:jar-name "java-fest-assert.jar"
        #:source-dir "src/main/java"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'activate-all-tests
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               ;; Unable to set MockitoNamingPolicy on cglib
-                               ;; generator which creates FastClasses
-                               "<exclude name=\"**/MessageFormatter_format_Test.java\" />"
-                               "<exclude name=\"**/internal/*/*_assert*_Test.java\" />"
-                               ;; Not tests
-                               "<exclude name=\"**/Abstract*.java\" />"
-                               "<exclude name=\"**/*BaseTest.java\" />"))))))))
+       #:test-exclude
+       (list
+         "**/Abstract*.java"
+         "**/*BaseTest.java"
+         ;; Unable to set MockitoNamingPolicy on cglib generator which creates FastClasses
+         "**/MessageFormatter_format_Test.java"
+         "**/internal/*/*_assert*_Test.java")))
     (inputs
      `(("java-fest-util" ,java-fest-util)))
     (native-inputs
@@ -2983,20 +2948,14 @@ the dependency is said to be unsatisfied, and the application is broken.")
      `(#:jar-name "java-jeromq.jar"
        #:source-dir "src/main/java"
        #:jdk ,icedtea-8
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'remove-failing
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/*Test.java\" />"
-                               ;; Requires network
-                               "<exclude name=\"**/ZBeaconTest.java\" />"
-                               ;; FIXME: I don't know why it fails
-                               "<exclude name=\"**/CustomDecoderTest.java\" />"
-                               "<exclude name=\"**/CustomEncoderTest.java\" />"
-                               ;; Not tests
-                               "<exclude name=\"**/Abstract*.java\" />"))))))))
+       #:test-exclude
+       (list
+         "**/Abstract*.java"
+         ;; Requires network
+         "**/ZBeaconTest.java"
+         ;; FIXME: investigate test failure
+         "**/CustomDecoderTest.java"
+         "**/CustomEncoderTest.java")))
     (inputs
      `(("java-jnacl" ,java-jnacl)))
     (native-inputs
@@ -3195,29 +3154,24 @@ the dependency is said to be unsatisfied, and the application is broken.")
        #:source-dir "log4j-1.2-api/src/main/java"
        #:test-dir "log4j-1.2-api/src/test"
        #:jdk ,icedtea-8
-       #:tests? #f; requires maven
+       ;#:tests? #f; requires maven
        #:phases
        (modify-phases %standard-phases
-         (add-before 'check 'copy-classes
+         (add-before 'check 'copy-test-classes
            (lambda _
-             (mkdir-p "log4j-1.2-api/src/test/java/org/apache/logging/log4j/test/appender")
-             (copy-file "log4j-core/src/test/java/org/apache/logging/log4j/test/appender/ListAppender.java"
-                        "log4j-1.2-api/src/test/java/org/apache/logging/log4j/test/appender/ListAppender.java")
-             (mkdir-p "log4j-1.2-api/src/test/java/org/apache/logging/log4j/junit")
-             (copy-file "log4j-core/src/test/java/org/apache/logging/log4j/junit/LoggerContextRule.java"
-                        "log4j-1.2-api/src/test/java/org/apache/logging/log4j/junit/LoggerContextRule.java")
-             (mkdir-p "log4j-1.2-api/src/test/java/org/apache/logging/log4j/osgi/equinox")
-             (copy-file "log4j-api/src/test/java/org/apache/logging/log4j/osgi/equinox/AbstractEquinoxLoadBundleTest.java"
-                        "log4j-1.2-api/src/test/java/org/apache/logging/log4j/osgi/equinox/AbstractEquinoxLoadBundleTest.java")
-             (mkdir-p "log4j-1.2-api/src/test/java/org/apache/logging/log4j/osgi/felix")
-             (copy-file "log4j-api/src/test/java/org/apache/logging/log4j/osgi/OsgiRule.java"
-                        "log4j-1.2-api/src/test/java/org/apache/logging/log4j/osgi/OsgiRule.java")
-             (copy-file "log4j-api/src/test/java/org/apache/logging/log4j/osgi/BundleTestInfo.java"
-                        "log4j-1.2-api/src/test/java/org/apache/logging/log4j/osgi/BundleTestInfo.java")
-             (copy-file "log4j-api/src/test/java/org/apache/logging/log4j/osgi/AbstractLoadBundleTest.java"
-                        "log4j-1.2-api/src/test/java/org/apache/logging/log4j/osgi/AbstractLoadBundleTest.java")
-             (copy-file "log4j-api/src/test/java/org/apache/logging/log4j/osgi/felix/AbstractFelixLoadBundleTest.java"
-                        "log4j-1.2-api/src/test/java/org/apache/logging/log4j/osgi/felix/AbstractFelixLoadBundleTest.java"))))))
+             (let ((from "log4j-core/src/test/java/org/apache/logging/log4j/")
+                   (to "log4j-1.2-api/src/test/java/org/apache/logging/log4j/"))
+               (for-each (lambda (file)
+                           (mkdir-p (dirname (string-append to file)))
+                           (copy-file (string-append from file)
+                                      (string-append to file)))
+                 '("test/appender/ListAppender.java"
+                   "junit/LoggerContextRule.java"
+                   "osgi/equinox/AbstractEquinoxLoadBundleTest.java"
+                   "osgi/OsgiRule.java"
+                   "osgi/BundleTestInfo.java"
+                   "osgi/AbstractLoadBundleTest.java"
+                   "osgi/felix/AbstractFelixLoadBundleTest.java"))))))))
     (inputs
      `(("log4j-api" ,java-log4j-api)
        ("log4j-core" ,java-log4j-core)
@@ -4249,14 +4203,7 @@ namespaces.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "src/main/java"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'activate-all-tests
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/Test*.java\" />"
-                               "<exclude name=\"**/test*/**.java\" />"))))))))
+       #:test-eclude (list "**/test*/**.java")))
     (inputs
      `(("java-guava" ,java-guava)))
     (native-inputs
@@ -4283,6 +4230,8 @@ namespaces.")
     (arguments
      `(#:jar-name "java-joda-time.jar"
        #:source-dir "src/main/java"
+       #:test-include (list "**/Test*.java")
+       #:test-exclude (list "**/Test*Chronology.java" "**/Test*Field.java")
        #:phases
        (modify-phases %standard-phases
          (add-after 'build 'build-resources
@@ -4316,14 +4265,7 @@ namespaces.")
              (for-each (lambda (file)
                          (copy-file file (string-append "build/test-classes/"
                                                         (basename file))))
-               (find-files "src/test/resources/" ".*"))))
-         (add-before 'check 'exclude-non-tests
-           (lambda _
-             (substitute* "build.xml"
-               (("<include name=\"\\*\\*/\\*Test.java\" />")
-                (string-append "<include name=\"**/Test*.java\" />"
-                               "<exclude name=\"**/Test*Chronology.java\" />"
-                               "<exclude name=\"**/Test*Field.java\" />"))))))))
+               (find-files "src/test/resources/" ".*")))))))
     (inputs
      `(("java-joda-convert" ,java-joda-convert)))
     (native-inputs
