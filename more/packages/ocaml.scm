@@ -32,6 +32,7 @@
   #:use-module (gnu packages emacs)
   #:use-module (gnu packages flex)
   #:use-module (gnu packages llvm)
+  #:use-module (gnu packages m4)
   #:use-module (gnu packages maths)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages ocaml)
@@ -80,6 +81,61 @@
                          (assoc-ref %build-inputs "findlib")
                          "/lib/ocaml/site-lib"))
     #:phases (modify-phases %standard-phases (delete 'configure))))
+
+(define-public ocaml-fix
+  (package
+    (inherit ocaml)
+    (version "4.05.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://caml.inria.fr/pub/distrib/ocaml-"
+                    (version-major+minor version)
+                    "/ocaml-" version ".tar.xz"))
+              (sha256
+               (base32
+                "1y9fw1ci9pwnbbrr9nwr8cq8vypcxwdf4akvxard3mxl2jx2g984"))))
+    (arguments
+     `(#:modules ((guix build gnu-build-system)
+                  (guix build utils)
+                  (web server))
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'patch-/bin/sh-references
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let* ((sh (string-append (assoc-ref inputs "bash")
+                                       "/bin/sh"))
+                    (quoted-sh (string-append "\"" sh "\"")))
+               (with-fluids ((%default-port-encoding #f))
+                 (for-each
+                  (lambda (file)
+                    (substitute* file
+                      (("\"/bin/sh\"")
+                       (begin
+                         (format (current-error-port) "\
+patch-/bin/sh-references: ~a: changing `\"/bin/sh\"' to `~a'~%"
+                                 file quoted-sh)
+                         quoted-sh))))
+                  (find-files "." "\\.ml$"))
+                 #t))))
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (mandir (string-append out "/share/man")))
+               ;; Custom configure script doesn't recognize
+               ;; --prefix=<PREFIX> syntax (with equals sign).
+               (zero? (system* "./configure"
+                               "--prefix" out
+                               "--mandir" mandir)))))
+         (replace 'build
+           (lambda _
+             (zero? (system* "make" "-j1" ;; fails to build otherwise
+                             "world.opt"))))
+         (delete 'check)
+         (add-after 'install 'check
+           (lambda _
+             (with-directory-excursion "testsuite"
+               (zero? (system* "make" "all"))))))))))
 
 (define-public ocaml-zed
   (package
@@ -260,6 +316,56 @@ assistant to write formal mathematical proofs using a variety of theorem
 provers.")
     (license license:gpl2+)))
 
+(define-public ocaml-findlib-fix
+  (package
+    (inherit ocaml-findlib)
+    (native-inputs
+     `(("camlp4" ,camlp4)
+       ("ocaml" ,ocaml-fix)
+       ("m4" ,m4)))))
+
+(define-public ocaml-build
+  (package
+    (name "ocaml-build")
+    (version "0.11.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ocaml/ocamlbuild/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1vh30731gv1brr4ljfzd6m5lni44ifyb1w8hwir81ff9874fs5qp"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:test-target "test"
+       #:tests? #f; FIXME: tests fail to find Findlib
+       #:make-flags
+       (list (string-append "OCAMLBUILD_PREFIX=" (assoc-ref %outputs "out"))
+             (string-append "OCAMLBUILD_BINDIR=" (assoc-ref %outputs "out") "/bin")
+             (string-append "OCAMLBUILD_LIBDIR=" (assoc-ref %outputs "out") "/lib")
+             (string-append "OCAMLBUILD_MANDIR=" (assoc-ref %outputs "out") "/share/man"))
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         ;(replace 'configure
+         ;  (lambda* (#:key outputs #:allow-other-keys)
+         ;    (let ((out (assoc-ref %outputs "out")))
+         ;      (zero? (system* "make" "-f" "configure.make" "all")))))
+         (add-before 'build 'findlib-environment
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out")))
+               (setenv "OCAMLFIND_DESTDIR" (string-append out "/lib/ocaml/site-lib"))
+               (setenv "OCAMLFIND_LDCONF" "ignore")
+               #t))))))
+    (native-inputs
+     `(("ocaml" ,ocaml-fix)
+       ("findlib" ,ocaml-findlib-fix)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
+
 (define-public ocaml-menhir-fix
   (package
     (inherit ocaml-menhir)
@@ -272,7 +378,10 @@ provers.")
                     "menhir-" version ".tar.gz"))
               (sha256
                (base32
-                "0qffci9qxgfabzyalx851q994yykl4n9ylr4vbplsm6is1padjh0"))))))
+                "0qffci9qxgfabzyalx851q994yykl4n9ylr4vbplsm6is1padjh0"))))
+    (inputs
+     `(("ocaml" ,ocaml-fix)
+       ("ocamlbuild" ,ocaml-build)))))
 
 (define-public compcert
   (package
@@ -295,7 +404,7 @@ provers.")
                              (assoc-ref outputs "out"))))))
        #:tests? #f))
     (native-inputs
-     `(("ocaml" ,ocaml)
+     `(("ocaml" ,ocaml-fix)
        ("coq" ,coq-fix)))
     (inputs
      `(("menhir" ,ocaml-menhir-fix)))
