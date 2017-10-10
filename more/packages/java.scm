@@ -650,7 +650,7 @@ outputting XML data from Java code.")
                                   "archive/powermock-" version ".tar.gz"))
               (sha256
                (base32
-                "09rdklqm1c2zp45c8x9596g8r9m5ab8aalxh447kljcrzajz49ri"))
+                "12f9jazi7ilk5r1fz0m1hy1rhn3w476xsh35r670larpxm6gbc26"))
               (patches
                 (search-patches "java-powermock-fix-java-files.patch"))))
     (build-system ant-build-system)
@@ -1253,7 +1253,7 @@ file when the JVM loads it.")
                                   "_spec-1.0.0.Final.tar.gz"))
               (sha256
                (base32
-                "15h3486rcqg46sfz99kilwidhgv085gyjx6fdpxa1c5j75s8qc3k"))))
+                "0wv8x0jp9a5qxlrgkhb5jdk2gr6vi87b4j4kjb8ryxiy9gn8g51z"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-jboss-interceptors-api_spec.jar"
@@ -1499,7 +1499,7 @@ file when the JVM loads it.")
                                   "jackson-databind-" version ".tar.gz"))
               (sha256
                (base32
-                "01a60dwy1q11xizvimphmhjfbk41rwar3rl1q3xcwlhic2vdw147"))))
+                "0nxjmhbplclgl960ik8sa3ghq56x2qb4ymh3y6cqxynhzs89mzvl"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "jackson-databind.jar"
@@ -1545,7 +1545,7 @@ file when the JVM loads it.")
                                   "jackson-modules-base-" version ".tar.gz"))
               (sha256
                (base32
-                "054f1rk3k7way7d2a67q2j81yi33n1q9l4rp14jb864y46zdaayy"))))
+                "0gbv20nmg43swv8r7nszwxmq9gacwnysm70ymqlj6kp44big1dgs"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "jackson-modules-base.jar"
@@ -1646,7 +1646,7 @@ file when the JVM loads it.")
                                   "jackson-dataformat-xml-" version ".tar.gz"))
               (sha256
                (base32
-                "1iv8brs68szk2d4fghji1bgg5g8fcc4y1yp363phiy794f40vxfc"))))
+                "0c1n25xi68kg4n74r9hfnm1q5c7grkmcfl16kpb3bnh2xrjizdlp"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "jackson-dataformat-xml.jar"
@@ -2165,7 +2165,7 @@ interface and high-performance Typed Access API.")
                                   version ".REL.tar.gz"))
               (sha256
                (base32
-                "158c9250v1q07hvj6v30lja4gq1s3y0v94j281rghz82lilwzb07"))))
+                "09vgb6axikbz66zi9falijbnzh1qnp9ysfns123dmzdb01cbza9q"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-bndlib.jar"
@@ -2271,7 +2271,7 @@ interface and high-performance Typed Access API.")
                                   "archive/exam-reactor-" version ".tar.gz"))
               (sha256
                (base32
-                "0vk87df6m4shhqwd0wmkjklhnnqy98cxbhns06wzvb8rfgcl6wp5"))))
+                "08mzw8nkah3rj3vznlplnawspxhp61zgvb44ifqa1rni1cvbms2g"))))
     (arguments
      `(#:jar-name "java-ops4j-pax-exam-core.jar"
        #:source-dir "core/pax-exam/src/main/java"
@@ -2375,7 +2375,7 @@ interface and high-performance Typed Access API.")
                                   "jackson-dataformat-yaml-" version ".tar.gz"))
               (sha256
                (base32
-                "1qsqkbm9myq2bgqp58b64i2791gcl9njvrgfsy0kdmfhsxy975a9"))))
+                "1a4kgwf68abq2shq0wip7qzl5kdnadql4zashxx4bi0hw4z1pyg4"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "jackson-dataformat-yaml.jar"
@@ -3051,7 +3051,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
 (define-public java-apache-felix-utils
   (package
     (name "java-apache-felix-utils")
-    (version "1.10.0")
+    (version "1.10.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://apache.mindstudios.com/felix/"
@@ -3059,7 +3059,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
                                   "-source-release.tar.gz"))
               (sha256
                (base32
-                "11hb1in1dzgwmi27iwksl45a7nibc8mi5175jhg94yq63svcjkrh"))))
+                "0b2cvw7pfkslvlg0hfgqp3kl0qbzj5hq62mmx1m4iqwbi2h8103s"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "felix-utils.jar"
@@ -4429,7 +4429,7 @@ namespaces.")
     (arguments
      `(#:jar-name "jaxp.jar"
        #:jdk ,icedtea-8
-       #:source-dir "."
+       #:source-dir ".."
        #:tests? #f)); no tests
     ;; TODO: Debian builds several jars out of this: jaxp-1.4.jar,
     ;; xml-apis.jar and xml-apis-1.4.01.jar. Additionally it adds maven-repo
@@ -4440,14 +4440,14 @@ namespaces.")
     (description "xml-apis.jar from the Apache XML Commons project is used by
 the Xerces-J XML parser and Xalan-J XSLT processor and specifies these APIs:
 
-@begin{itemize}
+@itemize
 @item Document Object Model (DOM) level 3
 @item Simple API for XML (SAX) 2.0.2
 @item Java APIs for XML Processing (JAXP) 1.3.04
 @item Transformation API for XML (TrAX) 1.3.04
 @item Document Object Model (DOM) Level 3 Load and Save
 @item JSR 206 Java API for XML Processing 1.3
-@end{itemize}
+@end itemize
 
 These classes are also used in Sun's reference implementation. A GPL'ed
 implementation of these APIs can be found in the java-gnujaxp package. ")
@@ -4498,17 +4498,19 @@ processor.
 
 Xerces2-J supports the following standards and APIs:
 
- * eXtensible Markup Language (XML) 1.0 Second Edition Recommendation
- * Namespaces in XML Recommendation
- * Document Object Model (DOM) Level 2 Core, Events, and Traversal and
-   Range Recommendations
- * Simple API for XML (SAX) 2.0.1 Core and Extension
- * Java APIs for XML Processing (JAXP) 1.2.01
- * XML Schema 1.0 Structures and Datatypes Recommendations
- * Experimental implementation of the Document Object Model (DOM) Level 3
-   Core and Load/Save Working Drafts
- * Provides a partial implementation of the XML Inclusions (XInclude) W3C
-   Candidate Recommendation
+@itemize
+@item eXtensible Markup Language (XML) 1.0 Second Edition Recommendation
+@item Namespaces in XML Recommendation
+@item Document Object Model (DOM) Level 2 Core, Events, and Traversal and
+      Range Recommendations
+@item Simple API for XML (SAX) 2.0.1 Core and Extension
+@item Java APIs for XML Processing (JAXP) 1.2.01
+@item XML Schema 1.0 Structures and Datatypes Recommendations
+@item Experimental implementation of the Document Object Model (DOM) Level 3
+      Core and Load/Save Working Drafts
+@item Provides a partial implementation of the XML Inclusions (XInclude) W3C
+      Candidate Recommendation
+@end itemize
 
 Xerces is now able to parse documents written according to the XML 1.1
 Candidate Recommendation, except that it does not yet provide an option to
@@ -6079,7 +6081,7 @@ contexts, DOM etc, including mixtures thereof.")
     (version "1.7.1")
     (source (codehaus-plexus-origin
              "plexus-containers" version
-             "07l7wfi0kxnabd175yvbkilb26mndnba0a1g0ac1rpfagv3qpnzw"
+             "0xw5g30qf4a83608rw9v2hv8pfsz7d69dkdhk6r0wia4q78hh1pc"
              ""))
     (build-system ant-build-system)
     (arguments
@@ -6353,7 +6355,7 @@ documentation tools.")
     (version "2.8.2")
     (source (codehaus-plexus-origin
              "plexus-compiler" version
-             "13lxk1yg8fzv4ihby1jmfjda60dkxx4rg89k9i6glddd78q1xl4h"
+             "0g3x26pymcdnfnwv2a1i57pd5s26f5zqfi1rdy98z1bn01klx25k"
              ""))
     (build-system ant-build-system)
     (arguments
@@ -6394,7 +6396,7 @@ documentation tools.")
     (version "1.9.1")
     (source (codehaus-plexus-origin
              "modello" version
-             "1nqa1arvyc84i8wn3vk08k46vf8bpqqnf5a6szdj2lc3s1yamlv8"
+             "0l2pvns8pmlrmjm3iknp7gpg3654y1m8qhy55b19sdwdchdcyxfh"
              "")) ;; no prefix
     (build-system ant-build-system)
     (arguments
@@ -6564,7 +6566,7 @@ documentation tools.")
                             "archive/" "7db8f88048" ".tar.gz"))
         (sha256
          (base32
-          "1nvlwj2090nn7f0144pyamp3lfygahlcp09dx0faqgla57lr11hj"))
+          "1smfrk4n7xbrsxpxcp2j4i0j8q86j73w0w6xg7qz83dp6dagdjgp"))
         (file-name (string-append name "-" version ".tar.gz"))))
     (arguments
      `(#:jar-name "plexus-sec-dispatcher.jar"
@@ -6652,7 +6654,7 @@ documentation tools.")
                                   "archive/releases/" version ".tar.gz"))
               (sha256
                (base32
-                "1d2b378bc2l3k2ylcjvbh6dkydk0s2mfpw80hk6lx9zhizfifkn3"))))
+                "11rg6yw5nl13i65xsp4jxxgr341qcnnaan48p767h28kb07s0ajn"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "eclipse-sisu-inject.jar"
@@ -6687,7 +6689,7 @@ documentation tools.")
                                   "archive/releases/" version ".tar.gz"))
               (sha256
                (base32
-                "1qqk6lryblp70r464sn1rj86j3131zrazminp4zlphm510p3dpgz"))))
+                "0lbj7nxy5j0z71k407zbb82icfqh7midrfk0fb3fa3jzdjz0d9d9"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "eclipse-sisu-plexus.jar"
@@ -6726,7 +6728,7 @@ documentation tools.")
                                   "archive/jetty-test-helper-" version ".tar.gz"))
               (sha256
                (base32
-                "0gxq0g3rkplcpxrjl0xrlwqanxwn0aiblk2nma3z1w0gmy0a70g0"))))
+                "1jd6r9wc26fa11si4rn2gvy8ml8q4zw1nr6v04mjp8wvwpgvzwx5"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "eclipse-jetty-test-helper.jar"
@@ -6850,7 +6852,7 @@ documentation tools.")
                                   "archive/jetty-" version ".v20170606.tar.gz"))
               (sha256
                (base32
-                "14lwmxx4ydachrhrf46b17siqjq4npblh0brlfq0j0cpmxq23mmi"))))
+                "1i51qlsd7h06d35kx5rqpzbfadbcszycx1iwr6vz7qc9gf9f29la"))))
     (arguments
      `(#:jar-name "eclipse-jetty-util.jar"
        #:source-dir "src/main/java"

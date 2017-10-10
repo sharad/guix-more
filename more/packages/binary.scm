@@ -502,3 +502,81 @@ applicable to a variety of tasks.")
     (description
       "Radare2 is a tool for reversing binaries.")
     (license license:gpl3+)))
+
+(define-public sandsifter
+  (package
+    (name "sandsifter")
+    (version "0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/xoreaxeaxeax/sandsifter")
+                     (commit "dff63246fed84d90118441b8ba5b5d3bdd094427")))
+              (sha256
+               (base32
+                "1f4hfdhqmam8cz2hixv8zpwggqy17fmczsnc5k9gz87ff7bpqrnk"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:make-flags (list "CC=gcc")
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'install
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (bin (string-append out "/bin"))
+                    (lib (string-append out "/lib/python2.7/site-packages/sandsifter"))
+                    (pyutil (string-append lib "/pyutil"))
+                    (gui (string-append lib "/gui")))
+               ;(substitute* "summarize.py"
+               ;  (("pyutil.progress") "sandsifter.pyutil.progress")
+               ;  (("gui.gui") "sandsifter.gui.gui"))
+               (substitute* "sifter.py"
+                 (("./injector") (string-append lib "/injector")))
+               (mkdir-p bin)
+               (with-output-to-file (string-append bin "/sifter")
+                 (lambda _
+                   (format #t
+                     "#!~a~@
+                     PYTHONPATH=~a ~a/bin/python ~a/sifter.py $@"
+                     (which "sh")
+                     (string-append (assoc-ref inputs "py-capstone")
+                                    "/lib/python2.7/site-packages:"
+                                    (dirname lib))
+                     (assoc-ref inputs "python2") lib)))
+               (chmod (string-append bin "/sifter") #o755)
+               (with-output-to-file (string-append bin "/sifter-summarize")
+                 (lambda _
+                   (format #t
+                     "#!~a~@
+                     PYTHONPATH=~a ~a/bin/python ~a/summarize.py $@"
+                     (which "sh")
+                     (string-append (assoc-ref inputs "py-capstone")
+                                    "/lib/python2.7/site-packages:"
+                                    lib)
+                     (assoc-ref inputs "python2") lib)))
+               (chmod (string-append bin "/sifter-summarize") #o755)
+               (install-file "sifter.py" lib)
+               (install-file "summarize.py" lib)
+               (install-file "injector" lib)
+               (install-file "pyutil/__init__.py" pyutil)
+               (install-file "pyutil/colors.py" pyutil)
+               (install-file "pyutil/progress.py" pyutil)
+               (install-file "gui/__init__.py" gui)
+               (install-file "gui/gui.py" gui)))))))
+    (inputs
+     `(("capstone" ,capstone)
+       ("python2" ,python-2)
+       ("py-capstone" ,python2-capstone)))
+    (home-page "https://github.com/xoreaxeaxeax/sandsifter")
+    (synopsis "X86 processor fuzzer")
+    (description "The sandsifter audits x86 processors for hidden instructions
+and hardware bugs, by systematically generating machine code to search through
+a processor's instruction set, and monitoring execution for anomalies.
+Sandsifter has uncovered secret processor instructions from every major vendor;
+ubiquitous software bugs in disassemblers, assemblers, and emulators; flaws in
+enterprise hypervisors; and both benign and security-critical hardware bugs in
+x86 chips.")
+    ;; No license!
+    (license license:expat)))

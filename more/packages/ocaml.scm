@@ -679,7 +679,7 @@ algorithms are typical examples of such systems.")
      `(("c2newspeak" ,ocaml-c2newspeak)
        ("zarith" ,ocaml-zarith)
        ("menhir" ,ocaml-menhir)
-       ("ocamlgraph" ,ocamlgraph)
+       ("ocamlgraph" ,ocaml-graph)
        ("gmp" ,gmp)))
     (native-inputs
      `(("python" ,python-2)
