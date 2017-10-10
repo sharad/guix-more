@@ -252,18 +252,18 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "12712")
+    (version "12921")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/openstreetmap/josm.git")
-                    (commit "13645f32a20ff596f7a359be2ecf15680437cd22")))
+                    (commit "82b3a6bc44ce02ce8398b3842fa4ec2647bb5e4a")))
               ;;(uri (svn-reference
               ;;      (url "https://svn.openstreetmap.org/applications/editors/josm")
               ;;      (revision 12039)))
               (sha256
                (base32
-                "02bbv7ac47vj7p63ffxa3pqx8pagkvfhnq0819s07mhhqav1kvy0"))
+                "1v2mf8y42r3jplc72xy481a3263j9p2g72d76szcsvnh3cg5kd3i"))
               (file-name (string-append name "-" version))))
     (build-system ant-build-system)
     (native-inputs
@@ -3316,6 +3316,46 @@ the dependency is said to be unsatisfied, and the application is broken.")
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-commons-lang" ,java-commons-lang)))
     (home-page "https://velocity.apache.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-velocity-tools
+  (package
+    (name "java-velocity-tools")
+    (version "2.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/velocity/tools/" version
+                                  "/velocity-tools-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0d93v8nj95jfdgx7n72axaavdq2h800vxyi4vx35rdphndy1xg51"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jdk ,icedtea-8
+       #:test-target "test-main"
+       #:tests? #f; FIXME: need a fix to build.xml and hsqldb
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'prepare
+           (lambda* (#:key inputs #:allow-other-keys)
+             ;; Don't download anything
+             (substitute* "build.xml"
+               ((".*download.xml.*") ""))))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (dir (string-append out "/share/java")))
+               (mkdir-p dir)
+               (copy-file "../bin/velocity-tools-2.0.jar"
+                          (string-append dir "/velocity-tools-2.0.jar"))))))))
+    (inputs
+     `(("dom4j" ,java-dom4j)
+       ("velocity" ,java-velocity)
+       ("beanutils", java-commons-beanutils)))
+    ;; apache struts, commons validator
+    (home-page "https://velocity.apache.org/tools/devel")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
