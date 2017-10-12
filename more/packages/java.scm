@@ -6820,21 +6820,6 @@ documentation tools.")
        ,@(package-inputs java-slf4j-api)
        ,@(package-native-inputs java-slf4j-api)))))
 
-(define-public java-slf4j-simple
-  (package
-    (inherit java-slf4j-api)
-    (name "java-slf4j-simple")
-    (arguments
-     `(#:jar-name "slf4j-simple.jar"
-       #:source-dir "slf4j-simple/src/main/java"
-       #:test-dir "slf4j-simple/src/test"))
-    (inputs
-     `(("slf4j" ,java-slf4j-api)
-       ,@(package-inputs java-slf4j-api)))
-    (native-inputs
-     `(("tests" ,java-slf4j-api-tests)
-       ,@(package-native-inputs java-slf4j-api)))))
-
 ;; Needs maven-core
 (define-public maven-plugin-testing-harness
   (package
