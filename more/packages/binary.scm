@@ -457,52 +457,6 @@ focuses on both static and dynamic symbolic (\"concolic\") analysis, making it
 applicable to a variety of tasks.")
     (license license:bsd-2)))
 
-(define-public radare2
-  (package
-    (name "radare2")
-    (version "1.6.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "http://radare.mikelloc.com/get/" version "/"
-                                  name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "16ggsk40zz6hyvclvqj1r4bh4hb78jf0d6ppry1jk4r0j30wm7cm"))
-              (modules '((guix build utils)))
-              (snippet
-                '(begin
-                  (substitute* "libr/asm/p/Makefile"
-                    (("LDFLAGS\\+=") "LDFLAGS+=-Wl,-rpath=$(LIBDIR) "))
-                  (substitute* "libr/parse/p/Makefile"
-                    (("LDFLAGS\\+=") "LDFLAGS+=-Wl,-rpath=$(LIBDIR) "))
-                  (substitute* "libr/bin/p/Makefile"
-                    (("LDFLAGS\\+=") "LDFLAGS+=-Wl,-rpath=$(LIBDIR) "))))))
-    (build-system gnu-build-system)
-    (arguments
-     '(#:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'configure 'mklibdir
-           (lambda* (#:key inputs #:allow-other-keys)
-             (mkdir-p (string-append (assoc-ref %outputs "out") "/lib")))))
-       #:configure-flags
-       (list "--with-sysmagic" "--with-syszip" "--with-openssl"
-             "--without-nonpic" "--with-rpath" "--with-syscapstone")
-       #:make-flags
-       (list "CC=gcc")))
-    (inputs
-     `(("openssl" ,openssl)
-       ("zip" ,zip)
-       ("gmp" ,gmp)
-       ("capstone" ,capstone)))
-    (native-inputs
-     `(("pkg-config" ,pkg-config)))
-    (home-page "https://rada.re/")
-    (synopsis "Binary analysis tool")
-    (description
-      "Radare2 is a tool for reversing binaries.")
-    (license license:gpl3+)))
-
 (define-public sandsifter
   (package
     (name "sandsifter")
