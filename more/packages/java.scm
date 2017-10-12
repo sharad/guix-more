@@ -38,14 +38,14 @@
 (define-public java-tomcat
   (package
     (name "java-tomcat")
-    (version "8.5.20")
+    (version "8.5.23")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/tomcat/tomcat-8/v"
                                   version "/src/apache-tomcat-" version "-src.tar.gz"))
               (sha256
                (base32
-                "0436glw5knwnlj5636vsb966zfdfcw3jpnwbpwjn743p3gk0mi3b"))))
+                "1m6b1dikib46kbgz9gf0p6svi00nsw62b9kgjzn6sda151skbbza"))))
     (build-system ant-build-system)
     (inputs
      `(("java-eclipse-jdt-core" ,java-eclipse-jdt-core)))
@@ -60,7 +60,9 @@
            (lambda _
              (mkdir "downloads")
              (substitute* "build.xml"
-               (("download-compile,") ""))
+               (("download-compile,") "")
+               (("depends=\"validate\"") "depends=\"build-prepare\"")
+               ((",download-validate") ""))
              (with-output-to-file "build.properties"
                (lambda _
                  (display
