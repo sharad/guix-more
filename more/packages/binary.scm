@@ -27,6 +27,7 @@
   #:use-module (guix build-system python)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages glib)
+  #:use-module (gnu packages libffi)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
