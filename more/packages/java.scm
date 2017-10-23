@@ -58,6 +58,7 @@
        (modify-phases %standard-phases
          (add-after 'unpack 'properties
            (lambda _
+             (for-each delete-file (find-files "." ".*.jar$"))
              (mkdir "downloads")
              (substitute* "build.xml"
                (("download-compile,") "")
@@ -2039,7 +2040,7 @@ the dependency is said to be unsatisfied, and the application is broken.")
        ("java-bsh" ,java-bsh)
        ("java-jcommander" ,java-jcommander)
        ("java-guice" ,java-guice)
-       ("snakeyaml" ,java-snakeyaml-notests)))
+       ("snakeyaml" ,java-snakeyaml)))
     (native-inputs
      `(("guava" ,java-guava)
        ("java-javax-inject" ,java-javax-inject)
@@ -2445,24 +2446,8 @@ the dependency is said to be unsatisfied, and the application is broken.")
        #:source-dir "log4j-1.2-api/src/main/java"
        #:test-dir "log4j-1.2-api/src/test"
        #:jdk ,icedtea-8
-       ;#:tests? #f; requires maven
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'copy-test-classes
-           (lambda _
-             (let ((from "log4j-core/src/test/java/org/apache/logging/log4j/")
-                   (to "log4j-1.2-api/src/test/java/org/apache/logging/log4j/"))
-               (for-each (lambda (file)
-                           (mkdir-p (dirname (string-append to file)))
-                           (copy-file (string-append from file)
-                                      (string-append to file)))
-                 '("test/appender/ListAppender.java"
-                   "junit/LoggerContextRule.java"
-                   "osgi/equinox/AbstractEquinoxLoadBundleTest.java"
-                   "osgi/OsgiRule.java"
-                   "osgi/BundleTestInfo.java"
-                   "osgi/AbstractLoadBundleTest.java"
-                   "osgi/felix/AbstractFelixLoadBundleTest.java"))))))))
+       #:tests? #f)); requires maven-model (and other maven subprojects),
+                    ; which is a cyclic dependency
     (inputs
      `(("log4j-api" ,java-log4j-api)
        ("log4j-core" ,java-log4j-core)
@@ -3534,7 +3519,7 @@ namespaces.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "src/main/java"
-       #:test-eclude (list "**/test*/**.java")))
+       #:test-exclude (list "**/test*/**.java")))
     (inputs
      `(("java-guava" ,java-guava)))
     (native-inputs
