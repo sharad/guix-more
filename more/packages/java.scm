@@ -31,8 +31,10 @@
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages docbook)
   #:use-module (gnu packages java)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages xml)
   #:use-module (more packages python))
 
 (define-public java-tomcat
@@ -78,18 +80,6 @@ Servlet, JavaServer Pages, Java Expression Language and Java WebSocket
 technologies. The Java Servlet, JavaServer Pages, Java Expression Language and
 Java WebSocket specifications are developed under the Java Community Process.")
     (license license:asl2.0)))
-
-;(define-public java-tomcat-7
-;  (package
-;    (inherit java-tomcat)
-;    (version "7.0.81")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "mirror://apache/tomcat/tomcat-7/v"
-;                                  version "/src/apache-tomcat-" version "-src.tar.gz"))
-;              (sha256
-;               (base32
-;                "0rjyv3jpya60ph60950gmiqa6znbiq2dvsydxgwwiyqc47xrm9zw"))))))
 
 (define-public java-openjfx
   (package
@@ -281,6 +271,10 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        ("java-openjfx-base" ,java-openjfx-base)
        ("java-openjfx-media" ,java-openjfx-media)
        ("java-openjfx-graphics" ,java-openjfx-graphics)
+       ("java-avalon-framework-api" ,java-avalon-framework-api)
+       ("java-httpcomponents-client" ,java-httpcomponents-client)
+       ("java-httpcomponents-core" ,java-httpcomponents-core)
+       ("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-collections" ,java-commons-collections)
        ("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
@@ -294,6 +288,9 @@ methods.  It is similar in speed with deflate but offers more dense compression.
          (add-after 'unpack 'rm-build.xml
            (lambda* _
              (delete-file "build.xml")))
+         (add-after 'unpack 'rm-jcs-embedded
+           (lambda _
+             (delete-file-recursively "src/org/apache/commons/jcs")))
          (add-before 'build 'fix-revision
            (lambda* _
              (with-output-to-file "REVISION.XML"
@@ -682,8 +679,13 @@ algorithms and xxHash hashing algorithm.")
        ("assertj" ,java-assertj)
        ("mockito" ,java-mockito-1)))
     (home-page "https://github.com/powermock/powermock")
-    (synopsis "")
-    (description "")
+    (synopsis "Mock library extension framework")
+    (description "PowerMock is a framework that extends other mock libraries
+such as EasyMock with more powerful capabilities.  PowerMock uses a custom
+classloader and bytecode manipulation to enable mocking of static methods,
+constructors, final classes and methods, private methods, removal of static
+initializers and more.  By using a custom classloader no changes need to be
+done to the IDE or continuous integration servers which simplifies adoption.")
     (license license:asl2.0)))
 
 (define-public java-powermock-reflect
@@ -1024,8 +1026,12 @@ algorithms and xxHash hashing algorithm.")
                (mkdir-p share)
                (copy-file "dist/bsh-2.0b6.jar" (string-append share "/bsh-2.0b6.jar"))))))))
     (home-page "http://beanshell.org/")
-    (synopsis "")
-    (description "")
+    (synopsis "Lightweight Scripting for Java")
+    (description "BeanShell is a small, free, embeddable Java source
+interpreter with object scripting language features, written in Java.
+BeanShell dynamically executes standard Java syntax and extends it with common
+scripting conveniences such as loose types, commands, and method closures like
+those in Perl and JavaScript.")
     (license license:asl2.0)))
 
 (define-public java-hdrhistogram
@@ -1081,21 +1087,13 @@ algorithms and xxHash hashing algorithm.")
     (arguments
      `(#:jar-name "java-jmock.jar"
        #:source-dir "jmock/src/main/java"
-       #:test-dir "jmock/src/test"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'fix-tests
-           (lambda _
-             ;; Otherwise the abstract class is tested, but junit cannot create
-             ;; an instance of it. Then remove dependent.
-             (for-each (lambda (file) (delete-file file))
-               '("jmock/src/test/java/org/jmock/test/unit/lib/AbstractMatcherTest.java"
-                 "jmock/src/test/java/org/jmock/test/unit/lib/CurrentStateMatcherTests.java")))))))
+       #:test-dir "jmock/src/test"))
     (native-inputs
      `(("cglib" ,java-cglib)))
     (home-page "https://github.com/jmock-developers/jmock-library")
-    (synopsis "")
-    (description "")
+    (synopsis "Mock object library")
+    (description "Jmock is an expressive Mock Object library for Test Driven
+Development.")
     (license license:bsd-3)))
 
 (define-public java-jmock-junit4
@@ -1654,7 +1652,7 @@ file when the JVM loads it.")
 ;     `(("core" ,java-spring-framework-core)
 ;       ("cglib" ,java-cglib)
 ;       ("inject" ,java-javax-inject)
-;       ("snakeyaml" ,java-snakeyaml-notests)
+;       ("snakeyaml" ,java-snakeyaml)
 ;       ("el" ,java-jboss-el-api-spec)
 ;       ("aspectj" ,java-aspectj-weaver)
 ;       ("logging" ,java-commons-logging-minimal)))
@@ -1957,8 +1955,10 @@ the dependency is said to be unsatisfied, and the application is broken.")
        #:tests? #f; requires testng which depends on jcommander
        #:source-dir "src/main/java"))
     (home-page "http://jcommander.org")
-    (synopsis "")
-    (description "")
+    (synopsis "Command line parameters parser")
+    (description "JCommander is a very small Java framework that makes it
+trivial to parse command line parameters.  Parameters are declared with
+annotations.")
     (license license:asl2.0)))
 
 (define-public java-assertj
@@ -2050,8 +2050,10 @@ the dependency is said to be unsatisfied, and the application is broken.")
        ("asm" ,java-asm)
        ("aopalliance" ,java-aopalliance)))
     (home-page "http://testng.org")
-    (synopsis "")
-    (description "")
+    (synopsis "Testing framework")
+    (description "TestNG is a testing framework inspired from JUnit and NUnit
+but introducing some new functionalities that make it more powerful and easier
+to use.")
     (license license:asl2.0)))
 
 (define-public java-fest-util
@@ -2073,8 +2075,8 @@ the dependency is said to be unsatisfied, and the application is broken.")
      `(("junit" ,java-junit)
        ("hamcrest" ,java-hamcrest-core)))
     (home-page "https://github.com/alexruiz/fest-util")
-    (synopsis "")
-    (description "")
+    (synopsis "FEST common utilities")
+    (description "Common utilities used in all FEST module.")
     (license license:asl2.0)))
 
 ;; required by java-jnacl
@@ -2114,8 +2116,8 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (inputs
      `(("junit" ,java-junit)))
     (home-page "https://github.com/alexruiz/fest-test")
-    (synopsis "")
-    (description "")
+    (synopsis "Common FEST testing infrastructure")
+    (description "Fest-test contains the common FEST testing infrastructure.")
     (license license:asl2.0)))
 
 ;(define-public java-fest-assert-1
@@ -2173,8 +2175,8 @@ the dependency is said to be unsatisfied, and the application is broken.")
        ("java-objenesis" ,java-objenesis)
        ("java-asm" ,java-asm)))
     (home-page "https://github.com/alexruiz/fest-assert-2.x")
-    (synopsis "")
-    (description "")
+    (synopsis "FEST fluent assertions")
+    (description "FEST-Assert provides a fluent interface for assertions.")
     (license license:asl2.0)))
 
 (define-public java-jnacl
@@ -2220,8 +2222,9 @@ the dependency is said to be unsatisfied, and the application is broken.")
        ("java-fest-util" ,java-fest-util)
        ("java-fest-assert" ,java-fest-assert)))
     (home-page "https://github.com/neilalexander/jnacl")
-    (synopsis "")
-    (description "")
+    (synopsis "Java implementation of NaCl")
+    (description "Pure Java implementation of the NaCl: Networking and
+Cryptography library.")
     (license license:mpl2.0)))
 
 (define-public java-jeromq
@@ -2254,8 +2257,8 @@ the dependency is said to be unsatisfied, and the application is broken.")
      `(("java-hamcrest-core" ,java-hamcrest-core)
        ("junit" ,java-junit)))
     (home-page "http://zeromq.org/bindings:java")
-    (synopsis "")
-    (description "")
+    (synopsis "Java binding for ØMQ")
+    (description "Jeromq provides the java bindings for ØMQ.")
     (license license:mpl2.0)))
 
 (define-public java-log4j-core
@@ -2297,7 +2300,10 @@ the dependency is said to be unsatisfied, and the application is broken.")
        #:phases
        (modify-phases %standard-phases
          (add-after 'unpack 'enter-dir
-           (lambda _ (chdir "log4j-core") #t)))))))
+           (lambda _ (chdir "log4j-core") #t)))))
+    (synopsis "Core component of the Log4j framework")
+    (description "This package provides the core component of the Log4j
+logging framework for Java.")))
 
 (define-public java-apache-felix-utils
   (package
@@ -2544,6 +2550,203 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-commons-digester
+  (package
+    (name "java-commons-digester")
+    (version "3.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/digester/source/"
+                                  "commons-digester3-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "03kc18dfl5ma50cn02ji7rbhm33qpxyd9js6mvzznf8f7y6pmykk"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-digester.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resource
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")))
+         (add-before 'test 'copy-test-resource
+           (lambda _
+             (copy-recursively "src/test/resources" "build/test-classes"))))))
+    (inputs
+     `(("logging" ,java-commons-logging-minimal)
+       ("cglib" ,java-cglib)
+       ("beanutils", java-commons-beanutils)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)))
+    (home-page "https://commons.apache.org/proper/commons-digester/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-validator
+  (package
+    (name "java-commons-validator")
+    (version "1.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache//commons/validator/source/"
+                                  "commons-validator-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "1v2iqhjz4iqwmv38gzf953php770mmhglibixzvxjc2yca3sizkb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-validator.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; Require network access (jakarta.apache.org)
+       #:test-exclude (list "**/Abstract*.java"
+                            ;; Require network access (jakarta.apache.org)
+                            "**/ByteTest.java"
+                            "**/DateTest.java"
+                            "**/DoubleTest.java"
+                            "**/EmailTest.java"
+                            "**/EntityImportTest.java"
+                            "**/ExceptionTest.java"
+                            "**/ExtensionTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resource
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")))
+         (add-before 'test 'copy-test-resource
+           (lambda _
+             (copy-recursively "src/test/resources" "build/test-classes")))
+         (add-before 'build 'fix-digester
+           (lambda _
+             ;; Port from digester 1 to digester 3.
+             (substitute* (find-files "src/main/java" ".*\\.java")
+               (("commons.digester") "commons.digester3")
+               (("org.apache.commons.digester3.xmlrules.DigesterLoader")
+                "org.apache.commons.digester3.binder.DigesterLoader"))
+             ;; digester is private in this class, so we use the getter
+             (substitute* "src/main/java/org/apache/commons/validator/FormSetFactory.java"
+               (("digester.peek") "getDigester().peek"))
+             (substitute* "src/main/java/org/apache/commons/validator/ValidatorResources.java"
+               (("// DEPRECATED")
+                "// DEPRECATED\nimport org.apache.commons.digester3.xmlrules.FromXmlRulesModule;")
+               (("private Digester initDigester")
+                (string-append
+                  "private FromXmlRulesModule rulesModule(final URL url) {\n"
+                  "  return new FromXmlRulesModule() {\n"
+                  "    @Override\n"
+                  "    protected void loadRules() {\n"
+                  "      loadXMLRules(url);"
+                  "    }\n"
+                  "  };\n"
+                  "}\n"
+                  "private Digester initDigester"))
+               ;; Copied from digester tests
+               (("createDigester\\(rulesUrl\\)")
+                "newLoader(rulesModule(rulesUrl)).newDigester()")))))))
+    (inputs
+     `(("digester" ,java-commons-digester)
+       ("beanutils" ,java-commons-beanutils)
+       ("collections" ,java-commons-collections)
+       ("logging" ,java-commons-logging-minimal)))
+    (native-inputs
+     `(("junit" ,java-junit)))
+    (home-page "https://commons.apache.org/proper/commons-validator")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-ognl
+  (package
+    (name "java-ognl")
+    (version "3.2.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jkuhnert/ognl/archive/OGNL_"
+                                  (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "1p4yni36ln69cdl7icylpg87yzgnx9i08k4a5yhcvgmbr49p273w"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; Tests are run as a dependency of "dist"
+       #:jdk ,icedtea-8
+       #:make-flags (list "-Dcompile.version=7")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-binaries
+           (lambda _
+             (for-each delete-file (find-files "." ".*\\.jar"))
+             #t))
+         (add-before 'build 'remove-clover
+           (lambda _
+             (substitute* "osbuild.xml"
+               (("clover-check,") "")
+               ((", clover.report"), "")
+               ((".*clover-setup.*") "")
+               ((".*src/test/\\*\\*/\\*.java.*") "")
+               (("<files>") "")
+               (("</files>") ""))))
+         (replace 'install
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             (install-file "build/ognl-2.7.2.jar" (string-append (assoc-ref outputs "out") "/share/java")))))))
+             ;(zero? (system* "ant" "dist" "-Dcompile.version=7"
+             ;                (string-append "-Ddist="
+             ;                               (assoc-ref outputs "out")
+             ;                               "/share/java")
+             ;                (string-append "-Ddocbook.xsl.path="
+             ;                               (assoc-ref inputs "docbook-xsl"))
+             ;                (string-append "-Ddocbook.xml.path="
+             ;                               (assoc-ref inputs "docbook-xml"))
+             ;                               )))))))
+    (inputs
+     `(("javassist" ,java-jboss-javassist)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("hamcrest" ,java-hamcrest-core)
+       ("docbook-xml" ,docbook-xml)
+       ("docbook-xsl" ,docbook-xsl)
+       ("libxml2" ,libxml2)))
+    (home-page "http://www.opensymphony.com/ognl/"); down ? and ognl.org is not owned by the project
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-apache-struts
+  (package
+    (name "java-apache-struts")
+    (version "2.5.13")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/struts/" version "/struts-"
+                                  version "-src.zip"))
+              (sha256
+               (base32
+                "1pi3ymql7d9axxzi6pd8iqap1d3s2pij88mc7zywbw7mva61y8qy"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "apache-struts.jar"
+       #:source-dir "src/core/src/main/java"
+       #:test-dir "src/core/src/test"))
+    (inputs
+     `(("log4j" ,java-log4j-api)
+       ("lang3" ,java-commons-lang3)
+       ("io" ,java-commons-io)
+       ("logging" ,java-commons-logging-minimal)
+       ("servlet" ,java-classpathx-servletapi)
+       ("ognl" ,java-ognl)
+       ("velocity" ,java-velocity)
+       ("testng" ,java-testng)))
+    (native-inputs
+     `(("junit" ,java-junit)
+       ("unzip" ,unzip)))
+    (home-page "https://struts.apache.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-velocity
   (package
     (name "java-velocity")
@@ -2618,7 +2821,11 @@ the dependency is said to be unsatisfied, and the application is broken.")
            (lambda* (#:key inputs #:allow-other-keys)
              ;; Don't download anything
              (substitute* "build.xml"
-               ((".*download.xml.*") ""))))
+               ((".*download.xml.*") ""))
+             ;; Replace digester with digester3
+             (substitute* (find-files "src/main/java" ".*\\.java")
+               (("commons.digester") "commons.digester3"))
+             #t))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
@@ -2629,8 +2836,10 @@ the dependency is said to be unsatisfied, and the application is broken.")
     (inputs
      `(("dom4j" ,java-dom4j)
        ("velocity" ,java-velocity)
+       ("digester" ,java-commons-digester)
+       ("validator" ,java-commons-validator)
        ("beanutils", java-commons-beanutils)))
-    ;; apache struts, commons validator
+    ;; apache struts
     (home-page "https://velocity.apache.org/tools/devel")
     (synopsis "")
     (description "")
@@ -6375,7 +6584,6 @@ documentation tools.")
        ("io" ,java-eclipse-jetty-io-9.2)
        ("http" ,java-eclipse-jetty-http-9.2)
        ("security" ,java-eclipse-jetty-security-9.2)
-       ;("continuation" ,java-eclipse-jetty-continuation-8)
        ("http-test" ,java-eclipse-jetty-http-test-classes-9.2)
        ("server" ,java-eclipse-jetty-server-9.2)
        ,@(package-inputs java-eclipse-jetty-util-9.2)))))
