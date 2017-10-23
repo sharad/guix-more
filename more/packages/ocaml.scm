@@ -37,8 +37,10 @@
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages ocaml)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages protobuf)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages tex)
   #:use-module (gnu packages texinfo)
   #:use-module (more packages smt))
 
@@ -316,14 +318,6 @@ assistant to write formal mathematical proofs using a variety of theorem
 provers.")
     (license license:gpl2+)))
 
-(define-public ocaml-findlib-fix
-  (package
-    (inherit ocaml-findlib)
-    (native-inputs
-     `(("camlp4" ,camlp4)
-       ("ocaml" ,ocaml-fix)
-       ("m4" ,m4)))))
-
 (define-public ocaml-build
   (package
     (name "ocaml-build")
@@ -359,12 +353,63 @@ provers.")
                (setenv "OCAMLFIND_LDCONF" "ignore")
                #t))))))
     (native-inputs
-     `(("ocaml" ,ocaml-fix)
-       ("findlib" ,ocaml-findlib-fix)))
+     `(("ocaml" ,ocaml-fix)))
     (home-page "")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
+
+(define-public camlp4-fix
+  (package
+    (inherit camlp4)
+    (name "camlp4")
+    (version "4.05+2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ocaml/camlp4/archive/"
+								  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+			    "0dd9scf50y0928syvxflljwry2dzm35n903fgpfdkpcn907jq96v"))))
+    (inputs `(("ocaml" ,ocaml-fix)))
+    (native-inputs
+     `(("ocaml" ,ocaml-fix)
+       ("which" ,which)
+       ("build" ,ocaml-build)))))
+
+(define-public ocaml-findlib-fix
+  (package
+    (inherit ocaml-findlib)
+    (native-inputs
+     `(("camlp4" ,camlp4-fix)
+       ("ocaml" ,ocaml-fix)
+       ("m4" ,m4)))))
+
+(define-public camlp5-fix
+  (package
+    (inherit camlp5)
+    (name "camlp5")
+    (version "7.03")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/camlp5/camlp5/archive/rel"
+                                  (string-delete #\. version) ".tar.gz"))
+              (sha256
+               (base32
+                "06pj7l75r586gngam7nspd1a13ay7cj2bjh035z64w4fgaahlgf1"))))
+    (inputs
+     `(("ocaml" ,ocaml-fix)))))
+
+(define-public lablgtk-fix
+  (package
+    (inherit lablgtk)
+    (native-inputs
+     `(("ocaml" ,ocaml-fix)
+       ("build" ,ocaml-build)
+       ("camlp4" ,camlp4-fix)
+       ("findlib" ,ocaml-findlib-fix)
+       ("pkg-config" ,pkg-config)))))
 
 (define-public ocaml-menhir-fix
   (package
@@ -382,6 +427,22 @@ provers.")
     (inputs
      `(("ocaml" ,ocaml-fix)
        ("ocamlbuild" ,ocaml-build)))))
+
+(define-public coq-fix
+  (package
+    (inherit coq)
+    (native-inputs
+     `(("ocamlbuild" ,ocaml-build)
+       ("hevea" ,hevea)
+       ("texlive" ,texlive)))
+    (inputs
+     `(("lablgtk" ,lablgtk-fix)
+       ("python" ,python-2)
+       ("camlp5" ,camlp5-fix)))
+    (arguments
+     `(#:ocaml ,ocaml-fix
+       #:findlib ,ocaml-findlib-fix
+       ,@(package-arguments coq)))))
 
 (define-public compcert
   (package
@@ -404,8 +465,8 @@ provers.")
                              (assoc-ref outputs "out"))))))
        #:tests? #f))
     (native-inputs
-     `(("ocaml" ,ocaml)
-       ("coq" ,coq)))
+     `(("ocaml" ,ocaml-fix)
+       ("coq" ,coq-fix)))
     (inputs
      `(("menhir" ,ocaml-menhir-fix)))
     (home-page "http://compcert.inria.fr")
