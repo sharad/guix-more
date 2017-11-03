@@ -34,6 +34,7 @@
   #:use-module (gnu packages docbook)
   #:use-module (gnu packages java)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
   #:use-module (more packages python))
 
