@@ -44,10 +44,15 @@
   #:use-module (gnu packages texinfo)
   #:use-module (more packages smt))
 
+(define (ocaml-forge-uri name version file-number)
+  (string-append "https://forge.ocamlcore.org/frs/download.php/"
+                 (number->string file-number) "/" name "-" version
+                 ".tar.gz"))
+
 (define-public ocaml-fix
   (package
     (inherit ocaml)
-    (version "4.05.0")
+    (version "4.06.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -56,7 +61,7 @@
                     "/ocaml-" version ".tar.xz"))
               (sha256
                (base32
-                "1y9fw1ci9pwnbbrr9nwr8cq8vypcxwdf4akvxard3mxl2jx2g984"))))
+                "1dy542yfnnw10zvh5s9qzswliq11mg7l0bcyss3501qw3vwvadhj"))))
     (arguments
      `(#:modules ((guix build gnu-build-system)
                   (guix build utils)
@@ -226,7 +231,7 @@ provers.")
   (package
     (inherit camlp4)
     (name "camlp4")
-    (version "4.05+2")
+    (version "4.06+1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/ocaml/camlp4/archive/"
@@ -234,7 +239,7 @@ provers.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-			    "0dd9scf50y0928syvxflljwry2dzm35n903fgpfdkpcn907jq96v"))))
+			    "08mrp8jjaayv0s50kmhjkafxqykff5dq3073hrl7ylx0km253k5i"))))
     (inputs `(("ocaml" ,ocaml-fix)))
     (native-inputs
      `(("ocaml" ,ocaml-fix)
@@ -244,6 +249,26 @@ provers.")
 (define-public ocaml-findlib-fix
   (package
     (inherit ocaml-findlib)
+    (version "1.7.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://download.camlcity.org/download/findlib-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "12xx8si1qv3xz90qsrpazjjk4lc1989fzm97rsmc4diwla7n15ni"))))
+    (arguments
+      (substitute-keyword-arguments (package-arguments ocaml-findlib)
+        ((#:phases phases)
+          `(modify-phases ,phases
+            (add-before 'build 'fix-findlib-makefile
+              (lambda* (#:key outputs #:allow-other-keys)
+                (substitute* "Makefile.config"
+                  (("OCAML_CORE_STDLIB=.*")
+                   (string-append "OCAML_CORE_STDLIB="
+                                  (assoc-ref outputs "out") "/lib/ocaml/site-lib"
+                                  "\n")))
+                #t))))))
     (native-inputs
      `(("camlp4" ,camlp4-fix)
        ("ocaml" ,ocaml-fix)
@@ -267,6 +292,39 @@ provers.")
 (define-public lablgtk-fix
   (package
     (inherit lablgtk)
+    (version "2.18.6")
+    (source (origin
+              (method url-fetch)
+              (uri (ocaml-forge-uri "lablgtk" version 1726))
+              (sha256
+               (base32
+                "1y38fdvswy6hmppm65qvgdk4pb3ghhnvz7n4ialf46340r1s5p2d"))))
+    (arguments
+     `(#:tests? #f ; no check target
+
+       ;; opt: also install cmxa files
+       #:make-flags (list "all" "opt"
+                          "OCAMLFIND=ocamlfind"
+                          "OCAMLLDCONF=ld.conf"
+                          (string-append "FINDLIBDIR="
+                                         (assoc-ref %outputs "out")
+                                         "/lib/ocaml"))
+       ;; Occasionally we would get "Error: Unbound module GtkThread" when
+       ;; compiling 'gtkThInit.ml', with 'make -j'.  So build sequentially.
+       #:parallel-build? #f
+
+       #:phases
+         (modify-phases %standard-phases
+           (add-before 'install 'prepare-install
+             (lambda* (#:key inputs outputs #:allow-other-keys)
+               (let ((out (assoc-ref outputs "out"))
+                     (ocaml (assoc-ref inputs "ocaml")))
+                 ;; Install into the output and not the ocaml directory.
+                 (mkdir-p (string-append out "/lib/ocaml"))
+                 (substitute* "config.make"
+                   ((ocaml) out))
+                 #t))))))
+    (home-page "http://lablgtk.forge.ocamlcore.org/")
     (native-inputs
      `(("ocaml" ,ocaml-fix)
        ("build" ,ocaml-build)
