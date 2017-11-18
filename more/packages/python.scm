@@ -620,33 +620,3 @@ while keeping it all Pythonic and cross-platform.")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
-
-(define-public bitshuffle
-  (package
-    (name "bitshuffle")
-    (version "0.3.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/kiyo-masui/bitshuffle/archive/"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "1r3jar8vsqar9ikw6jsdbydngh85miqdlkv3n9ywc9ngzlr7dff0"))))
-    (build-system python-build-system)
-    (arguments
-     `(#:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'check 'make-required-dir
-           (lambda _
-             (mkdir-p "bitshuffle/plugin"))))))
-    (inputs
-     `(("numpy" ,python-numpy)
-       ("h5py" ,python-h5py)
-       ("hdf5" ,hdf5)))
-    (native-inputs
-     `(("cython" ,python-cython)))
-    (home-page "https://github.com/kiyo-masui/bitshuffle")
-    (synopsis "")
-    (description "")
-    (license license:expat)))
