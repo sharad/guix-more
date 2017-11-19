@@ -2922,7 +2922,7 @@ the DOM level 3 load/save API's are in use.")
            (lambda* (#:key inputs #:allow-other-keys)
              (mkdir-p "jaxen-sources")
              (with-directory-excursion "jaxen-sources"
-               (system* "jar" "xf" (assoc-ref inputs "jaxen-sources")))
+               (system* "jar" "xf" (assoc-ref inputs "java-jaxen-sources")))
              (mkdir-p "src/main/java/org/jaxen/dom4j")
              (copy-file "jaxen-sources/org/jaxen/dom4j/DocumentNavigator.java"
                         "src/main/java/org/jaxen/dom4j/DocumentNavigator.java")
@@ -3199,8 +3199,10 @@ the DOM level 3 load/save API's are in use.")
              ;; TODO: there are more required files for windows in windows/
              (with-directory-excursion "src/main/native-package/src"
                (system* "gcc" "-c" "jansi_ttyname.c" "-o" "jansi_ttyname.o"
-                        (string-append "-I" (assoc-ref inputs "hawtjni") "/include")
-                        (string-append "-I" (assoc-ref inputs "jdk") "/include/linux")
+                        (string-append "-I" (assoc-ref inputs "java-hawtjni")
+                                       "/include")
+                        (string-append "-I" (assoc-ref inputs "jdk")
+                                       "/include/linux")
                         "-fPIC" "-O2")
                (system* "gcc" "-o" "libjansi.so" "-shared" "jansi_ttyname.o"))
              ;; TODO: detect one of linux{32,64}, freebsd{32,64}, osx, windows{32,64}
@@ -3303,8 +3305,7 @@ the DOM level 3 load/save API's are in use.")
     (synopsis "")
     (description "")
     (license (list license:gpl2
-                   ;; actually CDDL 1.1
-                   license:cddl1.0))))
+                   license:cddl1.1))))
 
 (define-public groovy
   (package
