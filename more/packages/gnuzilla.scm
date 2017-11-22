@@ -29,9 +29,41 @@
   #:use-module (guix utils)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix build-system cargo)
   #:use-module (guix build-system gnu)
   #:use-module (more packages google)
-  #:use-module (gnu packages gnuzilla))
+  #:use-module (gnu packages assembly)
+  #:use-module (gnu packages autotools)
+  #:use-module (gnu packages base)
+  #:use-module (gnu packages bison)
+  #:use-module (gnu packages cmake)
+  #:use-module (gnu packages compression)
+  #:use-module (gnu packages cups)
+  #:use-module (gnu packages curl)
+  #:use-module (gnu packages databases)
+  #:use-module (gnu packages flex)
+  #:use-module (gnu packages fontutils)
+  #:use-module (gnu packages gl)
+  #:use-module (gnu packages glib)
+  #:use-module (gnu packages gnome)
+  #:use-module (gnu packages gnuzilla)
+  #:use-module (gnu packages gtk)
+  #:use-module (gnu packages icu4c)
+  #:use-module (gnu packages image)
+  #:use-module (gnu packages libcanberra)
+  #:use-module (gnu packages libevent)
+  #:use-module (gnu packages libffi)
+  #:use-module (gnu packages libreoffice)
+  #:use-module (gnu packages linux)
+  #:use-module (gnu packages perl)
+  #:use-module (gnu packages pkg-config)
+  #:use-module (gnu packages pulseaudio)
+  #:use-module (gnu packages python)
+  #:use-module (gnu packages rust)
+  #:use-module (gnu packages version-control)
+  #:use-module (gnu packages video)
+  #:use-module (gnu packages xdisorg)
+  #:use-module (gnu packages xorg))
 
 (define-public icecat-skia
   (package
@@ -43,3 +75,412 @@
     (arguments (substitute-keyword-arguments (package-arguments icecat)
                  ((#:configure-flags flags)
                   `(cons* "--enable-skia" ,flags))))))
+
+;; FIXME: Needs to be parsed from url not package name.
+(define (package-name->crate-name name)
+  "Return the crate name of NAME."
+  (match (string-split name #\-)
+    (("rust" rest ...)
+     (string-join rest "-"))
+    (_ #f)))
+
+(define* (replace-cargo-toml #:key inputs cargo-toml #:allow-other-keys)
+  "Replace Cargo.toml [dependencies] section with guix inputs."
+  ;; Make sure Cargo.toml is writeable when the crate uses git-fetch.
+  (chmod cargo-toml #o644)
+  (substitute* cargo-toml
+    ((".*32-sys.*") "
+")
+    ((".*winapi.*") "
+")
+    ((".*core-foundation.*") "
+"))
+  ;; Prepare one new directory with all the required dependencies.
+  ;; It's necessary to do this (instead of just using /gnu/store as the
+  ;; directory) because we want to hide the libraries in subdirectories
+  ;;   share/rust-source/... instead of polluting the user's profile root.
+  (mkdir "vendor")
+  (for-each
+    (match-lambda
+      ((name . path)
+       (let ((crate (package-name->crate-name name)))
+         (when (and crate path)
+           (match (string-split (basename path) #\-)
+             ((_ ... version)
+              (symlink (string-append path "/share/rust-source")
+                       (string-append "vendor/" (basename path)))))))))
+    inputs)
+  ;; Configure cargo to actually use this new directory.
+  (mkdir-p ".cargo")
+  (let ((port (open-file ".cargo/config" "w" #:encoding "utf-8")))
+    (display "
+[scrates-io]
+re = 'https://github.com/rust-lang/crates.io-index'
+rewith = 'vendored-sources'
+
+[svendored-sources]
+diy = '" port)
+    (display (getcwd) port)
+    (display "/vendor" port)
+    (display "'
+" 
+    (close-port port)))
+  (setenv "CC" (string-append (assoc-ref inputs "gcc") "/bin/gcc"))
+
+  ;(setenv "CARGO_HOME" "/gnu/store")
+  ; (setenv "CMAKE_C_COMPILER" cc)
+  #t)
+
+(define-public rust-for-mozilla
+  (package
+    (inherit rustc)
+    (arguments
+     (substitute-keyword-arguments (package-arguments rustc)
+       ((#:phases phases)
+        `(modify-phases ,phases
+           (replace 'check
+             (lambda _
+               #t))))))))
+
+(define-public cargo-for-mozilla
+  (package
+    (inherit cargo)
+    (arguments
+     `(#:rustc ,rust-for-mozilla
+       ,@(package-arguments cargo)))))
+
+(define-public rustc-1.17
+  (package
+    (inherit rust-for-mozilla)
+    (version "1.17.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://static.rust-lang.org/dist/"
+                    "rustc-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "11sg2y38x2psvc1gvhcd10fcszih2sljhnnfyqnlkwkmbf4s7asb"))
+            (modules '((guix build utils)))
+            (snippet
+             `(begin
+                (delete-file-recursively "src/llvm")
+                #t))))
+    (native-inputs
+     `(("bison" ,bison) ; For the tests
+       ("cmake" ,cmake)
+       ("flex" ,flex) ; For the tests
+       ("git" ,git)
+       ("procps" ,procps) ; For the tests
+       ("python-2" ,python-2)
+       ("rustc-bootstrap" ,rust-for-mozilla)
+       ("cargo" ,cargo-for-mozilla)
+       ("curl" ,curl)
+       ("which" ,which)))
+    (arguments
+     (substitute-keyword-arguments (package-arguments rustc)
+       ((#:phases phases)
+        `(modify-phases ,phases
+           (replace 'configure
+             (lambda* (#:key inputs outputs #:allow-other-keys)
+               (let* ((out (assoc-ref outputs "out"))
+                      (gcc (assoc-ref inputs "gcc"))
+                      (binutils (assoc-ref inputs "binutils"))
+                      (python (assoc-ref inputs "python-2"))
+                      (rustc (assoc-ref inputs "rustc-bootstrap"))
+                      (llvm (assoc-ref inputs "llvm"))
+                      (jemalloc (assoc-ref inputs "jemalloc"))
+                      (flags (list
+                              (string-append "--prefix=" out)
+                              (string-append "--datadir=" out "/share")
+                              (string-append "--infodir=" out "/share/info")
+                              (string-append "--default-linker=" gcc "/bin/gcc")
+                              (string-append "--default-ar=" binutils "/bin/ar")
+                              (string-append "--python=" python "/bin/python2")
+                              (string-append "--local-rust-root=" rustc)
+                              (string-append "--llvm-root=" llvm)
+                              (string-append "--jemalloc-root=" jemalloc "/lib")
+                              "--release-channel=stable"
+                              "--enable-rpath"
+                              "--enable-local-rust"
+                              "--disable-manage-submodules")))
+                 (substitute* "src/bootstrap/bootstrap.py"
+                   (("self.get_toml\\('cargo'\\)") 
+                    (string-append "\"" (assoc-ref inputs "cargo") "/bin/cargo\"")))
+                 ;; Rust uses a custom configure script (no autoconf).
+                 (zero? (apply system* "./configure" flags)))))
+           (delete 'patch-configure)))))))
+
+(define-public rustc-1.18
+  (package
+    (inherit rustc-1.17)
+    (version "1.18.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://static.rust-lang.org/dist/"
+                    "rustc-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "11sg2y38x2psvc1gvhcd10fcszih2sljhnnfyqnlkwkmbf4s7asb"))
+            (modules '((guix build utils)))
+            (snippet
+             `(begin
+                (delete-file-recursively "src/llvm")
+                #t))))
+    (native-inputs
+     `(("bison" ,bison) ; For the tests
+       ("cmake" ,cmake)
+       ("flex" ,flex) ; For the tests
+       ("git" ,git)
+       ("procps" ,procps) ; For the tests
+       ("python-2" ,python-2)
+       ("rustc-bootstrap" ,rustc-1.17)
+       ("which" ,which)))))
+
+(define-public rustc-1.19
+  (package
+    (inherit rustc-1.18)
+    (version "1.19.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://static.rust-lang.org/dist/"
+                    "rustc-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "11sg2y38x2psvc1gvhcd10fcszih2sljhnnfyqnlkwkmbf4s7asb"))
+            (modules '((guix build utils)))
+            (snippet
+             `(begin
+                (delete-file-recursively "src/llvm")
+                #t))))
+    (native-inputs
+     `(("bison" ,bison) ; For the tests
+       ("cmake" ,cmake)
+       ("flex" ,flex) ; For the tests
+       ("git" ,git)
+       ("procps" ,procps) ; For the tests
+       ("python-2" ,python-2)
+       ("rust-bootstrap" ,rustc-1.18)
+       ("which" ,which)))))
+
+(define-public rustc-1.20
+  (package
+    (inherit rustc-1.19)
+    (version "1.20.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://static.rust-lang.org/dist/"
+                    "rustc-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "11sg2y38x2psvc1gvhcd10fcszih2sljhnnfyqnlkwkmbf4s7asb"))
+            (modules '((guix build utils)))
+            (snippet
+             `(begin
+                (delete-file-recursively "src/llvm")
+                #t))))
+    (native-inputs
+     `(("bison" ,bison) ; For the tests
+       ("cmake" ,cmake)
+       ("flex" ,flex) ; For the tests
+       ("git" ,git)
+       ("procps" ,procps) ; For the tests
+       ("python-2" ,python-2)
+       ("rustc-bootstrap" ,rustc-1.19)
+       ("which" ,which)))))
+
+(define-public rustc-1.21
+  (package
+    (inherit rustc-1.20)
+    (version "1.21.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://static.rust-lang.org/dist/"
+                    "rustc-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "11sg2y38x2psvc1gvhcd10fcszih2sljhnnfyqnlkwkmbf4s7asb"))
+            (modules '((guix build utils)))
+            (snippet
+             `(begin
+                (delete-file-recursively "src/llvm")
+                #t))))
+    (native-inputs
+     `(("bison" ,bison) ; For the tests
+       ("cmake" ,cmake)
+       ("flex" ,flex) ; For the tests
+       ("git" ,git)
+       ("procps" ,procps) ; For the tests
+       ("python-2" ,python-2)
+       ("rustc-bootstrap" ,rustc-1.20)
+       ("which" ,which)))))
+
+(define-public firefox
+  (package
+    (name "firefox")
+    (version "57.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://archive.mozilla.org/pub/firefox/"
+                                  "releases/" version "/source/firefox-"
+                                  version ".source.tar.xz"))
+              (sha256
+               (base32
+                "13xvxzpp5l3amrd6jcpnn7d1q7wpf80dsiw0qp4z51xyal0z0fk0"))
+      (modules '((guix build utils)))
+      (snippet
+       '(begin
+          (use-modules (ice-9 ftw))
+          ;; Remove bundled libraries that we don't use, since they may
+          ;; contain unpatched security flaws, they waste disk space and
+          ;; network bandwidth, and may cause confusion.
+          (for-each delete-file-recursively
+                    '(;; FIXME: Removing the bundled icu breaks configure.
+                      ;;   * The bundled icu headers are used in some places.
+                      ;;   * The version number is taken from the bundled copy.
+                      ;;"intl/icu"
+                      ;;
+                      ;; FIXME: A script from the bundled nspr is used.
+                      ;;"nsprpub"
+                      ;;
+                      ;; TODO: Use system media libraries.  Waiting for:
+                      ;; <https://bugzilla.mozilla.org/show_bug.cgi?id=517422>
+                      ;;   * libogg
+                      ;;   * libtheora
+                      ;;   * libvorbis
+                      ;;   * libtremor (not yet in guix)
+                      ;;   * libopus
+                      ;;   * speex
+                      ;;   * soundtouch (not yet in guix)
+                      ;;
+                      ;; TODO: Use system harfbuzz.  Waiting for:
+                      ;; <https://bugzilla.mozilla.org/show_bug.cgi?id=847568>
+                      ;;
+                      ;; TODO: Use system graphite2.
+                      ;;
+                      "modules/freetype2"
+                      "modules/zlib"
+                      "modules/libbz2"
+                      "ipc/chromium/src/third_party/libevent"
+                      "media/libjpeg"
+                      "media/libvpx"
+                      "security/nss"
+                      "gfx/cairo"
+                      "js/src/ctypes/libffi"
+                      "db/sqlite3"))
+          ;; Delete .pyc files, typically present in icecat source tarballs
+          (for-each delete-file (find-files "." "\\.pyc$"))
+          ;; Delete obj-* directories, sometimes present in icecat tarballs
+          (for-each delete-file-recursively
+                    (scandir "." (lambda (name)
+                                   (string-prefix? "obj-" name))))
+          #t))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:out-of-source? #t
+       #:tests? #f
+       #:make-flags (list "--disable-necko-wifi"
+                          "--disable-stylo"
+                          "--disable-crashreporter"
+                          "--disable-updater"
+                          "--disable-tests"; Remove if we want to test
+                          "--enable-application=browser"
+                          "--enable-optimize=-O2"
+                          "--with-pthreads"
+                          ;; use system libraries
+                          "--enable-system-hunspell"
+                          "--enable-startup-notification"
+                          "--enable-alsa" "--enable-pulseaudio"
+                          "--enable-system-sqlite"
+                          "--with-system-libevent"
+                          "--with-system-libvpx"
+                          "--with-system-nspr"
+                          "--with-system-nss"
+                          "--with-system-icu"
+                          "--with-system-graphite2"
+                          "--with-system-harfbuzz"
+                          "--enable-system-cairo"
+                          "--enable-system-ffi"
+                          "--enable-system-pixman"
+                          "--with-system-bz2"
+                          "--with-system-jpeg"
+                          "--with-system-png"
+                          "--with-system-zlib")
+       #:phases
+       (modify-phases %standard-phases
+         (replace
+          'configure
+          ;; configure does not work followed by both "SHELL=..." and
+          ;; "CONFIG_SHELL=..."; set environment variables instead
+          (lambda* (#:key outputs configure-flags #:allow-other-keys)
+            (let* ((out (assoc-ref outputs "out"))
+                   (bash (which "bash"))
+                   (abs-srcdir (getcwd))
+                   (srcdir (string-append "../" (basename abs-srcdir)))
+                   (flags `(,(string-append "--prefix=" out)
+                            ,(string-append "--with-l10n-base="
+                                            abs-srcdir "/l10n")
+                            ,@configure-flags)))
+              (setenv "SHELL" bash)
+              (setenv "CONFIG_SHELL" bash)
+              (setenv "AUTOCONF" (which "autoconf")) ; must be autoconf-2.13
+              (mkdir "../build")
+              (chdir "../build")
+              (format #t "build directory: ~s~%" (getcwd))
+              (format #t "configure flags: ~s~%" flags)
+              (zero? (apply system* bash
+                            (string-append srcdir "/configure")
+                            flags))))))))
+    (inputs
+     `(("alsa-lib" ,alsa-lib)
+       ("bzip2" ,bzip2)
+       ("cairo" ,cairo)
+       ("cups" ,cups)
+       ("dbus-glib" ,dbus-glib)
+       ("gdk-pixbuf" ,gdk-pixbuf)
+       ("glib" ,glib)
+       ("gtk+" ,gtk+)
+       ("gtk+-2" ,gtk+-2)
+       ("pango" ,pango)
+       ("freetype" ,freetype)
+       ("hunspell" ,hunspell)
+       ("libcanberra" ,libcanberra)
+       ("libgnome" ,libgnome)
+       ("libjpeg-turbo" ,libjpeg-turbo)
+       ("libxft" ,libxft)
+       ("libevent" ,libevent-2.0)
+       ("libxinerama" ,libxinerama)
+       ("libxscrnsaver" ,libxscrnsaver)
+       ("libxcomposite" ,libxcomposite)
+       ("libxt" ,libxt)
+       ("libffi" ,libffi)
+       ("ffmpeg" ,ffmpeg)
+       ("libvpx" ,libvpx)
+       ("icu4c" ,icu4c)
+       ("pixman" ,pixman)
+       ("pulseaudio" ,pulseaudio)
+       ("mesa" ,mesa)
+       ("nspr" ,nspr)
+       ("nss" ,nss)
+       ("sqlite" ,sqlite)
+       ("startup-notification" ,startup-notification)
+       ("unzip" ,unzip)
+       ("zip" ,zip)
+       ("zlib" ,zlib)))
+    (native-inputs
+     `(("perl" ,perl)
+       ("python" ,python-2) ; Python 3 not supported
+       ("python2-pysqlite" ,python2-pysqlite)
+       ("yasm" ,yasm)
+       ("pkg-config" ,pkg-config)
+       ("autoconf" ,autoconf-2.13)
+       ("which" ,which)
+       ("rust" ,rustc-1.21)))
+    (home-page "https://mozilla.org")
+    (synopsis "Web browser")
+    (description "")
+    (license (package-license icecat))))
