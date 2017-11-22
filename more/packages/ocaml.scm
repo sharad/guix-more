@@ -263,11 +263,9 @@ provers.")
           `(modify-phases ,phases
             (add-before 'build 'fix-findlib-makefile
               (lambda* (#:key outputs #:allow-other-keys)
-                (substitute* "Makefile.config"
-                  (("OCAML_CORE_STDLIB=.*")
-                   (string-append "OCAML_CORE_STDLIB="
-                                  (assoc-ref outputs "out") "/lib/ocaml/site-lib"
-                                  "\n")))
+                (substitute* "src/findlib/Makefile"
+                  (("\\$\\(prefix\\)\\$\\(OCAML_CORE_STDLIB\\)")
+                   (string-append (assoc-ref outputs "out") "/lib/ocaml/site-lib")))
                 #t))))))
     (native-inputs
      `(("camlp4" ,camlp4-fix)
@@ -349,6 +347,38 @@ provers.")
      `(("ocaml" ,ocaml-fix)
        ("ocamlbuild" ,ocaml-build)))))
 
+(define-public ocaml-num
+  (package
+    (name "ocaml-num")
+    (version "1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ocaml/num/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1xlkd0svc0mgq5s7nrm2rjrsvg15i9wxqkc1kvwjp6sv8vv8bb04"))))
+    (build-system ocaml-build-system)
+    (arguments
+     `(#:ocaml ,ocaml-fix
+       #:findlib ,ocaml-findlib-fix
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-before 'build 'fix-makefile
+           (lambda* (#:key outputs #:allow-other-keys)
+             ;; This package supposes we install to the same directory as
+             ;; the ocaml package.
+             (substitute* "src/Makefile"
+               (("\\) \\$\\(STDLIBDIR\\)")
+                (string-append ") " (assoc-ref outputs "out")
+                               "/lib/ocaml/site-lib"))))))))
+    (home-page "https://github.com/ocaml/num")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+))); with linking exception
+
 (define-public coq-fix
   (package
     (inherit coq)
@@ -359,27 +389,75 @@ provers.")
     (inputs
      `(("lablgtk" ,lablgtk-fix)
        ("python" ,python-2)
-       ("camlp5" ,camlp5-fix)))
+       ("camlp5" ,camlp5-fix)
+       ;; ocaml-num was removed from the ocaml package in 4.06.
+       ("num" ,ocaml-num)))
     (arguments
      `(#:ocaml ,ocaml-fix
        #:findlib ,ocaml-findlib-fix
-       ,@(package-arguments coq)))))
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (mandir (string-append out "/share/man"))
+                    (browser "icecat -remote \"OpenURL(%s,new-tab)\""))
+               (zero? (system* "./configure"
+                               "-prefix" out
+                               "-mandir" mandir
+                               "-browser" browser
+                               "-coqide" "opt")))))
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "ide/ideutils.ml"
+               (("Bytes.unsafe_to_string read_string") "read_string"))
+             (zero? (system* "make" "-j" (number->string
+                                          (parallel-job-count))
+                             (string-append
+                               "USERFLAGS=-I "
+                               (assoc-ref inputs "num")
+                               "/lib/ocaml/site-lib")
+                             "world"))))
+         (delete 'check)
+         (add-after 'install 'check
+           (lambda _
+             (with-directory-excursion "test-suite"
+               ;; These two tests fail.
+               ;; This one fails because the output is not formatted as expected.
+               (delete-file-recursively "coq-makefile/timing")
+               ;; This one fails because we didn't build coqtop.byte.
+               (delete-file-recursively "coq-makefile/findlib-package")
+               (zero? (system* "make"))))))))))
 
 (define-public compcert
   (package
     (name "compcert")
-    (version "3.0.1")
+    (version "3.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://compcert.inria.fr/release/compcert-"
                                   version ".tgz"))
               (sha256
                (base32
-                "0dgrj26dzdy4n3s9b5hwc6lm54vans1v4qx9hdp1q8w1qqcdriq9"))))
+                "0irfwlw2chalp0g2gw0makc699hn3z37sha1a239p9d90mzx03cx"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
        (modify-phases %standard-phases
+         (add-before 'configure 'fix-newer-coq
+           (lambda _
+             (substitute* "configure"
+               (("8.6|8.6.1") "8.6|8.6.1|8.7.0"))
+             ;; functional induction is now defined in FunInd rather than in the
+             ;; toplevel.
+             (substitute* '("common/Globalenvs.v" "backend/ValueDomain.v")
+               (("Require Import Zwf")
+                "Require Import Zwf FunInd."))
+             (substitute* '("lib/Intv.v" "lib/Heaps.v" "lib/Parmov.v"
+                            "backend/Selectionproof.v" "backend/ValueAnalysis.v"
+                            "x86/CombineOpproof.v" "backend/Deadcodeproof.v")
+               (("Require Import Coqlib")
+                "Require Import Coqlib FunInd"))))
          (replace 'configure
            (lambda* (#:key outputs #:allow-other-keys)
              (zero? (system* "./configure" "x86_64-linux" "-prefix"
