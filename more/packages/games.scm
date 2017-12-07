@@ -104,7 +104,7 @@ it offers a WYSIWYG editor for creating layouts and imagesets.")
 (define-public morji
   (package
     (name "morji")
-    (version "0.2")
+    (version "0.3")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -112,7 +112,7 @@ it offers a WYSIWYG editor for creating layouts and imagesets.")
                      version ".tar.gz"))
               (sha256
                (base32
-                "1mr1yq739n1x9y01azv88npi2vm7swbgh8aqj4r590bq5lqn8w62"))))
+                "1icpqn7ypg4jbbn222zvgdg96x0k1nb9rbcfr5ky86ldhly1flq2"))))
     (build-system gnu-build-system)
     (arguments
      `(#:tests? #f; Tests don't run in our environment
@@ -207,20 +207,21 @@ and anki.")
     (name "anki")
     ; the latest stable version requires qt4 webkit which we don't have because
     ; of issues on arm and probably security reasons.
-    (version "2.1.0beta3")
+    (version "2.1.0beta25")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://apps.ankiweb.net/downloads/beta/anki-"
                                   version "-source.tgz"))
               (sha256
                (base32
-                "1iffc8l856j7c6r8s6y5f79fgf31d4halbhrwfc09zlkasvf9wqg"))))
+                "1p42b395k3kny5c17na3sw95mya3cw2hg3nxyj3b3mdhwdcy677r"))))
     (build-system gnu-build-system)
     (propagated-inputs
      `(("python" ,python)
-       ("pyaudio" ,python-pyaudio)
-       ("pyqt" ,python-pyqt)
-       ("sip" ,python-sip)))
+       ("python-pyaudio" ,python-pyaudio)
+       ("python-pyqt" ,python-pyqt)
+       ("python-sip" ,python-sip)
+       ("python-decorator" ,python-decorator)))
     (arguments
      `(#:tests? #f
        #:phases
@@ -229,6 +230,10 @@ and anki.")
          (delete 'build)
          (replace 'install
            (lambda* (#:key inputs outputs #:allow-other-keys)
+             (substitute* "anki/__init__.py"
+               (("< 6") "< 5"))
+             (substitute* "aqt/qt.py"
+               (("from PyQt5.QtWebEngineWidgets import QWebEnginePage") ""))
              (let* ((output (assoc-ref outputs "out"))
                     (bindir (string-append output "/bin"))
                     (libdir (string-append output "/lib/python3.5/site-packages")))
