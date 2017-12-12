@@ -202,19 +202,24 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "12921")
+    (version "13170")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/openstreetmap/josm.git")
-                    (commit "82b3a6bc44ce02ce8398b3842fa4ec2647bb5e4a")))
-              ;;(uri (svn-reference
-              ;;      (url "https://svn.openstreetmap.org/applications/editors/josm")
-              ;;      (revision 12039)))
+                    (commit "bfbb677395e5d788c2d49b6ed8fd9dac23495674")))
+              ;; FIXME: Fetching from mirror on github because svn-fetch result
+              ;; is not deterministic: hash differs each time it fetches the repo.
+              ;(uri (svn-reference
+              ;      (url "https://svn.openstreetmap.org/applications/editors/josm")
+              ;      (revision (string->number version))))
               (sha256
                (base32
-                "1v2mf8y42r3jplc72xy481a3263j9p2g72d76szcsvnh3cg5kd3i"))
-              (file-name (string-append name "-" version))))
+                "186sxgh51p8k6h05mvn710l566xvdw9qxsmq81y78bfbrda9n9sw"))
+              (file-name (string-append name "-" version))
+              (modules '((guix build utils)))
+              (snippet
+                '(delete-file-recursively "src/org/apache"))))
     (build-system ant-build-system)
     (native-inputs
      `(("java-javacc" ,java-javacc)))
@@ -233,7 +238,6 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        ("java-httpcomponents-core" ,java-httpcomponents-core)
        ("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-collections" ,java-commons-collections)
-       ("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-commons-compress" ,java-commons-compress-latest)))
     (arguments
@@ -245,9 +249,6 @@ methods.  It is similar in speed with deflate but offers more dense compression.
          (add-after 'unpack 'rm-build.xml
            (lambda* _
              (delete-file "build.xml")))
-         (add-after 'unpack 'rm-jcs-embedded
-           (lambda _
-             (delete-file-recursively "src/org/apache/commons/jcs")))
          (add-before 'build 'fix-revision
            (lambda* _
              (with-output-to-file "REVISION.XML"
@@ -282,7 +283,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
              (rename-file "data" "build/classes/data")))
          (add-before 'install 'regenerate-jar
            (lambda _
-             ;; We need to regenerate the jar file with to add data.
+             ;; We need to regenerate the jar file to add data.
              (delete-file "build/jar/josm.jar")
              (zero? (system* "jar" "-cf" "build/jar/josm.jar" "-C"
                              "build/classes" "."))))
@@ -485,7 +486,7 @@ from ORO, Inc.")
                                   "_spec-1.0.1.Final.tar.gz"))
               (sha256
                (base32
-                "0crfl4f5m2sm59kdsivrw2dy63w02al1li88bhlhp7mxnicfmxv7"))))
+                "0yhyjf9p21cjs84nz66bxnmzdxdr98kfpbyp5gr3js0hwl6zz7xb"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-jboss-transaction-api_spec.jar"
@@ -6420,4 +6421,24 @@ documentation tools.")
     (home-page "")
     (synopsis "")
     (description "")
+    (license license:asl2.0)))
+
+(define-public kotlin
+  (package
+    (name "kotlin")
+    (version "1.1.61")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/JetBrains/kotlin/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0pj7x0b93r85cc3wj1lj1ydf48rikdbv0hq6wfxs059z140icq0a"))))
+    (build-system ant-build-system)
+    (home-page "https://kotlinlang.org/")
+    (synopsis "Statically typed programming language")
+    (description "")
+    ;; described in license/README.md
+    ;; Kotlin is under asl2.0, third-party libraries have different licenses
     (license license:asl2.0)))
