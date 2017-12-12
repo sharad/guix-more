@@ -38,6 +38,351 @@
   #:use-module (gnu packages xml)
   #:use-module (more packages python))
 
+(define-public java-jul-to-slf4j
+  (package
+    (inherit java-slf4j-api)
+    (name "java-jul-to-slf4j")
+    (arguments
+     `(#:jar-name "jul-to-slf4j.jar"
+       #:source-dir "jul-to-slf4j/src/main/java"
+       #:test-dir "jul-to-slf4j/src/test"
+       #:tests? #f)); Depend on log4j-1.2 (not log4j-1.2-api)
+    (inputs
+     `(("java-slf4j-api" ,java-slf4j-api)))))
+
+;; Actually we need to build the native library too.
+(define-public java-native-platform
+  (package
+    (name "java-native-platform")
+    (version "0.14")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/adammurdoch/"
+                                  "native-platform/archive/" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1if8h1lz8rh6gv6rrych63j2a03cfcqshb5c2973xsfs7jfrvbrr"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "native-platform.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f)); TODO: fix build.xml to run Groovy tests
+    (home-page "https://github.com/EsotericSoftware/minlog")
+    (synopsis "Java bindings for various native APIs")
+    (description "Native-platform is a collection of cross-platform Java APIs
+for various native APIs.  It currently supports OS X, Linux, Windows and
+FreeBSD on Intel architectures")
+    (license license:asl2.0)))
+
+(define-public java-minlog
+  (package
+    (name "java-minlog")
+    (version "1.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/EsotericSoftware/minlog/"
+                                  "archive/minlog-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1vciwr6zw6bky70fi13sa85jc27r5nk5bzii8kdkblfaakmy8ifb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "minlog.jar"
+       #:tests? #f)); No tests
+    (home-page "https://github.com/EsotericSoftware/minlog")
+    (synopsis "Logging library")
+    (description "MinLog is a tiny Java logging library which features:
+@itemize
+@item Zero overhead: Logging statements below a given level can be
+      automatically removed by javac at compile time.  This means applications
+      can have detailed trace and debug logging without having any impact on
+      the finished product.
+@item Extremely lightweight: The entire project consists of a single Java file
+      with ~100 non-comment lines of code.
+@item Simple and efficient: The API is concise and the code is very efficient
+      at runtime.
+@end itemize")
+    (license license:bsd-3)))
+
+(define-public java-reflectasm
+  (package
+    (name "java-reflectasm")
+    (version "1.11.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/EsotericSoftware/"
+                                  "reflectasm/archive/reflectasm-" version
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "1rcgr5rm2g0jl2z0qk1bddlq72mh16ywznyy8pra0ns8xk6hwa8g"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "reflectasm.jar"
+       #:tests? #f; Tests are not in a java subdirectory
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-asm
+           (lambda _
+             ;; asm has been renamed
+             (substitute* '("src/com/esotericsoftware/reflectasm/ConstructorAccess.java"
+                            "src/com/esotericsoftware/reflectasm/FieldAccess.java"
+                            "src/com/esotericsoftware/reflectasm/MethodAccess.java")
+               (("com.esotericsoftware.asm") "org.objectweb.asm"))
+             #t)))))
+    (inputs
+     `(("java-asm" ,java-asm)))
+    (home-page "https://github.com/EsotericSoftware/reflectasm")
+    (synopsis "Reflection library for Java")
+    (description "ReflectASM is a very small Java library that provides high
+performance reflection by using code generation.  An access class is generated
+to set/get fields, call methods, or create a new instance.  The access class
+uses bytecode rather than Java's reflection, so it is much faster.  It can
+also access primitive fields via bytecode to avoid boxing.")
+    (license license:bsd-3)))
+
+(define-public java-kryo
+  (package
+    (name "java-kryo")
+    (version "4.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/EsotericSoftware/kryo/"
+                                  "archive/kryo-parent-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0l0mwxfym29ssvxxwawg8h6psnzbb1dbhqfzhhhxxbm7p79xzga5"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "kryo.jar"
+       #:jdk ,icedtea-8
+       #:tests? #f)); No tests
+    (inputs
+     `(("java-minlog" ,java-minlog)
+       ("java-objenesis" ,java-objenesis)
+       ("java-reflectasm" ,java-reflectasm)))
+    (home-page "https://github.com/EsotericSoftware/kryo")
+    (synopsis "Object graph serialization framework")
+    (description "Kryo is a fast and efficient object graph serialization
+framework for Java.  The project is useful any time objects need to be
+persisted, whether to a file, database, or over the network.")
+    (license license:bsd-3)))
+
+(define-public java-findbugs
+  (package
+    (name "java-findbugs")
+    (version "3.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://prdownloads.sourceforge.net/findbugs/"
+                                  "findbugs-" version "-source.zip"))
+              (sha256
+               (base32
+                "1zrkpmd87lcz62lk5dr0mpf5gbzrd1i8mmrv510fs6fla1jwd3mx"))))
+    (build-system ant-build-system)
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (arguments
+     `(#:build-target "jars"
+       #:test-target "test"
+       #:make-flags (list "-Dgitrnum=0")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'no-git
+           (lambda _
+             ;; We are not building a git revision
+             (substitute* "build.xml"
+               ((",-get-git-revision") ""))
+             #t)))))
+    (home-page "http://findbugs.sourceforge.net/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-mangosdk-spi
+  (package
+    (name "java-mangosdk-spi")
+    (version "1")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/rspilker/spi")
+                     (commit "ca933626bdd8084f9170fa478388bf1eabe10d8c")))
+              (file-name (string-append name "-" version))
+              (sha256
+               (base32
+                "1fbfn46923hd9lmby18zckannbw0fql9lrdf2wpbq3s9pm4zg0sc"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "spi.jar"
+       #:source-dir "org.mangosdk.spi/src/main/java"
+       #:test-dir "org.mangosdk.spi/src/test"
+       #:tests? #f;; FIXME: tests don't build
+       #:jdk ,icedtea-8))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "https://github.com/rspilker/spi")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-lombok-core
+  (package
+    (name "java-lombok-core")
+    (version "1.16.18")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/rzwitserloot/lombok/"
+                                  "archive/v" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "132p2aasip2n0633pas5xprmlzpwxc9i52na4hy7k3hzvd6bwd2j"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "lombok-core.jar"
+       #:source-dir "src/core"
+       #:tests? #f)); No specific test
+    (inputs
+     `(("java-asm" ,java-asm)
+       ("java-eclipse-jdt-core" ,java-eclipse-jdt-core)
+       ("java-lombok-utils" ,java-lombok-utils)
+       ("java-mangosdk-spi" ,java-mangosdk-spi)
+       ("java-osgi-framework" ,java-osgi-framework)))
+    (home-page "https://projectlombok.org/")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public java-lombok-utils
+  (package
+    (inherit java-lombok-core)
+    (name "java-lombok-utils")
+    (arguments
+     `(#:jar-name "lombok-utils.jar"
+       #:source-dir "src/utils"
+       #:jdk ,icedtea-8
+       #:tests? #f; No specific test
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-java8
+           (lambda _
+             (delete-file-recursively "src/utils/lombok/javac")
+             ;(delete-file-recursively "src/utils/lombok/javac/java6")
+             ;(delete-file-recursively "src/utils/lombok/javac/java7")
+             ;; Troubles with extending com.sun.tools.javac.code.Type
+             ;(delete-file-recursively "src/utils/lombok/javac/java")
+             #t)))))
+    (inputs
+     `(("java-eclipse-jdt-core" ,java-eclipse-jdt-core)))))
+
+(define-public java-asm-6
+  (package
+    (inherit java-asm)
+    (version "6.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://download.forge.ow2.org/asm/"
+                                  "asm-" version ".tar.gz"))
+              (sha256
+               (base32
+                "115l5pqblirdkmzi32dxx7gbcm4jy0s14y5wircr6h8jdr9aix00"))))
+    (arguments
+      (substitute-keyword-arguments (package-arguments java-asm)
+        ((#:make-flags flags)
+         `(list "-Dobjectweb.ant.tasks.path=foo"
+                (string-append "-Dbiz.aQute.bnd.path="
+                               (assoc-ref %build-inputs "java-aqute-bndlib")
+                               "/share/java/java-bndlib.jar")))))
+    (inputs
+     `(("java-aqute-bndlib" ,java-aqute-bndlib)))))
+
+(define-public java-byte-buddy-dep
+  (package
+    (name "java-byte-buddy-dep")
+    (version "1.7.9")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/raphw/byte-buddy/archive/"
+                                  "byte-buddy-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1dyx3hp1fnw30ndk341bscr8x9sy75f8sfy4hrrwcwg4hrdg4i36"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "byte-buddy-dep.jar"
+       #:source-dir "byte-buddy-dep/src/main/java"
+       #:test-dir "byte-buddy-dep/src/test"
+       #:tests? #f; FIXME: can't build tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-annotations
+           (lambda _
+             (with-directory-excursion "byte-buddy-dep/src/main/java/net/bytebuddy"
+               (substitute* (find-files "." ".*.java")
+                 (("@EqualsAndHashCode.*") "")
+                 (("import lombok.EqualsAndHashCode;") ""))
+               (substitute* (find-files "." ".*.java")
+                 (("@SuppressFBWarnings.*") "")
+                 (("import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;") "")))
+             #t)))))
+    (inputs
+     `(("java-asm-6" ,java-asm-6)))
+    (home-page "http://bytebuddy.net/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-spockframework-core
+  (package
+    (name "java-spockframework-core")
+    (version "1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/spockframework/spock/"
+                                  "archive/spock-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1b2bybldlnid41irkavd09bkkzfjyvc2d33grpn2vgaiyw9gzz8z"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "spock-core.jar"
+       #:source-dir "spock-core/src/main/java"
+       #:tests? #f)); No tests
+    (inputs
+     `(("groovy-bootstrap" ,groovy-bootstrap)
+       ("java-asm" ,java-asm)
+       ("java-cglib" ,java-cglib)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)
+       ("java-objenesis" ,java-objenesis)))
+    (home-page "http://spockframework.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jcip-annotations
+  (package
+    (name "java-jcip-annotations")
+    (version "1.0")
+    (source (origin
+              (method url-fetch)
+              (uri "http://jcip.net/jcip-annotations-src.jar")
+              (sha256
+               (base32
+                "1z4y6ga2yc01z4qwcdi6mawky8kk6pg3j1l7r3rwb9001fz5q7r2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jcip-annotations.jar"
+       #:source-dir "."
+       #:tests? #f)); No tests
+    (home-page "http://jcip.net")
+    (synopsis "Annotations for concurrency")
+    (description "JCIP annotations implement the annotations described in the
+\"Java Concurrency In Practice\" (JCIP) book.")
+    (license license:cc-by2.0))); cc-by2.5
+
 (define-public java-openjfx
   (package
     (name "java-openjfx")
@@ -347,6 +692,39 @@ methods.  It is similar in speed with deflate but offers more dense compression.
     (description "Java-based solution for accessing, manipulating, and
 outputting XML data from Java code.")
     (license license:bsd-4)))
+
+;; As of 2010-09-01, the ORO project is retired
+(define-public java-jakarta-regexp
+  (package
+    (name "java-jakarta-regexp")
+    (version "1.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/jakarta/regexp/"
+                                  "jakarta-regexp-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0zg9rmyif48dck0cv6ynpxv23mmcsx265am1fnnxss7brgw0ms3r"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jar"
+       #:tests? #f; tests are run as part of the build process
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'remove-bin
+           (lambda _
+             (delete-file (string-append "jakarta-regexp-" ,version ".jar"))))
+         (replace 'install
+           (install-jars "build")))))
+    (home-page "https://jakarta.apache.org/oro/")
+    (synopsis "Text-processing for Java")
+    (description "The Jakarta-ORO Java classes are a set of text-processing
+Java classes that provide Perl5 compatible regular expressions, AWK-like
+regular expressions, glob expressions, and utility classes for performing
+substitutions, splits, filtering filenames, etc.  This library is the successor
+of the OROMatcher, AwkTools, PerlTools, and TextTools libraries originally
+from ORO, Inc.")
+    (license license:asl2.0)))
 
 ;; As of 2010-09-01, the ORO project is retired
 (define-public java-jakarta-oro
@@ -2189,7 +2567,7 @@ namespaces.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "00igy7a6aylswxdcklj9021g2s8bvsvrysagqyd8cibm4pimxrnk"))))
+                "1qm7zpf0m75ps623h90xwb0rfyj4pywybvp005s9ykaqcvp50kzf"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -3308,6 +3686,66 @@ the DOM level 3 load/save API's are in use.")
     (license (list license:gpl2
                    license:cddl1.1))))
 
+(define-public java-commons-bsf
+  (package
+    (name "java-commons-bsf")
+    (version "2.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/bsf/source/bsf-src-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1sbamr8jl32p1jgf59nw0b2w9qivyg145954hm6ly54cfgsqrdas"))
+              (modules '((guix build utils)))
+              (snippet
+               '(begin
+                  (for-each delete-file
+                            (find-files "." "\\.jar$"))
+                  #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jar"
+       #:tests? #f; No test file
+       #:modules ((guix build ant-build-system)
+                  (guix build utils)
+                  (guix build java-utils)
+                  (sxml simple))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'create-properties
+           (lambda _
+             ;; This file is missing from the distribution
+             (call-with-output-file "build-properties.xml"
+               (lambda (port)
+                 (sxml->xml
+                  `(project (@ (basedir ".") (name "build-properties") (default ""))
+                     (property (@ (name "project.name") (value "bsf")))
+                     (property (@ (name "source.level") (value "1.5")))
+                     (property (@ (name "build.lib") (value "build/jar")))
+                     (property (@ (name "src.dir") (value "src")))
+                     (property (@ (name "tests.dir") (value "src/org/apache/bsf/test")))
+                     (property (@ (name "build.tests") (value "build/test-classes")))
+                     (property (@ (name "build.dest") (value "build/classes"))))
+                  port)))))
+         (replace 'install (install-jars "build")))))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)))
+    (home-page "https://commons.apache.org/proper/commons-bsf")
+    (synopsis "Bean Scripting Framework")
+    (description "The Bean Scripting Framework (BSF) is a set of Java classes
+which provides scripting language support within Java applications, and access
+to Java objects and methods from scripting languages.  BSF allows one to write
+JSPs in languages other than Java while providing access to the Java class
+library.  In addition, BSF permits any Java application to be implemented in
+part (or dynamically extended) by a language that is embedded within it.  This
+is achieved by providing an API that permits calling scripting language engines
+from within Java, as well as an object registry that exposes Java objects to
+these scripting language engines.")
+    (license license:asl2.0)))
+
 (define-public groovy
   (package
     (name "groovy")
@@ -3348,12 +3786,6 @@ the DOM level 3 load/save API's are in use.")
                                                          ":config/ant/src")
                              "org.codehaus.groovy.ExceptionUtilsGenerator"
                              "build/classes/org/codehaus/groovy/runtime/ExceptionUtils.class"))))
-         ;(add-before 'check 'compile-groovy
-         ;  (lambda _
-         ;    (zero? (apply system* "java" "-cp"
-         ;                  (string-append (getenv "CLASSPATH") ":build/classes")
-         ;                  "org.codehaus.groovy.tools.FileSystemCompiler"
-         ;                  (find-files "src/test" ".*\\.(groovy|java)$")))))
          (add-after 'install 'install-sh
            (lambda* (#:key outputs #:allow-other-keys)
              (substitute* "src/bin/startGroovy"
@@ -3390,6 +3822,425 @@ the DOM level 3 load/save API's are in use.")
     (description "")
     (license (list license:gpl2
                    license:cddl1.1))))
+
+(define-public java-apache-ivy-bootstrap
+  (package
+    (name "java-apache-ivy-bootstrap")
+    (version "2.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache//ant/ivy/" version
+                                  "/apache-ivy-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "1xkfn57g2m7l6y0xdq75x5rnrgk52m9jx2xah70g3ggl8750hbr0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "compile-core"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (system* "jar" "cf" "ivy.jar" "-C" "build/classes/core" ".")
+             (install-file "ivy.jar" (string-append (assoc-ref outputs "out")
+                                                    "/share/java")))))))
+    (home-page "https://ant.apache.org/ivy")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public groovy-bootstrap
+  (package
+    (name "groovy")
+    (version "2.0.0beta3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+                                  "2_0_0_BETA_3.tar.gz"))
+              (file-name (string-append "groovy-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1hm6kbwy5yhkzz7d2ln29k51iar6m7rwrzimsawgschvvqyrdxna"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "createJars"
+       #:tests? #f; part of build
+       #:make-flags
+       (list "-D_skipFetch_=true"
+             ;; FIXME: Tests require at least hsqldb and a part of ant testsuite
+             "-D_skipTests_=true"
+             ;; FIXME: Find aQute/bnd/ant/taskdef.properties.
+             "-D_skipOsgi_=true"
+             (string-append "-DinstallDirectory=" (assoc-ref %outputs "out")))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'make-build-dir
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "build.xml"
+               (("<property file=\"local.build.properties\"/>")
+                (string-append "<property file=\"local.build.properties\"/>
+<path id=\"classpath\">
+<fileset dir=\"" (assoc-ref inputs "java-asm") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "antlr2") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-classpathx-servletapi") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-xstream") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-commons-cli") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "ant") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-jline") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-junit") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-jansi") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-commons-bsf") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-apache-ivy-bootstrap") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+</path>"))
+               (("compilePath") "classpath"))
+             (substitute* "config/ant/build-setup.xml"
+               (("runtimePath") "classpath"))
+             ;; --classpath is not recognized (bug in commons-cli?)
+             (substitute* "src/main/org/codehaus/groovy/ant/Groovyc.java"
+               (("--classpath") "-cp"))
+             ;; These directories would have been created by maven initialization
+             (mkdir-p "target/lib/compile")
+             (mkdir-p "target/lib/test")
+             (mkdir-p "target/lib/tools")
+             (mkdir-p "target/lib/runtime")
+             #t))
+         (add-after 'install 'remove-embeddable
+           (lambda* (#:key outputs #:allow-other-keys)
+             (delete-file (string-append (assoc-ref outputs "out")
+                                         "/embeddable/groovy-all-2.0.0-beta-3.jar"))
+             #t)))))
+    (inputs
+     `(("java-commons-cli" ,java-commons-cli)
+       ("java-asm" ,java-asm)
+       ("ant-junit-tests" ,ant-junit-tests)
+       ("java-commons-bsf" ,java-commons-bsf)
+       ("java-classpathx-servletapi" ,java-classpathx-servletapi)
+       ("java-xstream" ,java-xstream)
+       ("java-jansi" ,java-jansi)
+       ("java-jline" ,java-jline)
+       ("java-apache-ivy-bootstrap" ,java-apache-ivy-bootstrap)
+       ("antlr2" ,antlr2)))
+    (native-inputs
+     `(("ant-antlr" ,ant-antlr)
+       ("java-aqute-bndlib" ,java-aqute-bndlib)
+       ("ant-junit-tests" ,ant-junit-tests)
+       ("java-jarjar" ,java-jarjar)
+       ("java-junit" ,java-junit)
+       ("java-jmock-1" ,java-jmock-1)
+       ("java-xmlunit-legacy" ,java-xmlunit-legacy)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license (list license:gpl2
+                   license:cddl1.1))))
+
+(define-public groovy-2.4
+  (package
+    (inherit groovy-bootstrap)
+    (name "groovy")
+    (version "2.2.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+                                  "2_2_0.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1fx9a71f0n5jr52zzyayia2hmbsr9pnd76rnh0z3y9ys1c5k8g7w"))
+              (patches
+                (search-patches
+                  "groovy-Add-exceptionutilsgenerator.patch"))))
+    (arguments
+     `(#:build-target "createJars"
+       #:tests? #f; part of build
+       #:jdk ,icedtea-8
+       #:make-flags
+       (list "-D_skipFetch_=true"
+             ;; FIXME: Tests require at least hsqldb and a part of ant testsuite
+             "-D_skipTests_=true"
+             ;; FIXME: Find aQute/bnd/ant/taskdef.properties.
+             "-D_skipOsgi_=true"
+             (string-append "-DinstallDirectory=" (assoc-ref %outputs "out")))
+       #:phases
+       (modify-phases %standard-phases
+         ;; FIXME: This should be taken care of by build.xml. Why doesn't it work?
+         (add-before 'build 'generate-parser
+           (lambda _
+             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
+               (zero? (system* "antlr" "java.g")))
+             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
+               (mkdir "parser")
+               (with-directory-excursion "parser"
+                 (zero? (system* "antlr" "../groovy.g"))))))
+         (add-before 'build 'generate-exception-utils
+           (lambda _
+             (system* "javac" "-cp" (getenv "CLASSPATH")
+                      "config/ant/src/org/codehaus/groovy/ExceptionUtilsGenerator.java")
+             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
+                                                         ":config/ant/src")
+                             "org.codehaus.groovy.ExceptionUtilsGenerator"
+                             "target/classes/org/codehaus/groovy/runtime/ExceptionUtils.class"))))
+         (add-before 'configure 'copy-build.xml
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir "old-groovy-tmp")
+             (mkdir-p "config/ant")
+             (with-directory-excursion "old-groovy-tmp"
+               (system* "tar" "xf" (assoc-ref inputs "build.xml"))
+               (copy-file "groovy-GROOVY_2_0_0_BETA_3/build.xml"
+                          "../build.xml")
+               (copy-recursively "groovy-GROOVY_2_0_0_BETA_3/config/ant"
+                                 "../config/ant"))
+             #t))
+         (add-before 'build 'make-build-dir
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "build.xml"
+               (("<property file=\"local.build.properties\"/>")
+                (string-append "<property file=\"local.build.properties\"/>
+<path id=\"classpath\">
+<pathelement path=\"${mainClassesDirectory}\" />
+<fileset dir=\"" (assoc-ref inputs "java-asm") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "antlr2") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-classpathx-servletapi") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-xstream") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-commons-cli") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "ant") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-jline") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-junit") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-jansi") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-commons-bsf") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+<fileset dir=\"" (assoc-ref inputs "java-apache-ivy-bootstrap") "\">
+<include name=\"**/*.jar\" />
+</fileset>
+</path>"))
+               (("compilePath") "classpath")
+             ;; groovy-ant is no longer in the main sources
+             (("<path id=\"groovyMainClasses\">")
+              "<javac srcdir=\"./subprojects/groovy-groovydoc/src/main/java\"
+includeantruntime=\"false\" destdir=\"${mainClassesDirectory}\"
+deprecation=\"on\" debug=\"yes\" source=\"1.5\" target=\"1.5\" fork=\"true\"
+classpathref=\"classpath\" />
+<javac srcdir=\"./subprojects/groovy-ant/src/main/java\"
+includeantruntime=\"false\" destdir=\"${mainClassesDirectory}\"
+deprecation=\"on\" debug=\"yes\" source=\"1.5\" target=\"1.5\" fork=\"true\"
+classpathref=\"classpath\" />
+<path id=\"groovyMainClasses\">"))
+             (substitute* "config/ant/build-setup.xml"
+               (("runtimePath") "classpath"))
+             ;; --classpath is not recognized (bug in commons-cli?)
+             ;(substitute* "subprojects/groovy-ant/src/main/java/org/codehaus/groovy/ant/Groovyc.java"
+             ;  (("--classpath") "-cp"))
+             ;; These directories would have been created by maven initialization
+             (mkdir-p "target/lib/compile")
+             (mkdir-p "target/lib/test")
+             (mkdir-p "target/lib/tools")
+             (mkdir-p "target/lib/runtime")
+             #t))
+         (add-after 'install 'remove-embeddable
+           (lambda* (#:key outputs #:allow-other-keys)
+             (delete-file (string-append (assoc-ref outputs "out")
+                                         "/embeddable/groovy-all-2.0.0-beta-3.jar"))
+             #t)))))
+    (native-inputs
+     `(("build.xml" ,(package-source groovy-bootstrap))
+       ,@(package-native-inputs groovy-bootstrap)))))
+
+(define-public ant-junit
+  (package
+    (inherit ant)
+    (name "ant-junit")
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jars"
+       #:tests? #f; disabled for now
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy
+           (lambda* (#:key inputs #:allow-other-keys)
+             (for-each (lambda (file) (copy-file file "lib/optional/junit.jar"))
+                       (find-files (string-append (assoc-ref inputs "java-junit") "/share") ".*.jar"))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "build/lib/ant-junit.jar"
+                           (string-append (assoc-ref outputs "out") "/share/java")))))))
+    (inputs
+     `(("java-junit" ,java-junit)))))
+
+(define-public ant-commons-net
+  (package
+    (inherit ant)
+    (name "ant-commons-net")
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jars"
+       #:tests? #f; disabled for now
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy
+           (lambda* (#:key inputs #:allow-other-keys)
+             (for-each (lambda (file) (copy-file file "lib/optional/commons-net.jar"))
+                       (find-files (string-append (assoc-ref inputs "java-commons-net") "/share") ".*.jar"))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "build/lib/ant-commons-net.jar"
+                           (string-append (assoc-ref outputs "out") "/share/java")))))))
+    (inputs
+     `(("java-commons-net" ,java-commons-net)))))
+
+(define-public ant-apache-oro
+  (package
+    (inherit ant)
+    (name "ant-apache-oro")
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jars"
+       #:tests? #f; disabled for now
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy
+           (lambda* (#:key inputs #:allow-other-keys)
+             (for-each (lambda (file) (copy-file file "lib/optional/apache-oro.jar"))
+                       (find-files (string-append (assoc-ref inputs "java-jakarta-oro") "/share") ".*.jar"))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "build/lib/ant-apache-oro.jar"
+                           (string-append (assoc-ref outputs "out") "/share/java")))))))
+    (inputs
+     `(("java-jakarta-oro" ,java-jakarta-oro)))))
+
+(define-public ant-apache-regexp
+  (package
+    (inherit ant)
+    (name "ant-apache-regexp")
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jars"
+       #:tests? #f; disabled for now
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy
+           (lambda* (#:key inputs #:allow-other-keys)
+             (for-each (lambda (file) (copy-file file "lib/optional/apache-regexp.jar"))
+                       (find-files (string-append (assoc-ref inputs "java-jakarta-regexp") "/share") ".*.jar"))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "build/lib/ant-apache-regexp.jar"
+                           (string-append (assoc-ref outputs "out") "/share/java")))))))
+    (inputs
+     `(("java-jakarta-regexp" ,java-jakarta-regexp)))))
+
+(define-public ant-jsch
+  (package
+    (inherit ant)
+    (name "ant-jsch")
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jars"
+       #:tests? #f; disabled for now
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy
+           (lambda* (#:key inputs #:allow-other-keys)
+             (for-each (lambda (file) (copy-file file "lib/optional/jsch.jar"))
+                       (find-files (string-append (assoc-ref inputs "java-jsch") "/share") ".*.jar"))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "build/lib/ant-jsch.jar"
+                           (string-append (assoc-ref outputs "out") "/share/java")))))))
+    (inputs
+     `(("java-jsch" ,java-jsch)))))
+
+(define-public ant-junit-tests
+  (package
+    (inherit ant)
+    (name "ant-junit-tests")
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "ant-junit-tests.jar"
+       #:tests? #f; disabled for now
+       #:source-dir "src/tests/junit"))
+    (inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("ant-commons-net" ,ant-commons-net)
+       ("java-jsch" ,java-jsch)
+       ("ant-jsch" ,ant-jsch)
+       ("java-jakarta-oro" ,java-jakarta-oro)
+       ("ant-apache-oro" ,ant-apache-oro)
+       ("java-jakarta-regexp" ,java-jakarta-regexp)
+       ("ant-apache-regexp" ,ant-apache-regexp)
+       ("java-commons-net" ,java-commons-net)))))
+
+(define-public ant-antlr
+  (package
+    (inherit ant)
+    (name "ant-antlr")
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "jars"
+       #:tests? #f; disabled for now
+       ;#:make-flags
+       ;(list (string-append "-Dant.install=" (assoc-ref %outputs "out")))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy
+           (lambda* (#:key inputs #:allow-other-keys)
+             (for-each (lambda (file) (begin (display ">") (display file) (newline) (copy-file file "lib/optional/antlr.jar")))
+                       (find-files (string-append (assoc-ref inputs "antlr2") "/share") ".*.jar"))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "build/lib/ant-antlr.jar"
+                           (string-append (assoc-ref outputs "out") "/share/java")))))))
+    (inputs
+     `(("antlr2" ,antlr2)))))
 
 ;(define-public antlr3-3.4
 ;  (package
@@ -3646,32 +4497,6 @@ the DOM level 3 load/save API's are in use.")
        #:tests? #f
        #:jdk ,icedtea-8))
     (native-inputs '())))
-
-;; requires groovy 2.4.7.
-;(define-public gradle
-;  (package
-;    (name "gradle")
-;    (version "3.4.1")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://github.com/gradle/gradle/archive/v"
-;                                  version ".tar.gz"))
-;              (file-name (string-append name "-" version ".tar.gz"))
-;              (sha256
-;               (base32 "0fq30k51mkixg31z3d4fjq3zbnyjml4i530px6n1n947mqk3rgyl"))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:phases
-;       (modify-phases %standard-phases
-;         (replace 'build
-;           (lambda* _
-;             (system* "sh" "-x" "gradlew" "prBuild" "-x" "integTest" "--continue"
-;                      "--stacktrace"))))))
-;             ;(system* "sh" "-x" "travisci_build.sh"))))))
-;    (home-page "")
-;    (synopsis "Build system")
-;    (description "Build system")
-;    (license license:asl2.0)))
 ;
 ;;; Requires gradle.
 ;(define-public android-anysoft-keyboard
