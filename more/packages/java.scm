@@ -36,6 +36,7 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
+  #:use-module (more packages groovy)
   #:use-module (more packages python))
 
 (define-public java-jul-to-slf4j
@@ -1663,7 +1664,7 @@ from ORO, Inc.")
              ;                               (assoc-ref inputs "docbook-xml"))
              ;                               )))))))
     (inputs
-     `(("java-jboos-javassist" ,java-jboss-javassist)))
+     `(("java-jboss-javassist" ,java-jboss-javassist)))
     (native-inputs
      `(("java-junit" ,java-junit)
        ("java-hamcrest-core" ,java-hamcrest-core)
@@ -3643,23 +3644,48 @@ the DOM level 3 load/save API's are in use.")
      `(#:jar-name "jline.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
+       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
            (lambda _
-             (mkdir-p "build/classes/jline")
-             (for-each (lambda (f) (copy-file (string-append "src/main/resources/jline/" f)
-                                              (string-append "build/classes/jline/" f)))
-               '("CandidateListCompletionHandler.properties"
-                 "keybindings-mac.properties"
-                 "keybindings.properties"
-                 "windowsbindings.properties")))))))
+             (copy-recursively "src/main/resources" "build/classes"))))))
     (native-inputs
      `(("java-junit" ,java-junit)))
     (home-page "https://jline.github.io")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-jline-2
+  (package
+    (inherit java-jline)
+    (version "2.14.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jline/jline2/archive/jline-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1c6qa26mf0viw8hg4jnv72s7i1qb1gh1l8rrzcdvqhqhx82rkdlf"))))
+    (inputs
+     `(("java-jansi" ,java-jansi)
+       ("java-jansi-native" ,java-jansi-native)))
+    (native-inputs
+     `(("java-powermock-modules-junit4" ,java-powermock-modules-junit4)
+       ("java-powermock-modules-junit4-common" ,java-powermock-modules-junit4-common)
+       ("java-powermock-api-easymock" ,java-powermock-api-easymock)
+       ("java-powermock-api-support" ,java-powermock-api-support)
+       ("java-powermock-core" ,java-powermock-core)
+       ("java-powermock-reflect" ,java-powermock-reflect)
+       ("java-easymock" ,java-easymock)
+       ("java-jboss-javassist" ,java-jboss-javassist)
+       ("java-objenesis" ,java-objenesis)
+       ("java-asm" ,java-asm)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-cglib" ,java-cglib)
+       ("java-junit" ,java-junit)
+       ("java-hawtjni" ,java-hawtjni)))))
 
 ;; vanished from the face of the earth :/
 (define-public java-jsonp
@@ -3746,82 +3772,82 @@ from within Java, as well as an object registry that exposes Java objects to
 these scripting language engines.")
     (license license:asl2.0)))
 
-(define-public groovy
-  (package
-    (name "groovy")
-    (version "2.4.10")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
-                                  "2_4_10.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "15c9xmf7rhr5w4qk2jcb6swds336l4l5gyb51pcjay2ywnigk8sa"))
-              (patches
-                (search-patches
-                  "groovy-Add-exceptionutilsgenerator.patch"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "groovy.jar"
-       #:source-dir "src/main:subprojects/groovy-test/src/main/java"
-       #:test-dir "src/test"
-       #:tests? #f
-       #:main-class "groovy.ui.GroovyMain"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'generate-parser
-           (lambda _
-             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
-               (zero? (system* "antlr" "java.g")))
-             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
-               (mkdir "parser")
-               (with-directory-excursion "parser"
-                 (zero? (system* "antlr" "../groovy.g"))))))
-         (add-before 'build 'generate-exception-utils
-           (lambda _
-             (system* "javac" "-cp" (getenv "CLASSPATH")
-                      "config/ant/src/org/codehaus/groovy/ExceptionUtilsGenerator.java")
-             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
-                                                         ":config/ant/src")
-                             "org.codehaus.groovy.ExceptionUtilsGenerator"
-                             "build/classes/org/codehaus/groovy/runtime/ExceptionUtils.class"))))
-         (add-after 'install 'install-sh
-           (lambda* (#:key outputs #:allow-other-keys)
-             (substitute* "src/bin/startGroovy"
-               ((" -classpath .*")
-                (string-append " -classpath " (getenv "CLASSPATH") ":"
-                               (assoc-ref outputs "out") "/share/java/groovy.jar \\")))
-             (let ((bin (string-append (assoc-ref outputs "out") "/bin")))
-               (for-each (lambda (script)
-                           (install-file (string-append "src/bin/" script) bin)
-                           (chmod (string-append bin "/" script) #o755))
-                 '("grape" "groovy" "groovyc" "groovyConsole" "groovydoc"
-                   "groovysh" "java2groovy" "startGroovy")))
-             (install-file "src/conf/groovy-starter.conf"
-                           (string-append (assoc-ref outputs "out") "/conf"))
-             #t))
-         (add-before 'check 'add-groovy-classes
-           (lambda _
-             (substitute* "build.xml"
-               (("a") "a")))))))
-    (native-inputs
-     `(("java-junit" ,java-junit)
-       ("antlr2" ,antlr2)
-       ("java-jmock-1" ,java-jmock-1)
-       ("java-xmlunit-legacy" ,java-xmlunit-legacy)))
-    (inputs
-     `(("java-commons-cli" ,java-commons-cli)
-       ("java-asm" ,java-asm)
-       ("java-tomcat" ,java-tomcat)
-       ("java-xstream" ,java-xstream)
-       ("java-jansi" ,java-jansi)
-       ("java-jline" ,java-jline)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license (list license:gpl2
-                   license:cddl1.1))))
+;(define-public groovy
+;  (package
+;    (name "groovy")
+;    (version "2.4.10")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+;                                  "2_4_10.tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "15c9xmf7rhr5w4qk2jcb6swds336l4l5gyb51pcjay2ywnigk8sa"))
+;              (patches
+;                (search-patches
+;                  "groovy-Add-exceptionutilsgenerator.patch"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "groovy.jar"
+;       #:source-dir "src/main:subprojects/groovy-test/src/main/java"
+;       #:test-dir "src/test"
+;       #:tests? #f
+;       #:main-class "groovy.ui.GroovyMain"
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'build 'generate-parser
+;           (lambda _
+;             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
+;               (zero? (system* "antlr" "java.g")))
+;             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
+;               (mkdir "parser")
+;               (with-directory-excursion "parser"
+;                 (zero? (system* "antlr" "../groovy.g"))))))
+;         (add-before 'build 'generate-exception-utils
+;           (lambda _
+;             (system* "javac" "-cp" (getenv "CLASSPATH")
+;                      "config/ant/src/org/codehaus/groovy/ExceptionUtilsGenerator.java")
+;             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
+;                                                         ":config/ant/src")
+;                             "org.codehaus.groovy.ExceptionUtilsGenerator"
+;                             "build/classes/org/codehaus/groovy/runtime/ExceptionUtils.class"))))
+;         (add-after 'install 'install-sh
+;           (lambda* (#:key outputs #:allow-other-keys)
+;             (substitute* "src/bin/startGroovy"
+;               ((" -classpath .*")
+;                (string-append " -classpath " (getenv "CLASSPATH") ":"
+;                               (assoc-ref outputs "out") "/share/java/groovy.jar \\")))
+;             (let ((bin (string-append (assoc-ref outputs "out") "/bin")))
+;               (for-each (lambda (script)
+;                           (install-file (string-append "src/bin/" script) bin)
+;                           (chmod (string-append bin "/" script) #o755))
+;                 '("grape" "groovy" "groovyc" "groovyConsole" "groovydoc"
+;                   "groovysh" "java2groovy" "startGroovy")))
+;             (install-file "src/conf/groovy-starter.conf"
+;                           (string-append (assoc-ref outputs "out") "/conf"))
+;             #t))
+;         (add-before 'check 'add-groovy-classes
+;           (lambda _
+;             (substitute* "build.xml"
+;               (("a") "a")))))))
+;    (native-inputs
+;     `(("java-junit" ,java-junit)
+;       ("antlr2" ,antlr2)
+;       ("java-jmock-1" ,java-jmock-1)
+;       ("java-xmlunit-legacy" ,java-xmlunit-legacy)))
+;    (inputs
+;     `(("java-commons-cli" ,java-commons-cli)
+;       ("java-asm" ,java-asm)
+;       ("java-tomcat" ,java-tomcat)
+;       ("java-xstream" ,java-xstream)
+;       ("java-jansi" ,java-jansi)
+;       ("java-jline" ,java-jline)))
+;    (home-page "")
+;    (synopsis "")
+;    (description "")
+;    (license (list license:gpl2
+;                   license:cddl1.1))))
 
 (define-public java-apache-ivy-bootstrap
   (package
@@ -3850,242 +3876,242 @@ these scripting language engines.")
     (description "")
     (license license:asl2.0)))
 
-(define-public groovy-bootstrap
-  (package
-    (name "groovy")
-    (version "2.0.0beta3")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
-                                  "2_0_0_BETA_3.tar.gz"))
-              (file-name (string-append "groovy-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1hm6kbwy5yhkzz7d2ln29k51iar6m7rwrzimsawgschvvqyrdxna"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:build-target "createJars"
-       #:tests? #f; part of build
-       #:make-flags
-       (list "-D_skipFetch_=true"
-             ;; FIXME: Tests require at least hsqldb and a part of ant testsuite
-             "-D_skipTests_=true"
-             ;; FIXME: Find aQute/bnd/ant/taskdef.properties.
-             "-D_skipOsgi_=true"
-             (string-append "-DinstallDirectory=" (assoc-ref %outputs "out")))
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'make-build-dir
-           (lambda* (#:key inputs #:allow-other-keys)
-             (substitute* "build.xml"
-               (("<property file=\"local.build.properties\"/>")
-                (string-append "<property file=\"local.build.properties\"/>
-<path id=\"classpath\">
-<fileset dir=\"" (assoc-ref inputs "java-asm") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "antlr2") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-classpathx-servletapi") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-xstream") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-commons-cli") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "ant") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-jline") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-junit") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-jansi") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-commons-bsf") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-apache-ivy-bootstrap") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-</path>"))
-               (("compilePath") "classpath"))
-             (substitute* "config/ant/build-setup.xml"
-               (("runtimePath") "classpath"))
-             ;; --classpath is not recognized (bug in commons-cli?)
-             (substitute* "src/main/org/codehaus/groovy/ant/Groovyc.java"
-               (("--classpath") "-cp"))
-             ;; These directories would have been created by maven initialization
-             (mkdir-p "target/lib/compile")
-             (mkdir-p "target/lib/test")
-             (mkdir-p "target/lib/tools")
-             (mkdir-p "target/lib/runtime")
-             #t))
-         (add-after 'install 'remove-embeddable
-           (lambda* (#:key outputs #:allow-other-keys)
-             (delete-file (string-append (assoc-ref outputs "out")
-                                         "/embeddable/groovy-all-2.0.0-beta-3.jar"))
-             #t)))))
-    (inputs
-     `(("java-commons-cli" ,java-commons-cli)
-       ("java-asm" ,java-asm)
-       ("ant-junit-tests" ,ant-junit-tests)
-       ("java-commons-bsf" ,java-commons-bsf)
-       ("java-classpathx-servletapi" ,java-classpathx-servletapi)
-       ("java-xstream" ,java-xstream)
-       ("java-jansi" ,java-jansi)
-       ("java-jline" ,java-jline)
-       ("java-apache-ivy-bootstrap" ,java-apache-ivy-bootstrap)
-       ("antlr2" ,antlr2)))
-    (native-inputs
-     `(("ant-antlr" ,ant-antlr)
-       ("java-aqute-bndlib" ,java-aqute-bndlib)
-       ("ant-junit-tests" ,ant-junit-tests)
-       ("java-jarjar" ,java-jarjar)
-       ("java-junit" ,java-junit)
-       ("java-jmock-1" ,java-jmock-1)
-       ("java-xmlunit-legacy" ,java-xmlunit-legacy)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license (list license:gpl2
-                   license:cddl1.1))))
-
-(define-public groovy-2.4
-  (package
-    (inherit groovy-bootstrap)
-    (name "groovy")
-    (version "2.2.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
-                                  "2_2_0.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1fx9a71f0n5jr52zzyayia2hmbsr9pnd76rnh0z3y9ys1c5k8g7w"))
-              (patches
-                (search-patches
-                  "groovy-Add-exceptionutilsgenerator.patch"))))
-    (arguments
-     `(#:build-target "createJars"
-       #:tests? #f; part of build
-       #:jdk ,icedtea-8
-       #:make-flags
-       (list "-D_skipFetch_=true"
-             ;; FIXME: Tests require at least hsqldb and a part of ant testsuite
-             "-D_skipTests_=true"
-             ;; FIXME: Find aQute/bnd/ant/taskdef.properties.
-             "-D_skipOsgi_=true"
-             (string-append "-DinstallDirectory=" (assoc-ref %outputs "out")))
-       #:phases
-       (modify-phases %standard-phases
-         ;; FIXME: This should be taken care of by build.xml. Why doesn't it work?
-         (add-before 'build 'generate-parser
-           (lambda _
-             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
-               (zero? (system* "antlr" "java.g")))
-             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
-               (mkdir "parser")
-               (with-directory-excursion "parser"
-                 (zero? (system* "antlr" "../groovy.g"))))))
-         (add-before 'build 'generate-exception-utils
-           (lambda _
-             (system* "javac" "-cp" (getenv "CLASSPATH")
-                      "config/ant/src/org/codehaus/groovy/ExceptionUtilsGenerator.java")
-             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
-                                                         ":config/ant/src")
-                             "org.codehaus.groovy.ExceptionUtilsGenerator"
-                             "target/classes/org/codehaus/groovy/runtime/ExceptionUtils.class"))))
-         (add-before 'configure 'copy-build.xml
-           (lambda* (#:key inputs #:allow-other-keys)
-             (mkdir "old-groovy-tmp")
-             (mkdir-p "config/ant")
-             (with-directory-excursion "old-groovy-tmp"
-               (system* "tar" "xf" (assoc-ref inputs "build.xml"))
-               (copy-file "groovy-GROOVY_2_0_0_BETA_3/build.xml"
-                          "../build.xml")
-               (copy-recursively "groovy-GROOVY_2_0_0_BETA_3/config/ant"
-                                 "../config/ant"))
-             #t))
-         (add-before 'build 'make-build-dir
-           (lambda* (#:key inputs #:allow-other-keys)
-             (substitute* "build.xml"
-               (("<property file=\"local.build.properties\"/>")
-                (string-append "<property file=\"local.build.properties\"/>
-<path id=\"classpath\">
-<pathelement path=\"${mainClassesDirectory}\" />
-<fileset dir=\"" (assoc-ref inputs "java-asm") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "antlr2") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-classpathx-servletapi") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-xstream") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-commons-cli") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "ant") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-jline") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-junit") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-jansi") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-commons-bsf") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-<fileset dir=\"" (assoc-ref inputs "java-apache-ivy-bootstrap") "\">
-<include name=\"**/*.jar\" />
-</fileset>
-</path>"))
-               (("compilePath") "classpath")
-             ;; groovy-ant is no longer in the main sources
-             (("<path id=\"groovyMainClasses\">")
-              "<javac srcdir=\"./subprojects/groovy-groovydoc/src/main/java\"
-includeantruntime=\"false\" destdir=\"${mainClassesDirectory}\"
-deprecation=\"on\" debug=\"yes\" source=\"1.5\" target=\"1.5\" fork=\"true\"
-classpathref=\"classpath\" />
-<javac srcdir=\"./subprojects/groovy-ant/src/main/java\"
-includeantruntime=\"false\" destdir=\"${mainClassesDirectory}\"
-deprecation=\"on\" debug=\"yes\" source=\"1.5\" target=\"1.5\" fork=\"true\"
-classpathref=\"classpath\" />
-<path id=\"groovyMainClasses\">"))
-             (substitute* "config/ant/build-setup.xml"
-               (("runtimePath") "classpath"))
-             ;; --classpath is not recognized (bug in commons-cli?)
-             ;(substitute* "subprojects/groovy-ant/src/main/java/org/codehaus/groovy/ant/Groovyc.java"
-             ;  (("--classpath") "-cp"))
-             ;; These directories would have been created by maven initialization
-             (mkdir-p "target/lib/compile")
-             (mkdir-p "target/lib/test")
-             (mkdir-p "target/lib/tools")
-             (mkdir-p "target/lib/runtime")
-             #t))
-         (add-after 'install 'remove-embeddable
-           (lambda* (#:key outputs #:allow-other-keys)
-             (delete-file (string-append (assoc-ref outputs "out")
-                                         "/embeddable/groovy-all-2.0.0-beta-3.jar"))
-             #t)))))
-    (native-inputs
-     `(("build.xml" ,(package-source groovy-bootstrap))
-       ,@(package-native-inputs groovy-bootstrap)))))
+;(define-public groovy-bootstrap
+;  (package
+;    (name "groovy")
+;    (version "2.0.0beta3")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+;                                  "2_0_0_BETA_3.tar.gz"))
+;              (file-name (string-append "groovy-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1hm6kbwy5yhkzz7d2ln29k51iar6m7rwrzimsawgschvvqyrdxna"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:build-target "createJars"
+;       #:tests? #f; part of build
+;       #:make-flags
+;       (list "-D_skipFetch_=true"
+;             ;; FIXME: Tests require at least hsqldb and a part of ant testsuite
+;             "-D_skipTests_=true"
+;             ;; FIXME: Find aQute/bnd/ant/taskdef.properties.
+;             "-D_skipOsgi_=true"
+;             (string-append "-DinstallDirectory=" (assoc-ref %outputs "out")))
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'build 'make-build-dir
+;           (lambda* (#:key inputs #:allow-other-keys)
+;             (substitute* "build.xml"
+;               (("<property file=\"local.build.properties\"/>")
+;                (string-append "<property file=\"local.build.properties\"/>
+;<path id=\"classpath\">
+;<fileset dir=\"" (assoc-ref inputs "java-asm") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "antlr2") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-classpathx-servletapi") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-xstream") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-commons-cli") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "ant") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-jline") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-junit") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-jansi") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-commons-bsf") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-apache-ivy-bootstrap") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;</path>"))
+;               (("compilePath") "classpath"))
+;             (substitute* "config/ant/build-setup.xml"
+;               (("runtimePath") "classpath"))
+;             ;; --classpath is not recognized (bug in commons-cli?)
+;             (substitute* "src/main/org/codehaus/groovy/ant/Groovyc.java"
+;               (("--classpath") "-cp"))
+;             ;; These directories would have been created by maven initialization
+;             (mkdir-p "target/lib/compile")
+;             (mkdir-p "target/lib/test")
+;             (mkdir-p "target/lib/tools")
+;             (mkdir-p "target/lib/runtime")
+;             #t))
+;         (add-after 'install 'remove-embeddable
+;           (lambda* (#:key outputs #:allow-other-keys)
+;             (delete-file (string-append (assoc-ref outputs "out")
+;                                         "/embeddable/groovy-all-2.0.0-beta-3.jar"))
+;             #t)))))
+;    (inputs
+;     `(("java-commons-cli" ,java-commons-cli)
+;       ("java-asm" ,java-asm)
+;       ("ant-junit-tests" ,ant-junit-tests)
+;       ("java-commons-bsf" ,java-commons-bsf)
+;       ("java-classpathx-servletapi" ,java-classpathx-servletapi)
+;       ("java-xstream" ,java-xstream)
+;       ("java-jansi" ,java-jansi)
+;       ("java-jline" ,java-jline)
+;       ("java-apache-ivy-bootstrap" ,java-apache-ivy-bootstrap)
+;       ("antlr2" ,antlr2)))
+;    (native-inputs
+;     `(("ant-antlr" ,ant-antlr)
+;       ("java-aqute-bndlib" ,java-aqute-bndlib)
+;       ("ant-junit-tests" ,ant-junit-tests)
+;       ("java-jarjar" ,java-jarjar)
+;       ("java-junit" ,java-junit)
+;       ("java-jmock-1" ,java-jmock-1)
+;       ("java-xmlunit-legacy" ,java-xmlunit-legacy)))
+;    (home-page "")
+;    (synopsis "")
+;    (description "")
+;    (license (list license:gpl2
+;                   license:cddl1.1))))
+;
+;(define-public groovy-2.4
+;  (package
+;    (inherit groovy-bootstrap)
+;    (name "groovy")
+;    (version "2.2.0")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+;                                  "2_2_0.tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1fx9a71f0n5jr52zzyayia2hmbsr9pnd76rnh0z3y9ys1c5k8g7w"))
+;              (patches
+;                (search-patches
+;                  "groovy-Add-exceptionutilsgenerator.patch"))))
+;    (arguments
+;     `(#:build-target "createJars"
+;       #:tests? #f; part of build
+;       #:jdk ,icedtea-8
+;       #:make-flags
+;       (list "-D_skipFetch_=true"
+;             ;; FIXME: Tests require at least hsqldb and a part of ant testsuite
+;             "-D_skipTests_=true"
+;             ;; FIXME: Find aQute/bnd/ant/taskdef.properties.
+;             "-D_skipOsgi_=true"
+;             (string-append "-DinstallDirectory=" (assoc-ref %outputs "out")))
+;       #:phases
+;       (modify-phases %standard-phases
+;         ;; FIXME: This should be taken care of by build.xml. Why doesn't it work?
+;         (add-before 'build 'generate-parser
+;           (lambda _
+;             (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
+;               (zero? (system* "antlr" "java.g")))
+;             (with-directory-excursion "src/main/org/codehaus/groovy/antlr"
+;               (mkdir "parser")
+;               (with-directory-excursion "parser"
+;                 (zero? (system* "antlr" "../groovy.g"))))))
+;         (add-before 'build 'generate-exception-utils
+;           (lambda _
+;             (system* "javac" "-cp" (getenv "CLASSPATH")
+;                      "config/ant/src/org/codehaus/groovy/ExceptionUtilsGenerator.java")
+;             (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
+;                                                         ":config/ant/src")
+;                             "org.codehaus.groovy.ExceptionUtilsGenerator"
+;                             "target/classes/org/codehaus/groovy/runtime/ExceptionUtils.class"))))
+;         (add-before 'configure 'copy-build.xml
+;           (lambda* (#:key inputs #:allow-other-keys)
+;             (mkdir "old-groovy-tmp")
+;             (mkdir-p "config/ant")
+;             (with-directory-excursion "old-groovy-tmp"
+;               (system* "tar" "xf" (assoc-ref inputs "build.xml"))
+;               (copy-file "groovy-GROOVY_2_0_0_BETA_3/build.xml"
+;                          "../build.xml")
+;               (copy-recursively "groovy-GROOVY_2_0_0_BETA_3/config/ant"
+;                                 "../config/ant"))
+;             #t))
+;         (add-before 'build 'make-build-dir
+;           (lambda* (#:key inputs #:allow-other-keys)
+;             (substitute* "build.xml"
+;               (("<property file=\"local.build.properties\"/>")
+;                (string-append "<property file=\"local.build.properties\"/>
+;<path id=\"classpath\">
+;<pathelement path=\"${mainClassesDirectory}\" />
+;<fileset dir=\"" (assoc-ref inputs "java-asm") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "antlr2") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-classpathx-servletapi") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-xstream") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-commons-cli") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "ant") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-jline") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-junit") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-jansi") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-commons-bsf") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;<fileset dir=\"" (assoc-ref inputs "java-apache-ivy-bootstrap") "\">
+;<include name=\"**/*.jar\" />
+;</fileset>
+;</path>"))
+;               (("compilePath") "classpath")
+;             ;; groovy-ant is no longer in the main sources
+;             (("<path id=\"groovyMainClasses\">")
+;              "<javac srcdir=\"./subprojects/groovy-groovydoc/src/main/java\"
+;includeantruntime=\"false\" destdir=\"${mainClassesDirectory}\"
+;deprecation=\"on\" debug=\"yes\" source=\"1.5\" target=\"1.5\" fork=\"true\"
+;classpathref=\"classpath\" />
+;<javac srcdir=\"./subprojects/groovy-ant/src/main/java\"
+;includeantruntime=\"false\" destdir=\"${mainClassesDirectory}\"
+;deprecation=\"on\" debug=\"yes\" source=\"1.5\" target=\"1.5\" fork=\"true\"
+;classpathref=\"classpath\" />
+;<path id=\"groovyMainClasses\">"))
+;             (substitute* "config/ant/build-setup.xml"
+;               (("runtimePath") "classpath"))
+;             ;; --classpath is not recognized (bug in commons-cli?)
+;             ;(substitute* "subprojects/groovy-ant/src/main/java/org/codehaus/groovy/ant/Groovyc.java"
+;             ;  (("--classpath") "-cp"))
+;             ;; These directories would have been created by maven initialization
+;             (mkdir-p "target/lib/compile")
+;             (mkdir-p "target/lib/test")
+;             (mkdir-p "target/lib/tools")
+;             (mkdir-p "target/lib/runtime")
+;             #t))
+;         (add-after 'install 'remove-embeddable
+;           (lambda* (#:key outputs #:allow-other-keys)
+;             (delete-file (string-append (assoc-ref outputs "out")
+;                                         "/embeddable/groovy-all-2.0.0-beta-3.jar"))
+;             #t)))))
+;    (native-inputs
+;     `(("build.xml" ,(package-source groovy-bootstrap))
+;       ,@(package-native-inputs groovy-bootstrap)))))
 
 (define-public ant-junit
   (package
@@ -4827,26 +4853,54 @@ contexts, DOM etc, including mixtures thereof.")
 ;@code{@@tags}.  It is designed to be used by active code generators or
 ;documentation tools.")
 ;    (license license:asl2.0)))
-;
-;(define-public java-qdox-1.12
-;  (package (inherit java-qdox)
-;    (version "1.12.1")
-;    (source
-;     (origin
-;       (method url-fetch)
-;       (uri (string-append "http://central.maven.org/maven2/"
-;                           "com/thoughtworks/qdox/qdox/" version
-;                           "/qdox-" version "-sources.jar"))
-;       (sha256
-;        (base32 "0hlfbqq2avf5s26wxkksqmkdyk6zp9ggqn37c468m96mjv0n9xfl"))))
-;    (arguments
-;     `(#:jar-name "qdox.jar"
-;       #:phases
-;       (modify-phases %standard-phases
-;         (add-after 'unpack 'delete-tests
-;           (lambda _
-;             (delete-file-recursively "src/com/thoughtworks/qdox/junit")
-;             #t)))))))
+
+(define-public java-qdox
+  (package
+    (name "java-qdox")
+    ; Newer version exists, but this version is required by java-plexus-component-metadata
+    (version "2.0-M2")
+    (source
+     (origin
+       (method url-fetch)
+       ;; 2.0-M4, -M5 at https://github.com/paul-hammant/qdox
+       ;; Older releases at https://github.com/codehaus/qdox/
+       (uri (string-append "http://central.maven.org/maven2/"
+                           "com/thoughtworks/qdox/qdox/" version
+                           "/qdox-" version "-sources.jar"))
+       (sha256
+        (base32 "10xxrcaicq6axszcr2jpygisa4ch4sinyx5q7kqqxv4lknrmxp5x"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "qdox.jar"
+       #:tests? #f)); no tests
+    (home-page "http://qdox.codehaus.org/")
+    (synopsis "Parse definitions from Java source files")
+    (description "QDox is a high speed, small footprint parser for extracting
+class/interface/method definitions from source files complete with JavaDoc
+@code{@@tags}.  It is designed to be used by active code generators or
+documentation tools.")
+    (license license:asl2.0)))
+
+(define-public java-qdox-1.12
+  (package
+    (inherit java-qdox)
+    (version "1.12.1")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "http://central.maven.org/maven2/"
+                           "com/thoughtworks/qdox/qdox/" version
+                           "/qdox-" version "-sources.jar"))
+       (sha256
+        (base32 "0hlfbqq2avf5s26wxkksqmkdyk6zp9ggqn37c468m96mjv0n9xfl"))))
+    (arguments
+     `(#:jar-name "qdox.jar"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'delete-tests
+           (lambda _
+             (delete-file-recursively "src/com/thoughtworks/qdox/junit")
+             #t)))))))
 
 (define-public java-plexus-cli
   (package
@@ -4878,33 +4932,6 @@ contexts, DOM etc, including mixtures thereof.")
     (home-page "https://codehaus-plexus.github.io/plexus-cli")
     (synopsis "")
     (description "")
-    (license license:asl2.0)))
-
-(define-public java-qdox
-  (package
-    (name "java-qdox")
-    ; Newer version exists, but this version is required by java-plexus-component-metadata
-    (version "2.0-M2")
-    (source
-     (origin
-       (method url-fetch)
-       ;; 2.0-M4, -M5 at https://github.com/paul-hammant/qdox
-       ;; Older releases at https://github.com/codehaus/qdox/
-       (uri (string-append "http://central.maven.org/maven2/"
-                           "com/thoughtworks/qdox/qdox/" version
-                           "/qdox-" version "-sources.jar"))
-       (sha256
-        (base32 "10xxrcaicq6axszcr2jpygisa4ch4sinyx5q7kqqxv4lknrmxp5x"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "qdox.jar"
-       #:tests? #f)); no tests
-    (home-page "http://qdox.codehaus.org/")
-    (synopsis "Parse definitions from Java source files")
-    (description "QDox is a high speed, small footprint parser for extracting
-class/interface/method definitions from source files complete with JavaDoc
-@code{@@tags}.  It is designed to be used by active code generators or
-documentation tools.")
     (license license:asl2.0)))
 
 (define-public java-plexus-component-metadata
