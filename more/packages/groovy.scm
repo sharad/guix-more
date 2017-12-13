@@ -33,14 +33,18 @@
   (package
     (name "groovy-java-bootstrap")
     (version "2.4.13")
+    ;(version "3.0.0-alpha1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
                                   "2_4_13.tar.gz"))
+              ;(uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
+              ;                    "3_0_0_ALPHA_1.tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
                 "0qf1l029ilhnldmd194aybk3053apya3vfd33d3m80n2zh2wnbc1"))
+              ;  "0iqqp9mf5ar2y4c33i8i1rvnb1yi1k905yjr3gnx8i2hzbmkscr3"))
               (patches
                 (search-patches
                   "groovy-Add-exceptionutilsgenerator.patch"))))
@@ -50,12 +54,17 @@
        #:source-dir "src/main:subprojects/groovy-test/src/main/java"
        #:test-dir "src/test"
        #:tests? #f
-       ;; Reference to plus is ambiguous
-       ;#:jdk ,icedtea-8
+       #:jdk ,icedtea-8
        #:main-class "groovy.ui.GroovyMain"
        #:phases
        (modify-phases %standard-phases
-         (add-before 'build 'generate-parser
+         (add-before 'build 'fix-java8
+           ;; Fix "Reference to plus is ambiguous"
+           (lambda _
+             (substitute* "src/main/org/codehaus/groovy/runtime/DefaultGroovyMethods.java"
+               (("toList\\(left\\)")
+                "(List<T>)toList(left)"))))
+         (add-before 'build 'generate-parsers
            (lambda _
              (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
                (zero? (system* "antlr" "java.g")))
@@ -79,6 +88,7 @@
        ("java-xmlunit-legacy" ,java-xmlunit-legacy)))
     (inputs
      `(("java-commons-cli" ,java-commons-cli)
+       ;("java-asm-6" ,java-asm-6)
        ("java-asm" ,java-asm)
        ("java-classpathx-servletapi" ,java-classpathx-servletapi)
        ("java-xstream" ,java-xstream)
@@ -96,10 +106,17 @@
     (name "groovy-bootstrap")
     (arguments
      `(#:jar-name "groovy.jar"
+       #:jdk ,icedtea-8
        ;Requires groovy-xml and logback-classic which are circular dependencies
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
+         (add-before 'build 'fix-java8
+           ;; Fix "Reference to plus is ambiguous"
+           (lambda _
+             (substitute* "src/main/org/codehaus/groovy/runtime/DefaultGroovyMethods.java"
+               (("toList\\(left\\)")
+                "(List<T>)toList(left)"))))
          (add-before 'build 'generate-parser
            (lambda _
              (with-directory-excursion "src/main/org/codehaus/groovy/antlr/java"
@@ -161,6 +178,7 @@
     (name "groovy-tests-bootstrap")
     (arguments
      `(#:jar-name "groovy-tests-bootstrap.jar"
+       #:jdk ,icedtea-8
        #:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
@@ -186,12 +204,43 @@
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ,@(package-native-inputs groovy-java-bootstrap)))))
 
+; for groovy-3.0.0
+;(define-public groovy-parser-antlr4
+;  (package
+;    (inherit groovy-java-bootstrap)
+;    (name "groovy-parser-antlr4")
+;    (arguments
+;     `(#:jar-name "groovy-parser-antlr4.jar"
+;       #:jdk ,icedtea-8
+;       #:test-dir "subprojects/parser-antlr4/src/test"
+;       #:source-dir "subprojects/parser-antlr4/src/main/java"
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'build 'generate-parser
+;           (lambda _
+;             (with-directory-excursion "src/antlr"
+;               (zero? (system* "antlr4" "-visitor" "-no-listener" "-package"
+;                               "org.apache.groovy.parser.antlr4"
+;                               "-o" "../../subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4"
+;                               "GroovyLexer.g4"))
+;               (zero? (system* "antlr4" "-visitor" "-no-listener" "-package"
+;                               "org.apache.groovy.parser.antlr4"
+;                               "-o" "../../subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4"
+;                               "GroovyParser.g4"))))))))
+;                               ;"-lib" "src/antlr" "-Xlog")))))))
+;    (inputs
+;     `(("groovy-java-bootstrap" ,groovy-java-bootstrap)
+;       ("java-antlr4" ,java-antlr4)
+;       ("java-antlr4-runtime" ,java-antlr4-runtime)
+;       ,@(package-inputs groovy-java-bootstrap)))))
+
 (define-public groovy-test
   (package
     (inherit groovy-bootstrap)
     (name "groovy-test")
     (arguments
      `(#:jar-name "groovy-test.jar"
+       #:jdk ,icedtea-8
        #:test-dir "subprojects/groovy-test/src/test"
        #:phases
        (modify-phases %standard-phases
@@ -233,6 +282,7 @@
     (name "groovy-xml")
     (arguments
      `(#:jar-name "groovy-xml.jar"
+       #:jdk ,icedtea-8
        #:test-dir "src/test"
        #:phases
        (modify-phases %standard-phases
@@ -280,6 +330,7 @@
     (name "groovy-templates")
     (arguments
      `(#:jar-name "groovy-templates.jar"
+       #:jdk ,icedtea-8
        #:test-dir "subprojects/groovy-templates/src/test"
        #:tests? #f;Requires spock-framework which is a circular dependency
        #:phases
@@ -312,6 +363,7 @@
     (name "groovy-groovydoc")
     (arguments
      `(#:jar-name "groovy-groovydoc.jar"
+       #:jdk ,icedtea-8
        #:test-dir "subprojects/groovy-groovydoc/src/test"
        #:tests? #f; Requires groovy-ant which is a circular dependency
        #:phases
@@ -348,6 +400,7 @@
     (name "groovy-ant")
     (arguments
      `(#:jar-name "groovy-ant.jar"
+       #:jdk ,icedtea-8
        #:test-dir "src/test"
        ;; FIXME: Excluding all tests because they fail
        #:test-exclude (list
@@ -405,6 +458,7 @@
     (name "groovy-bsf")
     (arguments
      `(#:jar-name "groovy-bsf.jar"
+       #:jdk ,icedtea-8
        #:test-dir "src/test"
        #:test-exclude (list
 ;; exception from Groovy: org.codehaus.groovy.runtime.InvokerInvocationException:
@@ -461,6 +515,7 @@
     (name "groovy-swing")
     (arguments
      `(#:jar-name "groovy-swing.jar"
+       #:jdk ,icedtea-8
        ;; FIXME: tests are not run
        #:test-dir "src/test"
        #:phases
@@ -511,6 +566,7 @@
     (name "groovy-console")
     (arguments
      `(#:jar-name "groovy-console.jar"
+       #:jdk ,icedtea-8
        ;; FIXME: tests are not run
        #:test-dir "src/test"
        #:phases
@@ -572,6 +628,7 @@
     (name "groovy-docgenerator")
     (arguments
      `(#:jar-name "groovy-docgenerator.jar"
+       #:jdk ,icedtea-8
        #:tests? #f; No tests
        #:phases
        (modify-phases %standard-phases
@@ -845,7 +902,7 @@
     (inherit groovy-bootstrap)
     (name "groovy-servlet")
     (arguments
-     `(#:jar-name "groovy-jsr223.jar"
+     `(#:jar-name "groovy-servlet.jar"
        #:test-dir "src/test"
        #:jdk ,icedtea-8
        #:phases
@@ -961,12 +1018,66 @@
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
        ,@(package-native-inputs groovy-java-bootstrap)))))
 
+(define-public groovy-macro
+  (package
+    (inherit groovy-bootstrap)
+    (name "groovy-macro")
+    (arguments
+     `(#:jar-name "groovy-macro.jar"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "subprojects/groovy-macro")))
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (and
+               (zero? (apply system* "java" "-cp" (getenv "CLASSPATH")
+                               "org.codehaus.groovy.tools.FileSystemCompiler"
+                               "-d" "build/classes"
+                               "-j"; joint compilation
+                               (find-files "src/main"
+                                           ".*\\.(groovy|java)$")))
+               (zero? (system* "jar" "-cf" "build/jar/groovy-macro.jar"
+                               "-C" "build/classes" ".")))))
+         (replace 'check
+           (lambda _
+             (mkdir-p "build/test-classes")
+             (substitute* "build.xml"
+               (("depends=\"compile-tests\"") "depends=\"\"")
+               (("}/java") "}/groovy"))
+             (and
+               (zero? (apply system* "java" "-cp"
+                             (string-append (getenv "CLASSPATH") ":build/classes")
+                             "org.codehaus.groovy.tools.FileSystemCompiler"
+                             "-d" "build/test-classes"
+                             "-j"
+                             (append
+                               (find-files "src/test"
+                                           ".*\\.(groovy|java)$"))))
+               (zero? (system* "ant" "check"))))))))
+    (inputs
+     `(("groovy-templates" ,groovy-templates)
+       ("groovy-xml" ,groovy-xml)
+       ,@(package-inputs groovy-bootstrap)))
+    (native-inputs
+     `(("groovy-bootstrap" ,groovy-bootstrap)
+       ("groovy-json" ,groovy-json)
+       ("groovy-test" ,groovy-test)
+       ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
+       ,@(package-native-inputs groovy-java-bootstrap)))))
+
 (define-public groovy
   (package
     (inherit groovy-bootstrap)
     (name "groovy")
     (arguments
      `(#:tests? #f; No tests
+       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (delete 'configure)
@@ -996,7 +1107,11 @@
                                  "java-commons-cli" "java-asm"
                                  "java-classpathx-servletapi" "java-xstream"
                                  "java-jansi" "java-jline-2" "antlr2")))
-                        ":"))))
+                        ":")))
+                   (("MAX_FD=\"maximum\"")
+                    (string-append
+                      "MAX_FD=\"maximum\"\nJAVACMD="
+                      (assoc-ref inputs "jdk") "/bin/java")))
                  (for-each
                    (lambda (tool)
                      (install-file tool out-bin)
