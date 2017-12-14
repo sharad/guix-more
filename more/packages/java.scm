@@ -335,6 +335,28 @@ persisted, whether to a file, database, or over the network.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-intellij-annotation
+  (package
+    (name "java-intellij-annotation")
+    (version "181-1945")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/JetBrains/intellij-community/"
+                                  "archive/idea/" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1mvixizk75pvhaibdy8lriy5prasg0pap80vak6vfj67kw8lmksk"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-intellij-annotation.jar"
+       #:source-dir "platform/annotations/src"
+       #:tests? #f)); no tests
+    (home-page "http://jetbrains.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-spockframework-core
   (package
     (name "java-spockframework-core")
@@ -350,14 +372,18 @@ persisted, whether to a file, database, or over the network.")
     (arguments
      `(#:jar-name "spock-core.jar"
        #:source-dir "spock-core/src/main/java"
+       #:jdk ,icedtea-8
        #:tests? #f)); No tests
     (inputs
      `(("groovy" ,groovy)
        ("java-asm" ,java-asm)
        ("java-cglib" ,java-cglib)
        ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-intellij-annotation" ,java-intellij-annotation)
        ("java-junit" ,java-junit)
-       ("java-objenesis" ,java-objenesis)))
+       ("java-objenesis" ,java-objenesis)
+       ("java-byte-buddy-dep" ,java-byte-buddy-dep)
+       ,@(package-inputs groovy)))
     (home-page "http://spockframework.org/")
     (synopsis "")
     (description "")
@@ -4515,31 +4541,6 @@ contexts, DOM etc, including mixtures thereof.")
     (inputs '())
     (native-inputs '())))
 
-;(define-public java-qdox
-;  (package
-;    (name "java-qdox")
-;    (version "2.0-M5")
-;    (source
-;     (origin
-;       (method url-fetch)
-;       ;; 2.0-M4, -M5 at https://github.com/paul-hammant/qdox
-;       ;; Older releases at https://github.com/codehaus/qdox/
-;       (uri (string-append "http://central.maven.org/maven2/"
-;                           "com/thoughtworks/qdox/qdox/" version
-;                           "/qdox-" version "-sources.jar"))
-;       (sha256
-;        (base32 "10ny800qmfishrqdxmngv0jylhaxjh340bia8csghl9a9cbxfrjs"))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:jar-name "qdox.jar"))
-;    (home-page "http://qdox.codehaus.org/")
-;    (synopsis "Parse definitions from Java source files")
-;    (description "QDox is a high speed, small footprint parser for extracting
-;class/interface/method definitions from source files complete with JavaDoc
-;@code{@@tags}.  It is designed to be used by active code generators or
-;documentation tools.")
-;    (license license:asl2.0)))
-
 (define-public java-qdox
   (package
     (name "java-qdox")
@@ -4566,27 +4567,6 @@ class/interface/method definitions from source files complete with JavaDoc
 @code{@@tags}.  It is designed to be used by active code generators or
 documentation tools.")
     (license license:asl2.0)))
-
-(define-public java-qdox-1.12
-  (package
-    (inherit java-qdox)
-    (version "1.12.1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append "http://central.maven.org/maven2/"
-                           "com/thoughtworks/qdox/qdox/" version
-                           "/qdox-" version "-sources.jar"))
-       (sha256
-        (base32 "0hlfbqq2avf5s26wxkksqmkdyk6zp9ggqn37c468m96mjv0n9xfl"))))
-    (arguments
-     `(#:jar-name "qdox.jar"
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'delete-tests
-           (lambda _
-             (delete-file-recursively "src/com/thoughtworks/qdox/junit")
-             #t)))))))
 
 (define-public java-plexus-cli
   (package
