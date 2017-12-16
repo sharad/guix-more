@@ -1,0 +1,43 @@
+From df92ed786feeff0f54681d2f559ea25c9bbcef49 Mon Sep 17 00:00:00 2001
+From: Julien Lepiller <julien@lepiller.eu>
+Date: Thu, 14 Dec 2017 19:26:57 +0100
+Subject: [PATCH] Also match files without version number.
+
+Guix usually build java libraries without embedding their version number
+in the file name.  This patch allows gradle to match these files too.
+---
+ .../org/gradle/api/internal/classpath/DefaultModuleRegistry.java | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/subprojects/core/src/main/java/org/gradle/api/internal/classpath/DefaultModuleRegistry.java b/subprojects/core/src/main/java/org/gradle/api/internal/classpath/DefaultModuleRegistry.java
+index bcd55e3..b0ffd2b 100644
+--- a/subprojects/core/src/main/java/org/gradle/api/internal/classpath/DefaultModuleRegistry.java
++++ b/subprojects/core/src/main/java/org/gradle/api/internal/classpath/DefaultModuleRegistry.java
+@@ -227,18 +227,21 @@ public class DefaultModuleRegistry implements ModuleRegistry {
+     }
+ 
+     private File findJar(String name) {
+-        Pattern pattern = Pattern.compile(Pattern.quote(name) + "-\\d.+\\.jar");
++        Pattern pattern = Pattern.compile(Pattern.quote(name) + "\\.jar");
++        Pattern pattern2 = Pattern.compile(Pattern.quote(name) + "-\\d.+\\.jar");
+         if (gradleInstallation != null) {
+             for (File libDir : gradleInstallation.getLibDirs()) {
+                 for (File file : libDir.listFiles()) {
+-                    if (pattern.matcher(file.getName()).matches()) {
++                    if (pattern.matcher(file.getName()).matches() ||
++                                pattern2.matcher(file.getName()).matches()) {
+                         return file;
+                     }
+                 }
+             }
+         }
+         for (File file : classpath) {
+-            if (pattern.matcher(file.getName()).matches()) {
++            if (pattern.matcher(file.getName()).matches() ||
++                        pattern2.matcher(file.getName()).matches()) {
+                 return file;
+             }
+         }
+-- 
+2.15.1
+
