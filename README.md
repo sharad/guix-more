@@ -20,10 +20,10 @@ Binary analysis software
 * _angr_: A binary analysis tool
 * _bap_: A binary analysis platform
 
-Games
------
+Education
+---------
 
-* _lugaru_: A third-person action game
+* _morji_: A spaced-repetition program
 
 Video
 -----
