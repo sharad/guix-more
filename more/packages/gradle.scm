@@ -30,6 +30,8 @@
   #:use-module (more packages java)
   #:use-module (more packages maven))
 
+;; Gradle requires guava@17.
+;; TODO: patch gradle to support at least guava@20 and send it upstream.
 (define-public java-guava-for-gradle
   (package
     (inherit java-guava)
@@ -47,6 +49,14 @@
        #:tests? #f)))); Not in a "java" subdirectory
 
 (define (gradle-subproject subproject projects runtime)
+  "Gradle is made of a lot of subprojects. Each subproject can be compiled in
+a certain order and in the same way.
+
+This procedure builds the java source of @code{subproject}.
+
+Each subproject contains at least a text file, gradle-*-classpath.properties
+that contain dependency information. This file is created using the
+@code{projects} and @code{runtime} parameters."
   (package
     (name (string-append "gradle-" subproject))
     (version "4.4.0")
@@ -63,6 +73,8 @@
                   "gradle-match-files-witouht-version-number.patch"))))
     (build-system ant-build-system)
     (arguments
+     ;; The jar-name must be this exactly: gradle will not find its jar files
+     ;; if they are named differently.
      `(#:jar-name (string-append "gradle-" ,subproject "-4.4.jar")
        #:source-dir (string-append "subprojects/" ,subproject "/src/main/java")
        #:jdk ,icedtea-8
@@ -72,6 +84,8 @@
        (modify-phases %standard-phases
          (add-before 'build 'add-implementation-info
            (lambda _
+             ;; Add implementation information to the MANIFEST.MF file.  We can
+             ;; substitute this in the manifest phase.
              (substitute* "build.xml"
                (("message=\"")
                 (string-append "message=\"Implementation-Title: Gradle"
@@ -82,6 +96,16 @@
          (add-before 'build 'add-properties
            (lambda* (#:key inputs #:allow-other-keys)
              (mkdir-p "build/classes")
+             ;; This file contains dependency information.
+             ;; The projects list is a list of gradle-subprojects that this
+             ;; subproject depends directly on at runtime. This information
+             ;; can be found in the *.gradle file in the subproject's directory.
+             ;;
+             ;; The runtime list is a list of external projects this subproject
+             ;; depends on. This list must be a list of jar files, so we transform
+             ;; the project name into a list of jar files the package contains.
+             ;; This information can also be found in the *.gradle file of the
+             ;; subproject.
              (with-output-to-file (string-append "build/classes/gradle-"
                                                  ,subproject
                                                  "-classpath.properties")
@@ -98,10 +122,12 @@
              #t))
          (add-before 'build 'copy-resources
            (lambda _
+             ;; If the subproject has a resources directory, copy it to the jar
+             ;; file.
              (let ((resources (string-append "subprojects/" ,subproject
                                              "/src/main/resources")))
-             (if (file-exists? resources)
-               (copy-recursively resources "build/classes"))))))))
+               (if (file-exists? resources)
+                 (copy-recursively resources "build/classes"))))))))
     (inputs '())
     (native-inputs '())
     (home-page "")
@@ -110,6 +136,8 @@
     (license license:asl2.0)))
 
 (define (gradle-groovy-subproject subproject projects runtime)
+  "This procedure is similar to @code{gradle-groovy-subproject}, but it
+builds a module containing groovy source code."
   (let ((base (gradle-subproject subproject projects runtime)))
     (package
       (inherit base)
@@ -122,14 +150,19 @@
              (add-before 'build 'use-groovy
                (lambda _
                  (substitute* "build.xml"
+                   ;; Change the compiler to groovyc
                    (("javac") "groovyc")
+                   ;; Make it fork
                    (("includeantruntime=\"false\"")
                     "includeantruntime=\"false\" fork=\"yes\"")
+                   ;; groovyc doesn't understand the --classpath argument (bug?)
                    (("classpath=\"@refidclasspath\"")
                     "classpathref=\"classpath\"")
                    ;; To enable joint compilation
                    (("classpathref=\"classpath\" />")
                     "classpathref=\"classpath\"><javac source=\"1.5\" target=\"1.5\" /></groovyc>")
+                   ;; Actually create a definition of the groovyc task.
+                   ;; FIXME: Can't we use groovy-ant for that?
                    (("<project basedir=\".\">")
                     "<project basedir=\".\"><taskdef name=\"groovyc\"
 classname=\"org.codehaus.groovy.ant.Groovyc\" />"))))))))
@@ -137,6 +170,7 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))))))))
        `(("groovy" ,groovy)
          ,@(package-inputs groovy))))))
 
+;; This gradle plugin is not a subproject, but it is required by buildsrc.
 (define-public gradle-japicmp-plugin
   (package
     (name "gradle-japicmp-plugin")
@@ -175,6 +209,10 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))))))))
     (description "")
     (license license:asl2.0)))
 
+;; This package is not meant to be available at runtime: it a build dependency
+;; only. It contains task definitions used to build submodules. Unfortunately,
+;; it depends on many subprojects at runtime, and cannot be used without a
+;; complete gradle.
 (define-public gradle-buildsrc
   (package
     (inherit (gradle-subproject "buildsrc" '() '()))
@@ -1164,7 +1202,8 @@ isSnapshot=false")))
 
 ;; This package doesn't work. I need to understand how api-mapping.txt and
 ;; default-imports.txt are generated. Currently they are generated by a custom
-;; task that is run by gradle, but we don't have enough of gradle to run that.
+;; task defined in buildsrc that is run by gradle, but we don't have enough of
+;; gradle to run that.
 (define-public gradle-docs
   (let ((base (gradle-subproject "docs" '() '())))
     (package
@@ -1185,6 +1224,19 @@ isSnapshot=false")))
                     (format #t "")))
                 (zero? (system* "ant" "jar")))))))))))
 
+;; Gradle doesn't provide a gradle binary or script, so we provide it instead.
+;; Gradle expects that all its modules and dependency jars are located in the
+;; same directory. That directory must be called "lib".
+;; In this package, we create a script that puts gradle-launcher in the
+;; classpath (that's ok because gradle-launcher has a Class-Path declaration in
+;; its MANIFEST.MF). This runs the main entry point of gradle that will look
+;; for its requirements in that directory. I don't really understand how this
+;; is done, since the classpath contains only jar files and not directories,
+;; and it seems to look for gradle-installation-beacon, but it's definitely not
+;; in the classpath...
+;;
+;; Currently, gradle can find its modules and start running, but it will fail
+;; at reading the api-mapping.txt file from gradle-docs.
 (define-public gradle
   (package
     (inherit gradle-base-services)
@@ -1260,6 +1312,7 @@ export GRADLE_HOME=~a\n
                                                 "/bin/java")
                                  (string-append libdir "/gradle-launcher-4.4.jar"))))
                      (chmod filename #o755)
+                     ;; Create a symlink for every dependency listed above.
                      (for-each
                        (lambda (lib)
                          (symlink lib (string-append libdir "/" (basename lib))))
@@ -1269,6 +1322,7 @@ export GRADLE_HOME=~a\n
                              (find-files (assoc-ref %build-inputs lib)
                                          ".*.jar"))
                            dependencies)))
+                     ;; Using a symlink for gradle-launcher doesn't seem to work.
                      (delete-file (string-append libdir "/gradle-launcher-4.4.jar"))
                      (copy-file (string-append (assoc-ref %build-inputs "gradle-launcher")
                                                "/share/java/gradle-launcher-4.4.jar")
