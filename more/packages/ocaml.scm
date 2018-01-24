@@ -528,11 +528,11 @@ algorithms are typical examples of such systems.")
               (method git-fetch)
               (uri (git-reference
                      (url "https://github.com/airbus-seclab/c2newspeak")
-                     (commit "6f7adf13fefb7f8d4dc668b8290226e3c6a30063")))
+                     (commit "c97fd380111a49fa7baeb9e49c45238fca627492")))
               (file-name (string-append name "-" version))
               (sha256
                (base32
-                "1apaz0b84865xfba0mxbskbnaq6llqsn3qhy8b0sssbdxzw5w1x4"))))
+                "0fxh868s5jraq61mnig9ilhyjzsq4iw32f20zh3982naanp4p8r6"))))
     (build-system ocaml-build-system)
     (arguments
      `(#:test-target "check"
@@ -540,11 +540,6 @@ algorithms are typical examples of such systems.")
        #:phases
        (modify-phases %standard-phases
          (delete 'configure)
-         (add-before 'install 'modify-installed-file-list
-           (lambda _
-             (substitute* "src/newspeak.Makefile"
-               (("c2newspeak/typedC.cmi")
-                "c2newspeak/typedC.cmi c2newspeak/typedC.cmx c2newspeak/typedC.o"))))
          (add-after 'install 'install-bin
            (lambda* (#:key outputs #:allow-other-keys)
              (install-file "bin/c2newspeak" (string-append (assoc-ref outputs "out") "/bin")))))))
@@ -556,7 +551,7 @@ algorithms are typical examples of such systems.")
 (define-public ocaml-bincat
   (package
     (name "ocaml-bincat")
-    (version "0.6")
+    (version "0.8.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/airbus-seclab/bincat/archive/v"
@@ -564,10 +559,11 @@ algorithms are typical examples of such systems.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1762wrvf7fv16kxfvpblj4b0pwbwny1b39263q4jnqni12474djl"))))
+                "1ncwm1h428x1bs4sq7ql1isrkhw0angglsa9hnsvhhw2i1jsdk7j"))))
     (build-system ocaml-build-system)
     (arguments
-     `(#:tests? #f; some failures for unknown reasons
+     `(#:tests? #f; disabled for now
+       #:validate-runpath? #f; disabled for now
        #:make-flags
        (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
              "LDCONFIG=true"
@@ -577,24 +573,38 @@ algorithms are typical examples of such systems.")
        (modify-phases %standard-phases
          (delete 'configure)
          (add-before 'build 'python-path
-           (lambda _
+           (lambda* (#:key outputs #:allow-other-keys)
              (setenv "PYTHONPATH" (string-append (getenv "PYTHONPATH")
-                                                 ":../python"))))
-         (add-before 'build 'fix-makefile
+                                                 ":../python:"
+                                                 (assoc-ref outputs "out")
+                                                 "/lib/python2.7/site-packages/"))
+             #t))
+         (add-before 'build 'fix-makefiles
            (lambda _
              (substitute* "ocaml/src/Makefile"
-               (("GITVERSION:=.*") "GITVERSION:=0.6\n")
-               ;; typedC library is embedded in newspeak.cmxa
-               (("typedC.cmx") ""))))
+               (("GITVERSION:=.*") "GITVERSION:=0.8.1\n"))
+             (substitute* "python/Makefile"
+               (("./setup.py install") "./setup.py install --prefix=$(PREFIX)"))
+             #t))
          (add-before 'check 'fix-test
            (lambda _
              (setenv "PATH" (string-append (getenv "PATH") ":" (getcwd) "/ocaml/src"))
-             (chmod "test/eggloader_x86" #o755))))))
+             ;; Remove tests that require an armv8 compiler
+             (substitute* "test/Makefile"
+               (("eggloader_armv8 eggloader_armv7 eggloader_armv7thumb") ""))
+             (chmod "test/eggloader_x86" #o755)
+             #t))
+         (add-before 'install 'install-python-dir
+           (lambda* (#:key outputs #:allow-other-keys)
+             (mkdir-p (string-append (assoc-ref outputs "out")
+                                     "/lib/python2.7/site-packages/")))))))
     (inputs
      `(("c2newspeak" ,ocaml-c2newspeak)
        ("zarith" ,ocaml-zarith)
        ("menhir" ,ocaml-menhir)
        ("ocamlgraph" ,ocaml-graph)
+       ("ocaml-cppo" ,ocaml-cppo)
+       ("ocaml-ppx-tools" ,ocaml-ppx-tools)
        ("gmp" ,gmp)))
     (native-inputs
      `(("python" ,python-2)
