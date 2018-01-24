@@ -2806,54 +2806,54 @@ best of DOM, CSS, and jquery-like methods.")
     (license license:bsd-3)))
 
 ; propose update
-(define-public java-commons-cli
-  (package
-    (name "java-commons-cli")
-    (version "1.4")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "http://mirrors.ircam.fr/pub/apache/commons/"
-                                  "cli/source/commons-cli-" version "-src.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "05hgi2z01fqz374y719gl1dxzqvzci5af071zm7vxrjg9vczipm1"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "commons-cli-1.4.jar"
-       #:tests? #f))
-    (native-inputs
-     `(("java-junit" ,java-junit)))
-    (home-page "https://commons.apache.org/proper/commons-cli")
-    (synopsis "Java API for parsing command line options passed to programs")
-    (description "Apache Commons CLI library provides an API for parsing command
-line options passed to programs. It's also able to print help messages detailing
-the options available for a command line tool.")
-    (license license:asl2.0)))
+;(define-public java-commons-cli
+;  (package
+;    (name "java-commons-cli")
+;    (version "1.4")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "http://mirrors.ircam.fr/pub/apache/commons/"
+;                                  "cli/source/commons-cli-" version "-src.tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "05hgi2z01fqz374y719gl1dxzqvzci5af071zm7vxrjg9vczipm1"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "commons-cli-1.4.jar"
+;       #:tests? #f))
+;    (native-inputs
+;     `(("java-junit" ,java-junit)))
+;    (home-page "https://commons.apache.org/proper/commons-cli")
+;    (synopsis "Java API for parsing command line options passed to programs")
+;    (description "Apache Commons CLI library provides an API for parsing command
+;line options passed to programs. It's also able to print help messages detailing
+;the options available for a command line tool.")
+;    (license license:asl2.0)))
 
 ; propose update
-(define-public java-jsr305
-  (package
-    (name "java-jsr305")
-    (version "3.0.2")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "https://github.com/amaembo/jsr-305.git")
-                     (commit "d7734b13c61492982784560ed5b4f4bd6cf9bb2c")))
-              (file-name (string-append name "-" version))
-              (sha256
-               (base32
-                "1wk159136pgc6i54drbq2whazfmdilvfqlxj3k19s9dfwbayf621"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "ri/src/main/java"
-       #:tests? #f))
-    (home-page "https://github.com/amaembo/jsr-305")
-    (synopsis "")
-    (description "")
-    (license license:bsd-3)))
+;(define-public java-jsr305
+;  (package
+;    (name "java-jsr305")
+;    (version "3.0.2")
+;    (source (origin
+;              (method git-fetch)
+;              (uri (git-reference
+;                     (url "https://github.com/amaembo/jsr-305.git")
+;                     (commit "d7734b13c61492982784560ed5b4f4bd6cf9bb2c")))
+;              (file-name (string-append name "-" version))
+;              (sha256
+;               (base32
+;                "1wk159136pgc6i54drbq2whazfmdilvfqlxj3k19s9dfwbayf621"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name (string-append ,name "-" ,version ".jar")
+;       #:source-dir "ri/src/main/java"
+;       #:tests? #f))
+;    (home-page "https://github.com/amaembo/jsr-305")
+;    (synopsis "")
+;    (description "")
+;    (license license:bsd-3)))
 
 (define-public java-jsr250
   (package
