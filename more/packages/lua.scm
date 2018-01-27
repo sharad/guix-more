@@ -26,6 +26,7 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (more packages boost)
+  #:use-module (gnu packages boost)
   #:use-module (gnu packages lua))
 
 (define-public ryzom-cmake
@@ -87,7 +88,7 @@
     ;(native-inputs
     ; `(("boost-build" ,boost-build)))
     (inputs
-     `(("boost" ,boost-fix)
+     `(("boost" ,boost)
        ("lua" ,lua-5.1)))
     (native-inputs
      `(("ryzom-cmake" ,ryzom-cmake)))

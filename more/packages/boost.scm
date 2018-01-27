@@ -71,16 +71,3 @@
     (synopsis "")
     (description "")
     (license license:boost1.0)))
-
-(define-public boost-fix
-  (package
-    (inherit boost)
-    (name "boost-fix")
-    (native-inputs
-     `(("perl" ,perl)
-       ("python" ,python-2)
-       ("tcsh" ,tcsh)
-       ("which" ,which)))
-    (inputs
-     `(("zlib" ,zlib)
-       ("icu" ,icu4c)))))
