@@ -638,3 +638,30 @@ while keeping it all Pythonic and cross-platform.")
 
 (define-public python2-web.py
   (package-with-python2 python-web.py))
+
+(define-public python-bitstring
+  (package
+    (name "python-bitstring")
+    (version "3.1.5")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "bitstring" version ".zip"))
+              (sha256
+               (base32
+                "1algq30j6rz12b1902bpw7iijx5lhrfqhl80d4ac6xzkrrpshqy1"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "https://github.com/scott-griffiths/bitstring")
+    (synopsis "Simple construction, analysis and modification of binary data")
+    (description "Bitstring is a pure Python module designed to help make the
+creation and analysis of binary data as simple and natural as possible.
+
+Bitstrings can be constructed from integers (big and little endian), hex, octal,
+binary, strings or files.  They can be sliced, joined, reversed, inserted into,
+overwritten, etc.  They can also be read from, searched and replaced, and
+navigated in, similar to a file or stream.")
+    (license license:expat)))
+
+(define-public python2-bitstring
+  (package-with-python2 python-bitstring))

@@ -178,14 +178,14 @@ bindings for Python, Java, OCaml and more.")
 (define-public python-pefile
   (package
     (name "python-pefile")
-    (version "2016.3.28")
+    (version "2017.11.5")
     (source
       (origin
         (method url-fetch)
         (uri (pypi-uri "pefile" version))
         (sha256
          (base32
-          "0ysz17ci0nhc5gi6j9si0fg87lzc7vcz3ccbi6qgfgjwbc422h7j"))))
+          "0m2q0bdjdlf6lbidb33y43k3ikzjgy58vx6jh2gdnxqn1vp3ap37"))))
     (build-system python-build-system)
     (arguments
      `(#:tests? #f)); no test
@@ -206,13 +206,13 @@ convenience will depart from that convention.")
 (define-public python2-archinfo
   (package
     (name "python2-archinfo")
-    (version "6.7.7.27")
+    (version "7.7.12.16")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "archinfo" version))
               (sha256
                (base32
-                "1amcavk8x9xch18sfzbla5sgas955clj06g6hx20n47q87bw22vz"))))
+                "0xlgq1qnsrqywv43ij54k6ciyxmwf0krygsqdq13x3a6gd02a85l"))))
     (build-system python-build-system)
     (arguments
      `(#:python ,python-2))
@@ -226,15 +226,15 @@ architecture-specific information.  It is useful for cross-architecture tools
 (define-public angr-vex
   (package
     (name "angr-vex")
-    (version "20170130")
+    (version "0.20180104")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/angr/vex.git")
-                    (commit "fc6a0b1187cd614e97e204046b4d4be482e7ab3f")))
+                    (commit "7394e917fc86c8f042d8ce51a609810a97c20fd7")))
               (sha256
                (base32
-                "1qfv5j2hpvh5mv8mschrcd5sga4h910iggppr2g8jr6k9r3x725i"))
+                "1fw97l9wqirny0p2x0d1xr475b05s4zbq0hd0sip7q7f15claiy0"))
               (file-name (string-append name "-" version))))
     (build-system gnu-build-system)
     (arguments
@@ -265,19 +265,21 @@ valgrind.org) for use with PyVEX.")
 (define-public python2-pyvex
   (package
     (name "python2-pyvex")
-    (version "6.7.7.27")
+    (version "7.7.12.16")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "pyvex" version))
               (sha256
                (base32
-                "1bqag7hb1ysrq9hb31cn8l7b8ad91rfw52bm3kh9gbma8rmxi0hl"))))
+                "1jn4ivs75vs2x7fsmbyy0pbcspjff0h1vlw463kz9qf9ppr7fshc"))))
     (build-system python-build-system)
     (inputs `(("angr-vex" ,angr-vex)))
     (propagated-inputs
      `(("archinfo" ,python2-archinfo)
        ("pycparser" ,python2-pycparser)
        ("cffi" ,python2-cffi)))
+    (native-inputs
+     `(("python2-bitstring" ,python2-bitstring)))
     (arguments
      `(#:python ,python-2
        #:phases
@@ -360,13 +362,13 @@ CPU emulator framework.")
 (define-public python2-simuvex
   (package
     (name "python2-simuvex")
-    (version "6.7.7.27")
+    (version "7.7.9.8")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "simuvex" version))
               (sha256
                (base32
-                "1awc078861x7nj44g3x1p3mjdc3fhz85gqgx7rfk6918s6nbx848"))
+                "02485bb8cl3q2yrd42mgd6nnbx915y8xqz7fmb03wkj7alzm58pr"))
               (modules '((guix build utils)))
               (snippet
                '(substitute* "setup.py"
@@ -387,7 +389,9 @@ CPU emulator framework.")
     (inputs
      `(("zlib" ,zlib)))
     (arguments
-     `(#:python ,python-2))
+     `(#:python ,python-2
+       ;; Simuvex requires angr to be tested
+       #:tests? #f))
     (home-page "https://github.com/angr/cle")
     (synopsis "Abstraction of process memory")
     (description "CLE loads binaries and their associated libraries, resolves
@@ -398,17 +402,17 @@ loaded by the OS's loader.")
 (define-public python2-cle
   (package
     (name "python2-cle")
-    (version "6.7.7.27")
+    (version "7.7.12.16")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "cle" version))
               (sha256
                (base32
-                "0x4cyl1qkhwj18860nhxdylzaxq45264jv4449cl0vl6y23lbk8v"))
+                "04q15iflmapvm47vx4wblvmnj4hzg69hn2zd6h5wzkccgnkchb25"))
               (modules '((guix build utils)))
               (snippet
                '(substitute* "setup.py"
-                  ((", \"idalink\"") ""))))); Idalink is not acceptable
+                  (("'idalink',") ""))))); Idalink is not acceptable
     (build-system python-build-system)
     (propagated-inputs
      `(("pyelftools" ,python2-pyelftools)
@@ -417,6 +421,8 @@ loaded by the OS's loader.")
        ("future" ,python2-future)
        ("pyvex" ,python2-pyvex)
        ("pefile" ,python2-pefile)))
+    (native-inputs
+     `(("python2-bitstring" ,python2-bitstring)))
     (arguments
      `(#:python ,python-2))
     (home-page "https://github.com/angr/cle")
@@ -429,28 +435,31 @@ loaded by the OS's loader.")
 (define-public python2-angr
   (package
     (name "python2-angr")
-    (version "6.7.7.27")
+    (version "7.7.12.16")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "angr" version))
               (sha256
                (base32
-                "1k9vr9kds956jqyv126fc57ygly400jhhga98ms8clr4m3k3xlzn"))))
+                "177z45ki580dphmrpsv2ln1249n8jcjf7mjl8ymjcki5yzan26yy"))))
     (build-system python-build-system)
     (arguments
-     `(#:python ,python-2))
+     `(#:python ,python-2
+       ;; Tests require pygit 0.1
+       #:tests? #f))
     (propagated-inputs
-     `(("cle" ,python2-cle)
-       ("capstone" ,python2-capstone)
-       ("six" ,python2-six)
-       ("utils" ,python2-utils)
-       ("mulpyplexer" ,python2-mulpyplexer)
-       ("rpyc" ,python2-rpyc)
-       ("enum34" ,python2-enum34)
-       ("networkx" ,python2-networkx)
-       ("futures" ,python2-futures)
-       ("progressbar" ,python2-progressbar2)
-       ("simuvex" ,python2-simuvex)))
+     `(("python2-bitstring" ,python2-bitstring)
+       ("python2-cle" ,python2-cle)
+       ("python2-capstone" ,python2-capstone)
+       ("python2-six" ,python2-six)
+       ("python2-utils" ,python2-utils)
+       ("python2-mulpyplexer" ,python2-mulpyplexer)
+       ("python2-rpyc" ,python2-rpyc)
+       ("python2-enum34" ,python2-enum34)
+       ("python2-networkx" ,python2-networkx)
+       ("python2-futures" ,python2-futures)
+       ("python2-progressbar" ,python2-progressbar2)
+       ("python2-simuvex" ,python2-simuvex)))
     (home-page "https://github.com/angr/angr")
     (synopsis "Angr is a python framework for analyzing binaries")
     (description "angr is a python framework for analyzing binaries.  It
