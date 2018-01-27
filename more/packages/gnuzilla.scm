@@ -80,7 +80,7 @@
 (define-public firefox
   (package
     (name "firefox")
-    (version "57.0.4")
+    (version "58.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://archive.mozilla.org/pub/firefox/"
@@ -88,7 +88,7 @@
                                   version ".source.tar.xz"))
               (sha256
                (base32
-                "0crvqkwyf1zjlkayv0qqnvvz9vvbz0qmc2ghd3cmfp7xmdlyvk4p"))
+                "1zxapyir31zr1k7qrixqayzafh3kkvx0hh5vv1kp8kgrmg53j2hf"))
       (modules '((guix build utils)))
       (snippet
        '(begin
