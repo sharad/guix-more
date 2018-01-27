@@ -55,6 +55,7 @@
   #:use-module (gnu packages libffi)
   #:use-module (gnu packages libreoffice)
   #:use-module (gnu packages linux)
+  #:use-module (gnu packages llvm)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages pulseaudio)
@@ -79,7 +80,7 @@
 (define-public firefox
   (package
     (name "firefox")
-    (version "57.0")
+    (version "57.0.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://archive.mozilla.org/pub/firefox/"
@@ -87,7 +88,7 @@
                                   version ".source.tar.xz"))
               (sha256
                (base32
-                "13xvxzpp5l3amrd6jcpnn7d1q7wpf80dsiw0qp4z51xyal0z0fk0"))
+                "0crvqkwyf1zjlkayv0qqnvvz9vvbz0qmc2ghd3cmfp7xmdlyvk4p"))
       (modules '((guix build utils)))
       (snippet
        '(begin
@@ -145,6 +146,7 @@
                           "--disable-crashreporter"
                           "--disable-updater"
                           "--disable-tests"; Remove if we want to test
+                          "--disable-stylo"; FIXME
                           "--enable-application=browser"
                           "--enable-optimize=-O2"
                           "--with-pthreads"
@@ -180,7 +182,7 @@
                    (srcdir (string-append "../" (basename abs-srcdir)))
                    (flags `(,(string-append "--prefix=" out)
                             ,(string-append "--with-l10n-base="
-                                            abs-srcdir "/l10n")
+                                            abs-srcdir "/intl/l10n")
                             ,@configure-flags)))
               (setenv "SHELL" bash)
               (setenv "CONFIG_SHELL" bash)
@@ -237,7 +239,9 @@
        ("autoconf" ,autoconf-2.13)
        ("which" ,which)
        ("rust" ,rustc)
-       ("cargo" ,cargo)))
+       ("cargo" ,cargo)
+       ("clang-3.9.1" ,clang-3.9.1)
+       ("llvm-3.9.1" ,llvm-3.9.1)))
     (home-page "https://mozilla.org")
     (synopsis "Web browser")
     (description "")

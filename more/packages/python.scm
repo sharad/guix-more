@@ -26,6 +26,9 @@
   #:use-module (gnu packages maths)
   #:use-module (gnu packages networking)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages python-web)
+  #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
   #:use-module (guix packages)
   #:use-module (guix download)
@@ -57,13 +60,13 @@
 (define-public python-cachetools
   (package
     (name "python-cachetools")
-    (version "2.0.0")
+    (version "2.0.1")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "cachetools" version))
               (sha256
                (base32
-                "0a56ydsvsri1r19ny55g0x7jsgjl9n02vnxbhfz0vhhd4h174nki"))))
+                "0pdw2fr29pxlyn1g5fhdrrqbpn0iw062nv716ngdqvdx7hnizq7d"))))
     (build-system python-build-system)
     (home-page "https://github.com/tkem/cachetools")
     (synopsis "Memoizing collections and decorators including lru_cache")
@@ -123,16 +126,17 @@ drop in replacement for dicts in most cases.")
 the basic TCP/IP protocols.")
     (license license:bsd-3)))
 
+;; According to pypi, should work with py3
 (define-public python2-rpyc
   (package
     (name "python2-rpyc")
-    (version "3.3.0")
+    (version "3.4.4")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "rpyc" version))
               (sha256
                (base32
-                "0jwbxxf5f8l05pwh7ilg380y4pqv3nxibaszbwpl9gzh2i9q9yj3"))))
+                "1iw1nkyh8r55xqafl14lp7lih38b5fdqid05s6cp4zd62821v6d8"))))
     (build-system python-build-system)
     (native-inputs
      `(("nose" ,python2-nose)))
@@ -150,6 +154,7 @@ overcome the physical boundaries between processes and computers, so that
 remote objects can be manipulated as if they were local.")
     (license license:expat)))
 
+;; According to pypi, should work with py3
 (define-public python2-progressbar
   (package
     (name "python2-progressbar")
@@ -189,13 +194,13 @@ automatically enable features like auto-resizing when the system supports it.")
 (define-public python-progressbar2
   (package
     (name "python-progressbar2")
-    (version "3.20.0")
+    (version "3.34.3")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "progressbar2" version))
               (sha256
                (base32
-                "1xz5l3598bl2r1j8h6dqljbjf44f2d137ppi0l381adz4zd38vd1"))))
+                "1gigwmr60bgvjg2b4w93nww065dc4af8bq40b4hr9n9f54jp3w5x"))))
     (build-system python-build-system)
     (native-inputs
      `(("pytest-runner" ,python-pytest-runner)
@@ -219,13 +224,13 @@ differently depending on the state of the progress bar.")
 (define-public python-mulpyplexer
   (package
     (name "python-mulpyplexer")
-    (version "0.07")
+    (version "0.08")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "mulpyplexer" version))
               (sha256
                (base32
-                "1j5gm913adc8f0mn9y6a9wm9h78jb7ykr8i00yysfcy6ah2ilp9v"))))
+                "1zn5d1vyhfjp8x9z5mr9gv8m8gmi3s3jv3kqb790xzi1kqi0p4ya"))))
     (build-system python-build-system)
     (home-page "https://github.com/zardus/mulpyplexer")
     (synopsis "Multiplex interactions with lists of python objects")
@@ -243,21 +248,14 @@ differently depending on the state of the progress bar.")
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/zardus/ana.git")
-                    (commit "94928f773661eaa5a6c2dec40dad199c70daedab")))
+                    (commit "6d37cf9288839c5536ed2075f206d8d2a80c5906")))
               (sha256
                (base32
-                "0f2wdhs0xwpnk9lznxl96b2yzcz1641wbqrh1aid7q2pm60v6dhv"))
+                "15mvylgfzmsj0n62m6r5xpqzp6qp4nmp9r3j93g0f64z894kqk0q"))
               (file-name (string-append name "-" version))))
     (build-system python-build-system)
     (native-inputs
      `(("nose" ,python-nose)))
-    (arguments
-     `(#:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'fix-python3-import
-           (lambda _
-             (substitute* "ana/datalayer.py"
-               (("import cPickle as pickle") "import pickle")))))))
     (home-page "https://github.com/zardus/ana")
     (synopsis "Provide easy distributed data storage for python objects")
     (description "ANA is a project to provide easy distributed data storage for
@@ -269,21 +267,18 @@ object every time you need to send it.")
     (license license:bsd-2)))
 
 (define-public python2-ana
-  (package
-    (inherit (package-with-python2 python-ana))
-    (arguments
-     `(#:python ,python-2))))
+  (package-with-python2 python-ana))
 
 (define-public python-plumbum
   (package
     (name "python-plumbum")
-    (version "1.6.3")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (pypi-uri "plumbum" version))
-       (sha256
-        (base32 "083kikr1f7qzpp5jllss97dy8d6249v7ia3wg9i0a6wz8l4ffj82"))))
+    (version "1.6.5")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "plumbum" version))
+              (sha256
+               (base32
+                "1vjbl9qy9fkl3vwiiwpaafmyxfks2sc3b3dhkp4vdgk2pdcv1ayq"))))
     (build-system python-build-system)
     (native-inputs
      `(("pytest" ,python-pytest)))
@@ -358,11 +353,11 @@ while keeping it all Pythonic and cross-platform.")
     (name "python-cymruwhois")
     (version "1.6")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "cymruwhois" version))
-	      (sha256
-	       (base32
-		"0m7jgpglkjd0lsyw64lfw6qxdm0fg0f54145f79kq4rk1vjqbh5n"))))
+          (method url-fetch)
+          (uri (pypi-uri "cymruwhois" version))
+          (sha256
+           (base32
+        "0m7jgpglkjd0lsyw64lfw6qxdm0fg0f54145f79kq4rk1vjqbh5n"))))
     (build-system python-build-system)
     (native-inputs
      `(("python-nose" ,python-nose)))
@@ -377,13 +372,13 @@ while keeping it all Pythonic and cross-platform.")
 (define-public python-ripe-atlas-sagan
   (package
     (name "python-ripe-atlas-sagan")
-    (version "1.2.1")
+    (version "1.2.2")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "ripe.atlas.sagan" version))
-	      (sha256
-	       (base32
-		"0mc5f50jj61q5z92765gnqhifila2bdngaybzrh6hycz1x6lz0ra"))))
+          (method url-fetch)
+          (uri (pypi-uri "ripe.atlas.sagan" version))
+          (sha256
+           (base32
+        "1pww7f4kh9cgd9qm7hbnkxg2cvj7mcmwhsan97cl5pd0xqxxnvw3"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("cryptography" ,python-cryptography)
@@ -403,18 +398,18 @@ while keeping it all Pythonic and cross-platform.")
     (name "python-socketio-client")
     (version "0.7.2")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "socketIO-client" version))
-	      (sha256
-	       (base32
-		"1hfjfhyxgql1ndda1bagg8niy8m28byd2r0yq4l7zycwlzxq9kb4"))))
+          (method url-fetch)
+          (uri (pypi-uri "socketIO-client" version))
+          (sha256
+           (base32
+        "1hfjfhyxgql1ndda1bagg8niy8m28byd2r0yq4l7zycwlzxq9kb4"))))
     (build-system python-build-system)
     (propagated-inputs
       `(("websocket-client" ,python-websocket-client)
         ("requests" ,python-requests)))
     (native-inputs
       `(("coverage" ,python-coverage)
-	("nose" ,python-nose)))
+    ("nose" ,python-nose)))
     (arguments '(#:tests? #f)); requires network
     (home-page "")
     (synopsis "")
@@ -429,11 +424,11 @@ while keeping it all Pythonic and cross-platform.")
     (name "python-linecache2")
     (version "1.0.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "linecache2" version))
-	      (sha256
-	       (base32
-		"0z79g3ds5wk2lvnqw0y2jpakjf32h95bd9zmnvp7dnqhf57gy9jb"))))
+          (method url-fetch)
+          (uri (pypi-uri "linecache2" version))
+          (sha256
+           (base32
+        "0z79g3ds5wk2lvnqw0y2jpakjf32h95bd9zmnvp7dnqhf57gy9jb"))))
     (build-system python-build-system)
     (arguments '(#:tests? #f)); circular dependency with unittest2
     (propagated-inputs
@@ -451,11 +446,11 @@ while keeping it all Pythonic and cross-platform.")
     (name "python-traceback2")
     (version "1.4.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "traceback2" version))
-	      (sha256
-	       (base32
-		"0c1h3jas1jp1fdbn9z2mrgn3jj0hw1x3yhnkxp7jw34q15xcdb05"))))
+          (method url-fetch)
+          (uri (pypi-uri "traceback2" version))
+          (sha256
+           (base32
+        "0c1h3jas1jp1fdbn9z2mrgn3jj0hw1x3yhnkxp7jw34q15xcdb05"))))
     (build-system python-build-system)
     (arguments '(#:tests? #f)); circular dependency with unittest2
     (propagated-inputs
@@ -474,11 +469,11 @@ while keeping it all Pythonic and cross-platform.")
     (name "python-argparse")
     (version "1.4.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "argparse" version))
-	      (sha256
-	       (base32
-		"1r6nznp64j68ih1k537wms7h57nvppq0szmwsaf99n71bfjqkc32"))))
+          (method url-fetch)
+          (uri (pypi-uri "argparse" version))
+          (sha256
+           (base32
+        "1r6nznp64j68ih1k537wms7h57nvppq0szmwsaf99n71bfjqkc32"))))
     (build-system python-build-system)
     (home-page "")
     (synopsis "")
@@ -493,25 +488,25 @@ while keeping it all Pythonic and cross-platform.")
     (inherit python-unittest2)
     (version "1.1.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "unittest2" version))
-	      (sha256
-	       (base32
-		"0y855kmx7a8rnf81d3lh5lyxai1908xjp0laf4glwa4c8472m212"))))
+          (method url-fetch)
+          (uri (pypi-uri "unittest2" version))
+          (sha256
+           (base32
+        "0y855kmx7a8rnf81d3lh5lyxai1908xjp0laf4glwa4c8472m212"))))
     (arguments
       `(#:phases
-	(modify-phases %standard-phases
-	  (add-before 'check 'disable-failures
-	    (lambda _
-	      (substitute* "unittest2/test/test_result.py"
-		(("testGet") "dontTestGet"))
-	      (substitute* "unittest2/test/test_loader.py"
-		(("test_loadTestsFromNames__relative_malformed_name") "dontTest")
-		(("test_loadTestsFromName__relative_malformed_name") "dontTest2")))))))
+    (modify-phases %standard-phases
+      (add-before 'check 'disable-failures
+        (lambda _
+          (substitute* "unittest2/test/test_result.py"
+        (("testGet") "dontTestGet"))
+          (substitute* "unittest2/test/test_loader.py"
+        (("test_loadTestsFromNames__relative_malformed_name") "dontTest")
+        (("test_loadTestsFromName__relative_malformed_name") "dontTest2")))))))
     (propagated-inputs
       `(("traceback2" ,python-traceback2)
-	("six" ,python-six)
-	("argparse" ,python-argparse)))))
+    ("six" ,python-six)
+    ("argparse" ,python-argparse)))))
 
 (define-public python2-unittest2-fix
   (package-with-python2 python-unittest2-fix))
@@ -521,11 +516,11 @@ while keeping it all Pythonic and cross-platform.")
     (name "python-funcsigs")
     (version "1.0.2")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "funcsigs" version))
-	      (sha256
-	       (base32
-		"0l4g5818ffyfmfs1a924811azhjj8ax9xd1cffr1mzd3ycn0zfx7"))))
+          (method url-fetch)
+          (uri (pypi-uri "funcsigs" version))
+          (sha256
+           (base32
+        "0l4g5818ffyfmfs1a924811azhjj8ax9xd1cffr1mzd3ycn0zfx7"))))
     (build-system python-build-system)
     (native-inputs
       `(("unittest2" ,python-unittest2-fix)))
@@ -540,13 +535,13 @@ while keeping it all Pythonic and cross-platform.")
 (define-public python-ripe-atlas-cousteau
   (package
     (name "python-ripe-atlas-cousteau")
-    (version "1.4")
+    (version "1.4.1")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "ripe.atlas.cousteau" version))
-	      (sha256
-	       (base32
-		"0lhaanxs3hxlw1d0ma6rpx54p91v0kxvmxa82h86r6j5whdckq21"))))
+          (method url-fetch)
+          (uri (pypi-uri "ripe.atlas.cousteau" version))
+          (sha256
+           (base32
+        "1964qllddqqh1sz9psmmb84ahqdy499vavm9wdn0k2v7q6y0vm0p"))))
     (build-system python-build-system)
     (propagated-inputs
       `(("websocket-client" ,python-websocket-client)
@@ -570,13 +565,13 @@ while keeping it all Pythonic and cross-platform.")
 (define-public python-ripe-atlas-tools
   (package
     (name "python-ripe-atlas-tools")
-    (version "2.1")
+    (version "2.2.3")
     (source (origin
-	      (method url-fetch)
-	      (uri (pypi-uri "ripe.atlas.tools" version))
-	      (sha256
-	       (base32
-		"07h9cjxxp0dx4p32dhf5j3cciiap7sc32hb1byljkll5lv4vm9l5"))))
+              (method url-fetch)
+              (uri (pypi-uri "ripe.atlas.tools" version))
+              (sha256
+               (base32
+                "1afcf56fyvsxb0i15v43804rqnn0xdp33achds84axnd1rl1375g"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("pyopenssl" ,python-pyopenssl)
@@ -590,12 +585,15 @@ while keeping it all Pythonic and cross-platform.")
        ("coverage" ,python-coverage)))
     (arguments
       `(#:tests? #f; tests can't load dependencies
-	#:phases
-	(modify-phases %standard-phases
-	  (add-before 'check 'update-dependency
-	    (lambda _
-	      (substitute* "setup.py"
-		(("==1.2") "==1.2.1")))))))
+        #:phases
+        (modify-phases %standard-phases
+          (add-before 'check 'update-dependency
+            (lambda _
+              ;; Change dependency version to match what we have in guix
+              (substitute* "setup.py"
+                (("==1.2") "==1.2.2")
+                (("==1.4") "==1.4.1"))
+              #t)))))
     (home-page "")
     (synopsis "")
     (description "")
@@ -621,3 +619,22 @@ while keeping it all Pythonic and cross-platform.")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public python-web.py
+  (package
+    (name "python-web.py")
+    (version "0.40.dev0")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "web.py" version))
+              (sha256
+               (base32
+                "18v91c4s683r7a797a8k9p56r1avwplbbcb3l6lc746xgj6zlr6l"))))
+    (build-system python-build-system)
+    (home-page "http://webpy.org/")
+    (synopsis "")
+    (description "")
+    (license license:public-domain)))
+
+(define-public python2-web.py
+  (package-with-python2 python-web.py))
