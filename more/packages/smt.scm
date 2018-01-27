@@ -58,7 +58,7 @@
 (define-public python2-claripy
   (package
     (name "python2-claripy")
-    (version "6.7.7.27")
+    (version "7.7.12.16")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "claripy" version))
@@ -83,14 +83,14 @@
 (define-public why3
   (package
     (name "why3")
-    (version "0.87.3")
+    (version "0.88.3")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://gforge.inria.fr/frs/download.php/file/36398/why3-"
-                                  version ".tar.gz"))
+              (uri (string-append "https://gforge.inria.fr/frs/download.php/file"
+                                  "/37313/why3-" version ".tar.gz"))
               (sha256
                (base32
-                "1fn9v6w1ilkrm2n4rz31w8qvjnchyvwxiqs67z3f59b5k99wb2ka"))))
+                "0limdqy9l5bjzwhdalcfdyh0b6laxgiphhvr4bby9p0030agssiy"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("ocaml" ,ocaml)))
