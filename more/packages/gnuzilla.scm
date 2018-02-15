@@ -24,6 +24,7 @@
 
 (define-module (more packages gnuzilla)
   #:use-module ((srfi srfi-1) #:hide (zip))
+  #:use-module ((srfi srfi-26))
   #:use-module (gnu packages)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix utils)
@@ -64,7 +65,8 @@
   #:use-module (gnu packages version-control)
   #:use-module (gnu packages video)
   #:use-module (gnu packages xdisorg)
-  #:use-module (gnu packages xorg))
+  #:use-module (gnu packages xorg)
+  #:use-module (ice-9 match))
 
 (define-public icecat-skia
   (package
@@ -76,6 +78,92 @@
     (arguments (substitute-keyword-arguments (package-arguments icecat)
                  ((#:configure-flags flags)
                   `(cons* "--enable-skia" ,flags))))))
+
+(define-public icu4c-for-firefox
+  (package
+   (inherit icu4c)
+   (name "icu4c")
+   (version "59.1")
+   (source (origin
+            (method url-fetch)
+            (uri (string-append
+                  "http://download.icu-project.org/files/icu4c/"
+                  version
+                  "/icu4c-"
+                  (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
+                  "-src.tgz"))
+            (sha256
+             (base32 "1zkmbg2932ggvpgjp8pys0cj6z8bw087y8858009shkrjfpzscki"))))))
+
+(define nss-for-firefox
+  (package
+    (inherit nss)
+    (name "nss")
+    (version "3.34.1")
+    (source (origin
+              (method url-fetch)
+              (uri (let ((version-with-underscores
+                          (string-join (string-split version #\.) "_")))
+                     (string-append
+                      "https://ftp.mozilla.org/pub/mozilla.org/security/nss/"
+                      "releases/NSS_" version-with-underscores "_RTM/src/"
+                      "nss-" version ".tar.gz")))
+              (sha256
+               (base32
+                "186x33wsk4mzjz7dzbn8p0py9a0nzkgzpfkdv4rlyy5gghv5vhd3"))
+              ;; Create nss.pc and nss-config.
+              (patches (search-patches "nss-pkgconfig.patch"
+                                       "nss-increase-test-timeout.patch"))))))
+(define-public libpng-apng-for-firefox
+  (package
+    (inherit libpng-apng)
+    (name "libpng-apng")
+    (version "1.6.34")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (list (string-append "mirror://sourceforge/libpng/libpng16/"
+                                 version "/libpng-" version ".tar.xz")
+                  (string-append
+                   "ftp://ftp.simplesystems.org/pub/libpng/png/src"
+                   "/libpng16/libpng-" version ".tar.xz")
+                  (string-append
+                   "ftp://ftp.simplesystems.org/pub/libpng/png/src/history"
+                   "/libpng16/libpng-" version ".tar.xz")))
+       (sha256
+        (base32
+         "1xjr0v34fyjgnhvaa1zixcpx5yvxcg4zwvfh0fyklfyfj86rc7ig"))))
+    (inputs
+     `(("apng" ,(origin
+                  (method url-fetch)
+                  (uri
+                   (string-append "mirror://sourceforge/libpng-apng/libpng16/"
+                                  version "/libpng-" version "-apng.patch.gz"))
+                  (sha256
+                   (base32
+                    "1ha4npf9mfrzp0srg8a5amks5ww84xzfpjbsj8k3yjjpai798qg6"))))))))
+
+(define-public sqlite-for-firefox
+  (package
+   (inherit sqlite)
+   (name "sqlite")
+   (version "3.21.0")
+   (source (origin
+            (method url-fetch)
+            (uri (let ((numeric-version
+                        (match (string-split version #\.)
+                          ((first-digit other-digits ...)
+                           (string-append first-digit
+                                          (string-pad-right
+                                           (string-concatenate
+                                            (map (cut string-pad <> 2 #\0)
+                                                 other-digits))
+                                           6 #\0))))))
+                   (string-append "https://sqlite.org/2017/sqlite-autoconf-"
+                                  numeric-version ".tar.gz")))
+            (sha256
+             (base32
+              "1qxvzdjwzw6k0kqjfabj86rnq87xdbwbca7laxxdhnh0fmkm3pfp"))))))
 
 (define-public firefox
   (package
@@ -130,6 +218,8 @@
                       "gfx/cairo"
                       "js/src/ctypes/libffi"
                       "db/sqlite3"))
+          ;; Delete this file that has incorrect checksums
+          (for-each delete-file (find-files "." "\\.cargo-checksum.json"))
           ;; Delete .pyc files, typically present in icecat source tarballs
           (for-each delete-file (find-files "." "\\.pyc$"))
           ;; Delete obj-* directories, sometimes present in icecat tarballs
@@ -141,34 +231,42 @@
     (arguments
      `(#:out-of-source? #t
        #:tests? #f
-       #:make-flags (list "--disable-necko-wifi"
-                          "--disable-stylo"
-                          "--disable-crashreporter"
-                          "--disable-updater"
-                          "--disable-tests"; Remove if we want to test
-                          "--disable-stylo"; FIXME
-                          "--enable-application=browser"
-                          "--enable-optimize=-O2"
-                          "--with-pthreads"
-                          ;; use system libraries
-                          "--enable-system-hunspell"
-                          "--enable-startup-notification"
-                          "--enable-alsa" "--enable-pulseaudio"
-                          "--enable-system-sqlite"
-                          "--with-system-libevent"
-                          "--with-system-libvpx"
-                          "--with-system-nspr"
-                          "--with-system-nss"
-                          "--with-system-icu"
-                          "--with-system-graphite2"
-                          "--with-system-harfbuzz"
-                          "--enable-system-cairo"
-                          "--enable-system-ffi"
-                          "--enable-system-pixman"
-                          "--with-system-bz2"
-                          "--with-system-jpeg"
-                          "--with-system-png"
-                          "--with-system-zlib")
+       #:configure-flags (list "--disable-necko-wifi"
+                               "--disable-stylo"
+                               "--disable-crashreporter"
+                               "--disable-updater"
+                               "--disable-tests"; Remove if we want to test
+                               "--enable-application=browser"
+                               "--enable-optimize=-O2"
+                               "--with-pthreads"
+                               ;; use system libraries
+                               "--enable-system-hunspell"
+                               "--enable-startup-notification"
+                               "--enable-alsa" "--enable-pulseaudio"
+                               "--enable-system-sqlite"
+                               "--with-system-libevent"
+                               "--with-system-libvpx"
+                               "--with-system-nspr"
+                               "--with-system-nss"
+                               "--with-system-icu"
+                               "--enable-system-cairo"
+                               "--enable-system-ffi"
+                               "--enable-system-pixman"
+                               "--with-system-bz2"
+                               "--with-system-jpeg"
+                               "--with-system-png"
+                               "--with-system-zlib")
+                               ;; clang is not found because it is assumed to be in
+                               ;; the same location as llvm.
+                               ;(string-append "--with-clang-path="
+                               ;               (assoc-ref %build-inputs "clang-3.9.1")
+                               ;               "/bin/clang"))
+                               ;(string-append "--with-libclang-path="
+                               ;               (assoc-ref %build-inputs "clang-3.9.1")
+                               ;               "/lib"))
+       ;; Race condition in python?
+       ;;   EOFError: EOF read where object expected
+       #:parallel-build? #f
        #:phases
        (modify-phases %standard-phases
          (replace
@@ -184,6 +282,9 @@
                             ,(string-append "--with-l10n-base="
                                             abs-srcdir "/intl/l10n")
                             ,@configure-flags)))
+              ;; We removed the embedded sqlite, so don't reference it.
+              (substitute* '("storage/moz.build" "dom/indexedDB/moz.build")
+                (("'/db/sqlite3/src',") ""))
               (setenv "SHELL" bash)
               (setenv "CONFIG_SHELL" bash)
               (setenv "AUTOCONF" (which "autoconf")) ; must be autoconf-2.13
@@ -218,14 +319,15 @@
        ("libxt" ,libxt)
        ("libffi" ,libffi)
        ("ffmpeg" ,ffmpeg)
+       ("libpng-apng" ,libpng-apng-for-firefox)
        ("libvpx" ,libvpx)
-       ("icu4c" ,icu4c)
+       ("icu4c" ,icu4c-for-firefox)
        ("pixman" ,pixman)
        ("pulseaudio" ,pulseaudio)
        ("mesa" ,mesa)
        ("nspr" ,nspr)
-       ("nss" ,nss)
-       ("sqlite" ,sqlite)
+       ("nss" ,nss-for-firefox)
+       ("sqlite" ,sqlite-for-firefox)
        ("startup-notification" ,startup-notification)
        ("unzip" ,unzip)
        ("zip" ,zip)
