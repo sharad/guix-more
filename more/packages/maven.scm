@@ -38,6 +38,44 @@
   #:use-module (gnu packages xml)
   #:use-module (more packages java))
 
+(define-public java-plexus-component-metadata
+  (package
+    (inherit java-plexus-container-default)
+    (name "java-plexus-component-metadata")
+    (arguments
+     `(#:jar-name "plexus-component-metadata.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "plexus-component-metadata")))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources"
+                               "build/classes/")
+             #t)))))
+    (inputs
+     `(("java-plexus-container-default" ,java-plexus-container-default)
+       ("java-plexu-component-annotations" ,java-plexus-component-annotations)
+       ("java-plexus-utils" ,java-plexus-utils)
+       ("java-plexus-cli" ,java-plexus-cli)
+       ("java-plexus-classworlds" ,java-plexus-classworlds)
+       ("maven-plugin-api" ,maven-plugin-api)
+       ("maven-plugin-annotations" ,maven-plugin-annotations)
+       ("maven-core-boot" ,maven-core-boot)
+       ("maven-model" ,maven-model)
+       ("java-commons-cli" ,java-commons-cli)
+       ("java-qdox" ,java-qdox)
+       ("java-jdom2" ,java-jdom2)
+       ("java-asm" ,java-asm)))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-guava" ,java-guava)
+       ("java-geronimo-xbean-reflect" ,java-geronimo-xbean-reflect)))))
+
 ;; Needs maven-core
 (define-public maven-plugin-testing-harness
   (package
