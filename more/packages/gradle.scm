@@ -26,6 +26,8 @@
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages java)
+  #:use-module (gnu packages web)
+  #:use-module (gnu packages xml)
   #:use-module (more packages groovy)
   #:use-module (more packages java)
   #:use-module (more packages maven))

@@ -36,6 +36,7 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
+  #:use-module (more packages groovy)
   #:use-module (more packages java))
 
 (define-public java-plexus-component-metadata
