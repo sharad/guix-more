@@ -665,3 +665,45 @@ navigated in, similar to a file or stream.")
 
 (define-public python2-bitstring
   (package-with-python2 python-bitstring))
+
+(define-public python-android-stringslib
+  (package
+    (name "python-android-stringslib")
+    (version "0.1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "android-stringslib" version))
+              (sha256
+               (base32
+                "00k0nzjvym984805ikq22fzd81cr23j74lhamd50p2vf4yalw76n"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f)); no tests
+    (native-inputs
+     `(("python-sphinx" ,python-sphinx)))
+    (home-page "https://framagit.org/tyreunom/python-android-strings-lib")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public transmon
+  (package
+    (name "transmon")
+    (version "0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "transmon" version))
+              (sha256
+               (base32
+                "1l7lxp4xwymyb1wqhycqg33ry6gza4660k12xkja04kmw4aqv0az"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f)); no tests
+    (propagated-inputs
+     `(("python-android-stringslib" ,python-android-stringslib)
+       ("python-polib" ,python-polib)
+       ("python-pygit2" ,python-pygit2)))
+    (home-page "https://framagit.org/tyreunom/transmon")
+    (synopsis "")
+    (description "")
+    (license license:agpl3+)))
