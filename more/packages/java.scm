@@ -962,12 +962,13 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "13265")
+    (version "13367")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/openstreetmap/josm.git")
-                    (commit "25ec5252070d8cabb66e51a1be021f4a00b25fe0")))
+                    (commit "18d1ca07e20533e5220642d01a866c3880887458")))
+              ;; https://josm.openstreetmap.de/browser
               ;; FIXME: Fetching from mirror on github because svn-fetch result
               ;; is not deterministic: hash differs each time it fetches the repo.
               ;(uri (svn-reference
@@ -975,7 +976,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
               ;      (revision (string->number version))))
               (sha256
                (base32
-                "0xwj6pwzr29hc8533k4pipxc3xx5v60a4vs1qx4rqymahng0dd2h"))
+                "0pd7p2wnvammqgf456df13kwzfka1xbrkqj5a6lqfil9p8pcnflw"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
