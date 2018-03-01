@@ -4184,17 +4184,6 @@ expressions to graphs of objects of all kinds: JavaBeans, Maps, Servlet
 contexts, DOM etc, including mixtures thereof.")
     (license license:asl2.0)))
 
-(define-public java-plexus-component-annotations
-  (package
-    (inherit java-plexus-container-default)
-    (name "java-plexus-component-annotations")
-    (arguments
-     `(#:jar-name "plexus-component-annotations.jar"
-       #:source-dir "plexus-component-annotations/src/main/java"
-       #:tests? #f)); no tests
-    (inputs '())
-    (native-inputs '())))
-
 (define-public java-qdox
   (package
     (name "java-qdox")
