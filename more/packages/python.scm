@@ -322,13 +322,13 @@ while keeping it all Pythonic and cross-platform.")
 (define-public python-neovim
   (package
     (name "python-neovim")
-    (version "0.2.0")
+    (version "0.2.1")
     (source (origin
               (method url-fetch)
               (uri (pypi-uri "neovim" version))
               (sha256
                (base32
-                "1ywkgbrxd95cwlglihydmffcw2d2aji6562aqncymxs3ld5y02yn"))))
+                "16vzxmp7f6dl20n30j5cwwvrjj5h3c2ch8ldbss31anf36nirsdp"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("python-greenlet" ,python-greenlet)
