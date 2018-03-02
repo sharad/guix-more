@@ -1180,14 +1180,14 @@
 (define-public maven-resolver-api
   (package
     (name "maven-resolver-api")
-    (version "1.1.0")
+    (version "1.1.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/apache/maven-resolver/"
                                   "archive/maven-resolver-" version ".tar.gz"))
               (sha256
                (base32
-                "1kvb64f6anmn93vdyb4s90189jrrm31agrp2gf0n9njwjp5vcddz"))))
+                "0rpvdg3qr1j88gw0ankf0wnwfyq6238mdlm7s39vf5jrcvhdgwcl"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-resolver-api.jar"
