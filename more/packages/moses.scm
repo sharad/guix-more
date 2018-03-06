@@ -25,6 +25,7 @@
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix utils)
+  #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu))
 
 (define-public cmph
@@ -68,7 +69,7 @@ systems, among others.")
                 "13wvxizbvzrklswf1s8751r0vqd71xfn55biy76ifni2pg6pcwrm"))))
     (build-system gnu-build-system)
     (arguments
-     `(#:tests? #f
+     `(#:tests? #f; Tests run during build
        #:make-flags
        `(,(string-append "--with-boost=" (assoc-ref %build-inputs "boost"))
          ,(string-append "--with-cmph=" (assoc-ref %build-inputs "cmph"))
@@ -104,3 +105,32 @@ sentences in two different languages, which is sentence-aligned, in that
 each sentence in one language is matched with its corresponding translated
 sentence in the other language.")
     (license license:asl2.0)))
+
+(define-public mgiza
+  (package
+    (name "mgiza")
+    (version "0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/moses-smt/mgiza")
+                     (commit "d643960de98565d208114780ba8025799208afa7")))
+              (sha256
+               (base32
+                "1zvs18fxdw9frhlxlrmq3pjzm9b9chcjvppmn2yljqdxpzmqimc6"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "mgizapp")
+             #t)))))
+    (inputs
+     `(("boost" ,boost)))
+    (home-page "https://github.com/moses-smt/mgiza")
+    (synopsis "Word alignement tool")
+    (description "Mgiza is a word alignment tool based on the famous GIZA++,
+extended to support multi-threading, resume training and incremental training.")
+    (license license:gpl2+)))
