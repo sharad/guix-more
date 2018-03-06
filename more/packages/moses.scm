@@ -68,7 +68,13 @@ systems, among others.")
                 "13wvxizbvzrklswf1s8751r0vqd71xfn55biy76ifni2pg6pcwrm"))))
     (build-system gnu-build-system)
     (arguments
-     `(#:phases
+     `(#:tests? #f
+       #:make-flags
+       `(,(string-append "--with-boost=" (assoc-ref %build-inputs "boost"))
+         ,(string-append "--with-cmph=" (assoc-ref %build-inputs "cmph"))
+         "--with-mm" "--with-probing-pt" "--no-xmlrpc-c" "-q" "link=shared"
+         ,(string-append "--prefix=" (assoc-ref %outputs "out")))
+       #:phases
        (modify-phases %standard-phases
          (delete 'configure)
          (add-before 'build 'patch-bin-sh
@@ -76,11 +82,12 @@ systems, among others.")
              (substitute* "jam-files/engine/execunix.c"
                (("\"/bin/sh\"") (string-append "\"" (which "sh") "\"")))))
          (replace 'build
-           (lambda* (#:key inputs #:allow-other-keys)
+           (lambda* (#:key make-flags inputs #:allow-other-keys)
              (setenv "JAMSHELL" (string-append (which "sh") " -c"))
-             (invoke "./bjam" (string-append "--with-boost=" (assoc-ref inputs "boost"))
-                     (string-append "--with-cmph=" (assoc-ref inputs "cmph"))
-                     "--with-mm" "--with-probing-pt" "--no-xmlrpc-c" "-q"))))))
+             (apply invoke "./bjam" make-flags)))
+         (replace 'install
+           (lambda* (#:key make-flags inputs #:allow-other-keys)
+             (apply invoke "./bjam" "install" make-flags))))))
     (inputs
      `(("boost" ,boost)
        ("cmph" ,cmph)
