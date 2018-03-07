@@ -1177,71 +1177,6 @@
        ("java-junit" ,java-junit)
        ("java-hamcrest-core" ,java-hamcrest-core)))))
 
-(define-public maven-resolver-api
-  (package
-    (name "maven-resolver-api")
-    (version "1.1.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/apache/maven-resolver/"
-                                  "archive/maven-resolver-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0rpvdg3qr1j88gw0ankf0wnwfyq6238mdlm7s39vf5jrcvhdgwcl"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "maven-resolver-api.jar"
-       #:source-dir "maven-resolver-api/src/main/java"
-       #:test-dir "maven-resolver-api/src/test"))
-    (native-inputs
-     `(("java-junit" ,java-junit)
-       ("java-hamcrest-core" ,java-hamcrest-core)))
-    (home-page "https://github.com/apache/maven-resolver")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public maven-resolver-spi
-  (package
-    (inherit maven-resolver-api)
-    (name "maven-resolver-spi")
-    (arguments
-     `(#:jar-name "maven-resolver-spi.jar"
-       #:source-dir "maven-resolver-spi/src/main/java"
-       #:test-dir "maven-resolver-spi/src/test"
-       #:jdk ,icedtea-8))
-    (inputs
-     `(("maven-resolver-api" ,maven-resolver-api)))))
-
-(define-public maven-resolver-test-util
-  (package
-    (inherit maven-resolver-api)
-    (name "maven-resolver-test-util")
-    (arguments
-     `(#:jar-name "maven-resolver-test-util.jar"
-       #:source-dir "maven-resolver-test-util/src/main/java"
-       #:test-dir "maven-resolver-test-util/src/test"
-       #:jdk ,icedtea-8))
-    (inputs
-     `(("maven-resolver-api" ,maven-resolver-api)
-       ("maven-resolver-spi" ,maven-resolver-spi)))))
-
-(define-public maven-resolver-util
-  (package
-    (inherit maven-resolver-api)
-    (name "maven-resolver-util")
-    (arguments
-     `(#:jar-name "maven-resolver-util.jar"
-       #:source-dir "maven-resolver-util/src/main/java"
-       #:test-dir "maven-resolver-util/src/test"
-       #:jdk ,icedtea-8))
-    (inputs
-     `(("maven-resolver-api" ,maven-resolver-api)))
-    (native-inputs
-     `(("java-junit" ,java-junit)
-       ("java-hamcrest-core" ,java-hamcrest-core)
-       ("maven-resolver-test-util" ,maven-resolver-test-util)))))
-
 (define-public maven-resolver-impl
   (package
     (inherit maven-resolver-api)
@@ -1295,33 +1230,6 @@
        ("java-asm" ,java-asm)
        ("jajva-aopalliance" ,java-aopalliance)
        ("java-slf4j-api" ,java-slf4j-api)))
-    (native-inputs
-     `(("java-junit" ,java-junit)
-       ("java-hamcrest-core" ,java-hamcrest-core)
-       ("maven-resolver-test-util" ,maven-resolver-test-util)))))
-
-(define-public maven-resolver-connector-basic
-  (package
-    (inherit maven-resolver-api)
-    (name "maven-resolver-connector-basic")
-    (arguments
-     `(#:jar-name "maven-resolver-connector-basic.jar"
-       #:source-dir "maven-resolver-connector-basic/src/main/java"
-       #:test-dir "maven-resolver-connector-basic/src/test"
-       #:jdk ,icedtea-8
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'generate-sisu
-           (lambda _
-             (mkdir-p "build/classes/META-INF/sisu")
-             (with-output-to-file "build/classes/META-INF/sisu/javax.inject.Named"
-               (lambda _
-                 (display "org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory\n"))))))))
-    (inputs
-     `(("maven-resolver-api" ,maven-resolver-api)
-       ("maven-resolver-spi" ,maven-resolver-spi)
-       ("maven-resolver-util" ,maven-resolver-util)
-       ("java-javax-inject" ,java-javax-inject)))
     (native-inputs
      `(("java-junit" ,java-junit)
        ("java-hamcrest-core" ,java-hamcrest-core)
