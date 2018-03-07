@@ -4657,35 +4657,35 @@ documentation tools.")
            (lambda _
              (chdir "logback-classic")))
          (replace 'build
-           (lambda _
+           (lambda* (#:key inputs #:allow-other-keys)
              (mkdir-p "build/classes")
+             (setenv "CLASSPATH"
+                     (string-join
+                       (apply append (map (lambda (input)
+                                            (find-files (assoc-ref inputs input)
+                                                        ".*.jar"))
+                                          '("java-logback-core" "java-slf4j-api"
+                                            "java-commons-compiler" "java-tomcat")))
+                       ":"))
+     ;`(("java-javax-mail" ,java-javax-mail)
+     ;  ("java-tomcat" ,java-tomcat)
+     ;  ("java-commons-compiler" ,java-commons-compiler)
+     ;  ("java-janino" ,java-janino)))
              (and
                ;; FIXME: Using groovyc from groovy directly fails
-               (zero? (apply system* "java" "-cp" (getenv "CLASSPATH")
-                             "org.codehaus.groovy.tools.FileSystemCompiler"
-                             "-d" "build/classes" "-j"
-                             (find-files "src/main/" ".*\\.(groovy|java)$")))
+               ;(zero? (apply system* "java" "-cp" (getenv "CLASSPATH")
+               ;              "org.codehaus.groovy.tools.FileSystemCompiler"
+               ;              "-d" "build/classes" "-j"
+               ;              (find-files "src/main/" ".*\\.(groovy|java)$")))
+               (apply invoke "groovyc" "-d" "build/classes" "-j"
+                      (find-files "src/main/" ".*\\.(groovy|java)$"))
                (zero? (system* "ant" "jar"))))))))
     (inputs
      `(("java-logback-core" ,java-logback-core)
        ("java-slf4j-api" ,java-slf4j-api)
        ,@(package-inputs java-logback-core)))
     (native-inputs
-     `(("groovy-bootstrap" ,groovy-bootstrap)
-       ("java-commons-cli" ,java-commons-cli)
-       ("java-asm" ,java-asm)
-       ("antlr2" ,antlr2)
-       ;; for tests
-       ("java-junit" ,java-junit)
-       ("java-hamcrest-core" ,java-hamcrest-core)
-       ("java-dom4j" ,java-dom4j)
-       ("java-log4j-api" ,java-log4j-api)
-       ("java-osgi-framework" ,java-osgi-framework)
-       ("java-assertj" ,java-assertj)
-       ("java-mockito-1" ,java-mockito-1)
-       ("java-slf4j-api" ,java-slf4j-api)
-       ("java-logback-core" ,java-logback-core)
-       ("java-logback-core-tests" ,java-logback-core-tests)))))
+     `(("groovy" ,groovy)))))
 
 ;; TODO: build the native library
 (define-public java-native-access
