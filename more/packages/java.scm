@@ -33,6 +33,7 @@
   #:use-module (gnu packages compression)
   #:use-module (gnu packages docbook)
   #:use-module (gnu packages java)
+  #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
@@ -3179,6 +3180,9 @@ namespaces.")
               (sha256
                (base32
                 "1c6qa26mf0viw8hg4jnv72s7i1qb1gh1l8rrzcdvqhqhx82rkdlf"))))
+    (arguments
+     `(#:jdk ,icedtea-8
+       ,@(package-arguments java-jline)))
     (inputs
      `(("java-jansi" ,java-jansi)
        ("java-jansi-native" ,java-jansi-native)))

@@ -33,6 +33,7 @@
   #:use-module (gnu packages compression)
   #:use-module (gnu packages docbook)
   #:use-module (gnu packages java)
+  #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
