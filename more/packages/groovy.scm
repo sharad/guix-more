@@ -41,7 +41,7 @@
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0qf1l029ilhnldmd194aybk3053apya3vfd33d3m80n2zh2wnbc1"))
+                "0f9z2lj5salxnlpbqvxck55i8xqswq081yldvyjpbsrnpdxm91vz"))
               (patches
                 (search-patches
                   "groovy-Add-exceptionutilsgenerator.patch"))))
