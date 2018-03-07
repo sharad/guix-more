@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2017 Julien Lepiller <julien@lepiller.eu>
+;;; Copyright © 2017, 2018 Julien Lepiller <julien@lepiller.eu>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -32,19 +32,16 @@
 (define-public groovy-java-bootstrap
   (package
     (name "groovy-java-bootstrap")
-    (version "2.4.13")
-    ;(version "3.0.0-alpha1")
+    (version "2.4.14")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
-                                  "2_4_13.tar.gz"))
-              ;(uri (string-append "https://github.com/apache/groovy/archive/GROOVY_"
-              ;                    "3_0_0_ALPHA_1.tar.gz"))
+                                  (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
+                                  ".tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
                 "0qf1l029ilhnldmd194aybk3053apya3vfd33d3m80n2zh2wnbc1"))
-              ;  "0iqqp9mf5ar2y4c33i8i1rvnb1yi1k905yjr3gnx8i2hzbmkscr3"))
               (patches
                 (search-patches
                   "groovy-Add-exceptionutilsgenerator.patch"))))
@@ -88,15 +85,19 @@
        ("java-xmlunit-legacy" ,java-xmlunit-legacy)))
     (inputs
      `(("java-commons-cli" ,java-commons-cli)
-       ;("java-asm-6" ,java-asm-6)
        ("java-asm" ,java-asm)
        ("java-classpathx-servletapi" ,java-classpathx-servletapi)
        ("java-xstream" ,java-xstream)
        ("java-jansi" ,java-jansi)
        ("java-jline-2" ,java-jline-2)))
-    (home-page "")
-    (synopsis "")
-    (description "")
+    (home-page "http://groovy-lang.org/")
+    (synopsis "Programming language for the JVM")
+    (description "Apache Groovy is a powerful, optionally typed and dynamic
+language, with static-typing and static compilation capabilities, for the Java
+platform.  It integrates smoothly with any Java program, and immediately
+delivers to your application powerful features, including scripting
+capabilities, Domain-Specific Language authoring, runtime and compile-time
+meta-programming and functional programming.")
     (license (list license:gpl2
                    license:cddl1.1))))
 
@@ -1143,4 +1144,11 @@
        ("java-xstream" ,java-xstream)
        ("java-jansi" ,java-jansi)
        ("java-jline-2" ,java-jline-2)
-       ("antlr2" ,antlr2)))))
+       ("antlr2" ,antlr2)))
+    (synopsis "Programming language for the JVM")
+    (description "Apache Groovy is a powerful, optionally typed and dynamic
+language, with static-typing and static compilation capabilities, for the Java
+platform.  It integrates smoothly with any Java program, and immediately
+delivers to your application powerful features, including scripting
+capabilities, Domain-Specific Language authoring, runtime and compile-time
+meta-programming and functional programming.")))
