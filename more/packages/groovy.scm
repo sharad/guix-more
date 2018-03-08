@@ -28,7 +28,6 @@
   #:use-module (gnu packages xml)
   #:use-module (more packages java))
 
-;; This package contains the java bootstrap that is used to build groovy submodules.
 (define-public groovy-java-bootstrap
   (package
     (name "groovy-java-bootstrap")
@@ -91,13 +90,9 @@
        ("java-jansi" ,java-jansi)
        ("java-jline-2" ,java-jline-2)))
     (home-page "http://groovy-lang.org/")
-    (synopsis "Programming language for the JVM")
-    (description "Apache Groovy is a powerful, optionally typed and dynamic
-language, with static-typing and static compilation capabilities, for the Java
-platform.  It integrates smoothly with any Java program, and immediately
-delivers to your application powerful features, including scripting
-capabilities, Domain-Specific Language authoring, runtime and compile-time
-meta-programming and functional programming.")
+    (synopsis "Groovy's java bootstrap")
+    (description "This package contains the java bootstrap that is used to build
+groovy submodules.")
     (license (list license:gpl2
                    license:cddl1.1))))
 
@@ -170,7 +165,11 @@ meta-programming and functional programming.")
        ,@(package-inputs groovy-java-bootstrap)))
     (native-inputs
      `(("groovy-java-bootstrap" ,groovy-java-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy compiler")
+    (description "This package contains the first version of the Groovy compiler.
+Although already usable, it doesn't contain the groovy library yet.  This package
+is used to build the groovy submodules written in groovy.")))
 
 ;; Common test classes
 (define-public groovy-tests-bootstrap
@@ -203,37 +202,10 @@ meta-programming and functional programming.")
        ,@(package-inputs groovy-bootstrap)))
     (native-inputs
      `(("groovy-bootstrap" ,groovy-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
-
-; for groovy-3.0.0
-;(define-public groovy-parser-antlr4
-;  (package
-;    (inherit groovy-java-bootstrap)
-;    (name "groovy-parser-antlr4")
-;    (arguments
-;     `(#:jar-name "groovy-parser-antlr4.jar"
-;       #:jdk ,icedtea-8
-;       #:test-dir "subprojects/parser-antlr4/src/test"
-;       #:source-dir "subprojects/parser-antlr4/src/main/java"
-;       #:phases
-;       (modify-phases %standard-phases
-;         (add-before 'build 'generate-parser
-;           (lambda _
-;             (with-directory-excursion "src/antlr"
-;               (zero? (system* "antlr4" "-visitor" "-no-listener" "-package"
-;                               "org.apache.groovy.parser.antlr4"
-;                               "-o" "../../subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4"
-;                               "GroovyLexer.g4"))
-;               (zero? (system* "antlr4" "-visitor" "-no-listener" "-package"
-;                               "org.apache.groovy.parser.antlr4"
-;                               "-o" "../../subprojects/parser-antlr4/src/main/java/org/apache/groovy/parser/antlr4"
-;                               "GroovyParser.g4"))))))))
-;                               ;"-lib" "src/antlr" "-Xlog")))))))
-;    (inputs
-;     `(("groovy-java-bootstrap" ,groovy-java-bootstrap)
-;       ("java-antlr4" ,java-antlr4)
-;       ("java-antlr4-runtime" ,java-antlr4-runtime)
-;       ,@(package-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy test classes")
+    (description "This package contains three classes required for testing
+other groovy submodules.")))
 
 (define-public groovy-test
   (package
@@ -275,7 +247,10 @@ meta-programming and functional programming.")
              (zero? (system* "ant" "check")))))))
     (native-inputs
      `(("groovy-bootstrap" ,groovy-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy test submodule")
+    (description "This package contains the test submodules used to test
+other groovy submodules.")))
 
 (define-public groovy-xml
   (package
@@ -323,7 +298,9 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy XML")
+    (description "This package contains XML-related utilities for groovy.")))
 
 (define-public groovy-templates
   (package
@@ -356,7 +333,11 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy template engine")
+    (description "This package contains a template framework which is
+well-suited to applications where the text to be generated follows the form of
+a static template.")))
 
 (define-public groovy-groovydoc
   (package
@@ -393,7 +374,10 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy documentation generation")
+    (description "This package contains the groovy documentation generator,
+similar to javadoc.")))
 
 (define-public groovy-ant
   (package
@@ -451,7 +435,9 @@ meta-programming and functional programming.")
        ("groovy-xml" ,groovy-xml)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy ant tasks")
+    (description "This package contains groovy-related ant tasks definitions.")))
 
 (define-public groovy-bsf
   (package
@@ -508,7 +494,10 @@ meta-programming and functional programming.")
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy BSF engine")
+    (description "This package defines the BSF engine for using Groovy inside
+any @dfn{Bean Scripting Framework} (BSF) application.")))
 
 (define-public groovy-swing
   (package
@@ -559,7 +548,10 @@ meta-programming and functional programming.")
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy graphical library")
+    (description "This package contains the groovy bindings to Java Swing, a
+library used to build graphical interfaces.")))
 
 (define-public groovy-console
   (package
@@ -621,7 +613,9 @@ meta-programming and functional programming.")
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy graphical interface")
+    (description "This package contains a graphical interface to run groovy.")))
 
 (define-public groovy-docgenerator
   (package
@@ -661,7 +655,10 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy documentation generation")
+    (description "This package contains a command line tool to generate
+documentation for groovy applications.")))
 
 (define-public groovy-groovysh
   (package
@@ -716,7 +713,9 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy REPL")
+    (description "This package contains the Groovy REPL.")))
 
 (define-public groovy-jmx
   (package
@@ -764,7 +763,10 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy JMX extension")
+    (description "This package contains the JMX extension of Groovy, for
+management and monitoring JVM-based solutions.")))
 
 (define-public groovy-json
   (package
@@ -812,7 +814,9 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy JSON")
+    (description "This package contains JSON-related utilities for groovy.")))
 
 (define-public groovy-jsr223
   (package
@@ -863,7 +867,10 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy's own JSR223 implementation")
+    (description "This package contains Groovy's own JSR223 implementation.  This
+module is used for interaction between Groovy and Java code.")))
 
 (define-public groovy-nio
   (package
@@ -896,7 +903,10 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy input-output library")
+    (description "This package implements an input/output library that extends
+the functionnality of the common library of Java.")))
 
 (define-public groovy-servlet
   (package
@@ -949,7 +959,10 @@ meta-programming and functional programming.")
        ("groovy-json" ,groovy-json)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy's servlet implementation")
+    (description "This package contains a library to create groovlets, Groovy's
+version of Java servlets.")))
 
 (define-public groovy-sql
   (package
@@ -982,7 +995,10 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy SQL library")
+    (description "This package contains a facade over Java's normal JDBC APIs
+providing greatly simplified resource management and result set handling.")))
 
 (define-public groovy-testng
   (package
@@ -1017,7 +1033,10 @@ meta-programming and functional programming.")
      `(("groovy-bootstrap" ,groovy-bootstrap)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy testing framework")
+    (description "This package contains integration code for running TestNG
+tests in Groovy.")))
 
 (define-public groovy-macro
   (package
@@ -1070,7 +1089,10 @@ meta-programming and functional programming.")
        ("groovy-json" ,groovy-json)
        ("groovy-test" ,groovy-test)
        ("groovy-tests-bootstrap" ,groovy-tests-bootstrap)
-       ,@(package-native-inputs groovy-java-bootstrap)))))
+       ,@(package-native-inputs groovy-java-bootstrap)))
+    (synopsis "Groovy macro processor")
+    (description "This package contains a high-level library to create macro
+and modify groovy's @dfn{Abstract Syntax Tree} (AST).")))
 
 (define-public groovy
   (package
