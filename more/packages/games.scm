@@ -26,6 +26,7 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages audio)
+  #:use-module (gnu packages base)
   #:use-module (gnu packages boost)
   #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
@@ -35,12 +36,14 @@
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages fribidi)
   #:use-module (gnu packages games)
+  #:use-module (gnu packages gcc)
   #:use-module (gnu packages gl)
   #:use-module (gnu packages graphics)
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages image)
   #:use-module (gnu packages lua)
   #:use-module (more packages lua)
+  #:use-module (gnu packages llvm)
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages pkg-config)
@@ -255,3 +258,36 @@ and anki.")
     (synopsis "")
     (description "")
     (license license:gpl2)))
+
+(define-public emojicode
+  (package
+    (name "emojicode")
+    (version "0.5.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/emojicode/emojicode/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1l3f4i0vh09x8dz5fl1f4mb8wlgmi0j2bhjkfzrnmbgp09hi8wsl"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'fixgcc7
+           (lambda _
+             (display (getenv "CXX_INCLUDE_PATH"))
+             (setenv "CPATH" (getenv "C_INCLUDE_PATH"))
+             (unsetenv "C_INCLUDE_PATH")
+             (setenv "CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES" (getenv "CPATH"))
+             (setenv "CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES" (getenv "CPATH")))))))
+    (inputs
+     `(("llvm" ,llvm)))
+    (native-inputs
+     `(("gcc" ,gcc-7)))
+    (home-page "http://www.emojicode.org")
+    (synopsis "World’s only programming language that’s bursting with emojis")
+    (description "Emojicode is the only programming language consisting of
+emojis.  Emojicode is a straightforward language to learn, whatever background
+you have.")
+    (license license:artistic2.0)))
