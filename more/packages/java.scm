@@ -932,14 +932,14 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-jmapviewer
   (package
     (name "java-jmapviewer")
-    (version "2.3")
+    (version "2.7")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://svn.openstreetmap.org/applications/viewer/jmapviewer/releases/"
                                   version "/JMapViewer-" version "-Source.zip"))
               (sha256
                (base32
-                "0xalq8bacn8ibz3xiaqvj5pg6pxk9irvwx5f1lb0y2z5gsny3l1x"))))
+                "1s8agib0pncbmavgzb372qdwvgwc9jr77p13hqzak6xjlbnxldar"))))
     (build-system ant-build-system)
     (native-inputs
      `(("unzip" ,unzip)))
@@ -965,12 +965,12 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "13367")
+    (version "13576")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/openstreetmap/josm.git")
-                    (commit "18d1ca07e20533e5220642d01a866c3880887458")))
+                    (commit "ac76e49953464260a30b110a86dfd8529171db50")))
               ;; https://josm.openstreetmap.de/browser
               ;; FIXME: Fetching from mirror on github because svn-fetch result
               ;; is not deterministic: hash differs each time it fetches the repo.
@@ -979,11 +979,13 @@ methods.  It is similar in speed with deflate but offers more dense compression.
               ;      (revision (string->number version))))
               (sha256
                (base32
-                "0pd7p2wnvammqgf456df13kwzfka1xbrkqj5a6lqfil9p8pcnflw"))
+                "0x8xh0cn6dbyn55n3davyv6r84pgd4yb52fbxj6qdwh2icprkz92"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
-                '(delete-file-recursively "src/org/apache"))))
+                '(begin
+                   (for-each delete-file (find-files "." ".*.jar"))
+                   (delete-file-recursively "windows")))))
     (build-system ant-build-system)
     (native-inputs
      `(("java-javacc" ,java-javacc)))
@@ -3527,100 +3529,6 @@ these scripting language engines.")
     (inputs
      `(("antlr2" ,antlr2)))))
 
-;(define-public antlr3-3.4
-;  (package
-;    (name "antlr3")
-;    (version "3.4")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://github.com/antlr/website-antlr3/raw/"
-;                                  "gh-pages/download/antlr-"
-;                                  version ".tar.gz"))
-;              (sha256
-;               (base32
-;                "1cwfswpk3jlzl1dhc6b6586srza8q0bbzwlxcq136p29v62fjrb3"))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:jar-name (string-append ,name "-" ,version ".jar")
-;       #:source-dir "tool/src/main/java:runtime/Java/src/main/java:tool/src/main/antlr3"
-;       #:tests? #f
-;       #:phases
-;       (modify-phases %standard-phases
-;         (add-after 'install 'bin-install
-;           (lambda* (#:key inputs outputs #:allow-other-keys)
-;             (let ((jar (string-append (assoc-ref outputs "out") "/share/java"))
-;                   (bin (string-append (assoc-ref outputs "out") "/bin")))
-;               (mkdir-p bin)
-;               (with-output-to-file (string-append bin "/antlr3")
-;                 (lambda _
-;                   (display
-;                     (string-append "#!/bin/sh\n"
-;                                    "java -cp " jar "/antlr3-3.3.jar:"
-;                                    (string-concatenate
-;                                      (find-files (assoc-ref inputs "stringtemplate")
-;                                                  ".*\\.jar"))
-;                                    ":"
-;                                    (string-concatenate
-;                                      (find-files (string-append (assoc-ref inputs "antlr") "/lib")
-;                                                  ".*\\.jar"))
-;                                    " org.antlr.Tool $*"))))
-;               (chmod (string-append bin "/antlr3") #o755))))
-;         (add-before 'build 'generate-grammar
-;           (lambda _
-;             (chdir "tool/src/main/antlr3/org/antlr/grammar/v3/")
-;             (for-each (lambda (file)
-;                         (display file)
-;                         (newline)
-;                         (system* "antlr3" file))
-;                       '("ActionAnalysis.g" "ActionTranslator.g" "ANTLR.g"
-;                         "ANTLRTreePrinter.g" "ANTLRv3.g" "ANTLRv3Tree.g"
-;                         "AssignTokenTypesWalker.g" "CodeGenTreeWalker.g"
-;                         "DefineGrammarItemsWalker.g" "LeftRecursiveRuleWalker.g"
-;                         "TreeToNFAConverter.g"))
-;             (chdir "../../../../../../../..")
-;             (system* "antlr" "-o" "tool/src/main/java/org/antlr/tool"
-;                      "tool/src/main/java/org/antlr/tool/serialize.g")
-;             (substitute* "tool/src/main/java/org/antlr/tool/LeftRecursiveRuleAnalyzer.java"
-;               (("import org.antlr.grammar.v3.\\*;") "import org.antlr.grammar.v3.*;
-;import org.antlr.grammar.v3.ANTLRTreePrinter;"))
-;             (substitute* "tool/src/main/java/org/antlr/tool/Grammar.java"
-;               (("import org.antlr.grammar.v3.\\*;")
-;                "import org.antlr.grammar.v3.*;\n
-;import org.antlr.grammar.v3.TreeToNFAConverter;\n
-;import org.antlr.grammar.v3.DefineGrammarItemsWalker;\n
-;import org.antlr.grammar.v3.ANTLRTreePrinter;"))
-;             (substitute* "tool/src/main/java/org/antlr/tool/ErrorManager.java"
-;               (("case NO_SUCH_ATTRIBUTE_PASS_THROUGH:") ""))
-;             (substitute* "tool/src/main/antlr3/org/antlr/grammar/v3/ANTLRParser.java"
-;               (("public Object getTree") "public GrammarAST getTree"))
-;             (substitute* "tool/src/main/antlr3/org/antlr/grammar/v3/ANTLRv3Parser.java"
-;               (("public Object getTree") "public CommonTree getTree"))))
-;         (add-before 'build 'fix-build-xml
-;           (lambda _
-;             (substitute* "build.xml"
-;               (("<exec") "<copy todir=\"${classes.dir}\">
-;<fileset dir=\"tool/src/main/resources\">
-;<include name=\"**/*.stg\"/>
-;<include name=\"**/*.st\"/>
-;<include name=\"**/*.sti\"/>
-;<include name=\"**/STLexer.tokens\"/>
-;</fileset>
-;</copy><exec")))))))
-;    (native-inputs
-;     `(("antlr" ,antlr2)
-;       ("antlr3" ,antlr3-3.3)))
-;    (inputs
-;     `(("java-junit" ,java-junit)))
-;    (propagated-inputs
-;     `(("stringtemplate" ,java-stringtemplate-3)
-;       ("stringtemplate4" ,java-stringtemplate)
-;       ("antlr" ,antlr2)
-;       ("antlr3" ,antlr3-3.1)))
-;    (home-page "http://www.stringtemplate.org")
-;    (synopsis "")
-;    (description "")
-;    (license license:bsd-3)))
-
 (define-public libantlr3c
   (package
     (inherit antlr3)
@@ -4669,16 +4577,7 @@ documentation tools.")
                                           '("java-logback-core" "java-slf4j-api"
                                             "java-commons-compiler" "java-tomcat")))
                        ":"))
-     ;`(("java-javax-mail" ,java-javax-mail)
-     ;  ("java-tomcat" ,java-tomcat)
-     ;  ("java-commons-compiler" ,java-commons-compiler)
-     ;  ("java-janino" ,java-janino)))
              (and
-               ;; FIXME: Using groovyc from groovy directly fails
-               ;(zero? (apply system* "java" "-cp" (getenv "CLASSPATH")
-               ;              "org.codehaus.groovy.tools.FileSystemCompiler"
-               ;              "-d" "build/classes" "-j"
-               ;              (find-files "src/main/" ".*\\.(groovy|java)$")))
                (apply invoke "groovyc" "-d" "build/classes" "-j"
                       (find-files "src/main/" ".*\\.(groovy|java)$"))
                (zero? (system* "ant" "jar"))))))))
