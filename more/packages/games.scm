@@ -164,11 +164,11 @@ and anki.")
     (source (origin
               (method git-fetch)
               (uri (git-reference
-                     (url "https://git.khaganat.net/khaganat/khanat-code.git")
-                     (commit "90d9f6da6c367312ea856e1b8df67ec9ef1959c7")))
+                     (url "https://git.khaganat.net/khaganat/mmorpg_khanat/khanat-opennel-code.git")
+                     (commit "0ca90c49a5e1e6f8865ef15517bd25e388a2db96")))
               (sha256
                (base32
-                "0wh4k6k4213pm4bbynlsnbvpcmqiliny19v9sffgd011pzywy7cp"))))
+                "0rfrk43ya8mx576ycs4rln67kdrci37ryixk7abf1cqjdrz7a883"))))
     (build-system cmake-build-system)
     (inputs
      `(("boost" ,boost)
