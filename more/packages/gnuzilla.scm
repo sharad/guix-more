@@ -340,7 +340,7 @@
        ("pkg-config" ,pkg-config)
        ("autoconf" ,autoconf-2.13)
        ("which" ,which)
-       ("rust" ,rustc)
+       ("rust" ,rust)
        ("cargo" ,cargo)
        ("clang-3.9.1" ,clang-3.9.1)
        ("llvm-3.9.1" ,llvm-3.9.1)))
