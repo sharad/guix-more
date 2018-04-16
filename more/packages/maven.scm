@@ -1480,23 +1480,3 @@
     (synopsis "")
     (description "")
     (license license:asl2.0)))
-
-(define-public kotlin
-  (package
-    (name "kotlin")
-    (version "1.1.61")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/JetBrains/kotlin/archive/v"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0pj7x0b93r85cc3wj1lj1ydf48rikdbv0hq6wfxs059z140icq0a"))))
-    (build-system ant-build-system)
-    (home-page "https://kotlinlang.org/")
-    (synopsis "Statically typed programming language")
-    (description "")
-    ;; described in license/README.md
-    ;; Kotlin is under asl2.0, third-party libraries have different licenses
-    (license license:asl2.0)))
