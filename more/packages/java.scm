@@ -1122,39 +1122,6 @@ of the OROMatcher, AwkTools, PerlTools, and TextTools libraries originally
 from ORO, Inc.")
     (license license:asl2.0)))
 
-;; As of 2010-09-01, the ORO project is retired
-(define-public java-jakarta-oro
-  (package
-    (name "java-jakarta-oro")
-    (version "2.0.8")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://archive.apache.org/dist/jakarta/oro/"
-                                  "jakarta-oro-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0rpmnsskiwmsy8r0sckz5n5dbvh3vkxx8hpm177c754r8xy3qksc"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:build-target "package"
-       #:tests? #f; tests are run as part of the build process
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'remove-bin
-           (lambda _
-             (delete-file (string-append "jakarta-oro-" ,version ".jar"))))
-         (replace 'install
-           (install-jars ,(string-append "jakarta-oro-" version))))))
-    (home-page "https://jakarta.apache.org/oro/")
-    (synopsis "Text-processing for Java")
-    (description "The Jakarta-ORO Java classes are a set of text-processing
-Java classes that provide Perl5 compatible regular expressions, AWK-like
-regular expressions, glob expressions, and utility classes for performing
-substitutions, splits, filtering filenames, etc.  This library is the successor
-of the OROMatcher, AwkTools, PerlTools, and TextTools libraries originally
-from ORO, Inc.")
-    (license license:asl2.0)))
-
 (define-public java-bouncycastle-bctls
   (package
     (name "java-bouncycastle-bctls")
@@ -2192,49 +2159,6 @@ from ORO, Inc.")
     (description "")
     (license license:asl2.0)))
 
-;; Older version, unmaintained, for jcs.
-(define-public java-commons-httpclient
-  (package
-    (name "java-commons-httpclient")
-    (version "3.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://archive.apache.org/dist/httpcomponents/"
-                                  "commons-httpclient/source/commons-httpclient-"
-                                  version "-src.tar.gz"))
-              (sha256
-               (base32
-                "1wlpn3cfy3d4inxy6g7wxcsa8p7sshn6aldk9y4ia3lb879rd97r"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:build-target "compile"
-       #:test-target "test"
-       #:tests? #f; requires junit-textui (junit 3)
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'fix-accent
-           (lambda _
-             (for-each (lambda (file)
-                         (with-fluids ((%default-port-encoding "ISO-8859-1"))
-                          (substitute* file
-                            (("\\* @author Ortwin .*") "* @author Ortwin Gluck\n"))))
-               '("src/java/org/apache/commons/httpclient/HttpContentTooLargeException.java"
-                 "src/examples/TrivialApp.java" "src/examples/ClientApp.java"
-                 "src/test/org/apache/commons/httpclient/TestHttps.java"
-                 "src/test/org/apache/commons/httpclient/TestURIUtil2.java"))))
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (zero? (system* "ant" "dist"
-                             (string-append "-Ddist.home=" (assoc-ref outputs "out")
-                                            "/share/java"))))))))
-    (propagated-inputs
-     `(("java-commons-logging" ,java-commons-logging-minimal)
-       ("java-commons-codec" ,java-commons-codec)))
-    (home-page "https://hc.apache.org")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
 (define-public java-httpcomponents-core
   (package
     (name "java-httpcomponents-core")
@@ -2579,32 +2503,6 @@ from ORO, Inc.")
     (synopsis "")
     (description "")
     (license license:bsd-3)))
-
-; propose update
-;(define-public java-commons-cli
-;  (package
-;    (name "java-commons-cli")
-;    (version "1.4")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "http://mirrors.ircam.fr/pub/apache/commons/"
-;                                  "cli/source/commons-cli-" version "-src.tar.gz"))
-;              (file-name (string-append name "-" version ".tar.gz"))
-;              (sha256
-;               (base32
-;                "05hgi2z01fqz374y719gl1dxzqvzci5af071zm7vxrjg9vczipm1"))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:jar-name "commons-cli-1.4.jar"
-;       #:tests? #f))
-;    (native-inputs
-;     `(("java-junit" ,java-junit)))
-;    (home-page "https://commons.apache.org/proper/commons-cli")
-;    (synopsis "Java API for parsing command line options passed to programs")
-;    (description "Apache Commons CLI library provides an API for parsing command
-;line options passed to programs. It's also able to print help messages detailing
-;the options available for a command line tool.")
-;    (license license:asl2.0)))
 
 ; propose update
 ;(define-public java-jsr305
@@ -3173,39 +3071,6 @@ namespaces.")
     (description "")
     (license license:bsd-2)))
 
-(define-public java-jline-2
-  (package
-    (inherit java-jline)
-    (version "2.14.5")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/jline/jline2/archive/jline-"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "1c6qa26mf0viw8hg4jnv72s7i1qb1gh1l8rrzcdvqhqhx82rkdlf"))))
-    (arguments
-     `(#:jdk ,icedtea-8
-       ,@(package-arguments java-jline)))
-    (inputs
-     `(("java-jansi" ,java-jansi)
-       ("java-jansi-native" ,java-jansi-native)))
-    (native-inputs
-     `(("java-powermock-modules-junit4" ,java-powermock-modules-junit4)
-       ("java-powermock-modules-junit4-common" ,java-powermock-modules-junit4-common)
-       ("java-powermock-api-easymock" ,java-powermock-api-easymock)
-       ("java-powermock-api-support" ,java-powermock-api-support)
-       ("java-powermock-core" ,java-powermock-core)
-       ("java-powermock-reflect" ,java-powermock-reflect)
-       ("java-easymock" ,java-easymock)
-       ("java-jboss-javassist" ,java-jboss-javassist)
-       ("java-objenesis" ,java-objenesis)
-       ("java-asm" ,java-asm)
-       ("java-hamcrest-core" ,java-hamcrest-core)
-       ("java-cglib" ,java-cglib)
-       ("java-junit" ,java-junit)
-       ("java-hawtjni" ,java-hawtjni)))))
-
 ;; vanished from the face of the earth :/
 (define-public java-jsonp
   (package
@@ -3230,66 +3095,6 @@ namespaces.")
     (description "")
     (license (list license:gpl2
                    license:cddl1.1))))
-
-(define-public java-commons-bsf
-  (package
-    (name "java-commons-bsf")
-    (version "2.4.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "mirror://apache/commons/bsf/source/bsf-src-"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "1sbamr8jl32p1jgf59nw0b2w9qivyg145954hm6ly54cfgsqrdas"))
-              (modules '((guix build utils)))
-              (snippet
-               '(begin
-                  (for-each delete-file
-                            (find-files "." "\\.jar$"))
-                  #t))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:build-target "jar"
-       #:tests? #f; No test file
-       #:modules ((guix build ant-build-system)
-                  (guix build utils)
-                  (guix build java-utils)
-                  (sxml simple))
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'create-properties
-           (lambda _
-             ;; This file is missing from the distribution
-             (call-with-output-file "build-properties.xml"
-               (lambda (port)
-                 (sxml->xml
-                  `(project (@ (basedir ".") (name "build-properties") (default ""))
-                     (property (@ (name "project.name") (value "bsf")))
-                     (property (@ (name "source.level") (value "1.5")))
-                     (property (@ (name "build.lib") (value "build/jar")))
-                     (property (@ (name "src.dir") (value "src")))
-                     (property (@ (name "tests.dir") (value "src/org/apache/bsf/test")))
-                     (property (@ (name "build.tests") (value "build/test-classes")))
-                     (property (@ (name "build.dest") (value "build/classes"))))
-                  port)))))
-         (replace 'install (install-jars "build")))))
-    (native-inputs
-     `(("java-junit" ,java-junit)))
-    (inputs
-     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)))
-    (home-page "https://commons.apache.org/proper/commons-bsf")
-    (synopsis "Bean Scripting Framework")
-    (description "The Bean Scripting Framework (BSF) is a set of Java classes
-which provides scripting language support within Java applications, and access
-to Java objects and methods from scripting languages.  BSF allows one to write
-JSPs in languages other than Java while providing access to the Java class
-library.  In addition, BSF permits any Java application to be implemented in
-part (or dynamically extended) by a language that is embedded within it.  This
-is achieved by providing an API that permits calling scripting language engines
-from within Java, as well as an object registry that exposes Java objects to
-these scripting language engines.")
-    (license license:asl2.0)))
 
 (define-public java-apache-ivy-bootstrap
   (package
@@ -4029,44 +3834,6 @@ import java.util.Collection;")
      `(("unzip" ,unzip)
        ("java-junit" ,java-junit)))))
 
-(define-public java-commons-vfs
-  (package
-    (name "java-commons-vfs")
-    (version "2.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "mirror://apache/commons/vfs/source/"
-                                  "commons-vfs2-distribution-" version "-src.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1cnq1iaghbp4cslpnvwbp83i5v234x87irssqynhwpfgw7caf1s3"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "commons-vfs.jar"
-       #:source-dir "commons-vfs2/src/main/java"
-       #:tests? #f; no tests
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'remove-hadoop-and-webdav
-           ; Remove these files as they are not required and depend on difficult
-           ; packages.
-           (lambda _
-             (for-each delete-file-recursively
-               '("commons-vfs2/src/main/java/org/apache/commons/vfs2/provider/webdav"
-                 "commons-vfs2/src/main/java/org/apache/commons/vfs2/provider/hdfs")))))))
-    (inputs
-     `(("java-commons-collections4" ,java-commons-collections4)
-       ("java-commons-compress" ,java-commons-compress)
-       ("java-commons-httpclient" ,java-commons-httpclient)
-       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ("java-commons-net" ,java-commons-net)
-       ("java-jsch" ,java-jsch)))
-    (home-page "http://commons.apache.org/proper/commons-vfs/")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
 (define-public java-commons-jxpath
   (package
     (name "java-commons-jxpath")
@@ -4587,83 +4354,6 @@ documentation tools.")
        ,@(package-inputs java-logback-core)))
     (native-inputs
      `(("groovy" ,groovy)))))
-
-;; TODO: build the native library
-(define-public java-native-access
-  (package
-    (name "java-native-access")
-    (version "4.5.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/java-native-access/jna/"
-                                  "archive/" version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0zrpzkib6b905i018a9pqlzkqinphywr6y4jwv6mwp63jjqvqkd9"))
-              (modules '((guix build utils)))
-              (snippet
-                `(for-each delete-file (find-files "." ".*.jar")))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:tests? #f; FIXME: tests require reflections.jar
-       #:test-target "test"
-       #:make-flags (list "-Ddynlink.native=true")
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'fix-build.xml
-           (lambda* (#:key inputs #:allow-other-keys)
-             (substitute* "build.xml"
-               ;; Since we removed the bundled ant.jar, give the correct path
-               (("lib/ant.jar") (string-append (assoc-ref inputs "ant") "/lib/ant.jar"))
-               ;; We removed generated native libraries. We can only rebuild one
-               ;; so don't fail if we can't find a native library for another architecture.
-               (("zipfileset") "zipfileset erroronmissingarchive=\"false\""))
-             ;; Copy test dependencies
-             (copy-file (string-append (assoc-ref inputs "java-junit")
-                                       "/share/java/junit.jar")
-                        "lib/junit.jar")
-             (copy-file (string-append (assoc-ref inputs "java-hamcrest-core")
-                                       "/share/java/hamcrest-core.jar")
-                        "lib/hamcrest-core.jar")
-             ;; FIXME: once reflections.jar is built, copy it to lib/test.
-             #t))
-         (add-before 'build 'build-native
-           (lambda _
-             (invoke "ant" "-Ddynlink.native=true" "native")
-             #t))
-         (replace 'install
-           (install-jars "build")))))
-    (inputs
-     `(("libffi" ,libffi)
-       ("libx11" ,libx11)
-       ("libxt" ,libxt)))
-    (native-inputs
-     `(("java-junit" ,java-junit)
-       ("java-hamcrest-core" ,java-hamcrest-core)))
-    (home-page "https://github.com/java-native-access/jna")
-    (synopsis "Access to native shared libraries from Java")
-    (description "JNA provides Java programs easy access to native shared
-libraries without writing anything but Java code - no JNI or native code is
-required.  JNA allows you to call directly into native functions using natural
-Java method invocation.")
-    ;; Java Native Access project (JNA) is dual-licensed under 2 
-    ;; alternative Open Source/Free licenses: LGPL 2.1 or later and 
-    ;; Apache License 2.0. (starting with JNA version 4.0.0). 
-    (license (list
-               license:asl2.0
-               license:lgpl2.1+))))
-
-(define-public java-native-access-platform
-  (package
-    (inherit java-native-access)
-    (name "java-native-access-platform")
-    (arguments
-     `(#:jar-name "jna-platform.jar"
-       #:tests? #f; no tests
-       #:source-dir "contrib/platform/src"))
-    (inputs
-     `(("java-native-access" ,java-native-access)))))
 
 (define-public java-jsch-agentproxy-core
   (package
