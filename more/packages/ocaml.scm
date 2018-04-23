@@ -26,6 +26,7 @@
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (gnu packages assembly)
+  #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bison)
   #:use-module (gnu packages boost)
@@ -616,3 +617,69 @@ algorithms are typical examples of such systems.")
     (description "")
     (license license:lgpl2.1+)))
 
+(define-public ocaml-ocplib-simplex
+  (package
+    (name "ocaml-ocplib-simplex")
+    (version "0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/OCamlPro-Iguernlala/"
+                                  "ocplib-simplex/archive/v" version ".tar.gz"))
+              (sha256
+               (base32
+                "0y6q4bgly7fisdklriww48aknqf2vg4dphr7wwnd1wh80l4anzg1"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f; Compilation error
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'autoreconf
+           (lambda _
+             (invoke "autoreconf" "-fiv")
+             #t))
+         (add-before 'install 'mkdir
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (lib (string-append out "/lib")))
+               (mkdir-p lib)
+               #t))))))
+    (native-inputs
+     `(("autoconf" ,autoconf)
+       ("automake" ,automake)
+       ("ocaml" ,ocaml)
+       ("ocaml-findlib" ,ocaml-findlib)
+       ("which" ,which)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    ; lgpl2.1+ with linking exception
+    (license license:lgpl2.1+)))
+
+(define-public frama-c
+  (package
+    (name "frama-c")
+    (version "20171101")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://frama-c.com/download/frama-c-Sulfur-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1vwjfqmm1r36gkybsy3a7m89q5zicf4rnz5vlsn9imnpjpl9gjw1"))))
+    (build-system ocaml-build-system)
+    (arguments
+     `(#:tests? #f; for now
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'export-shell
+           (lambda* (#:key inputs #:allow-other-keys)
+             (setenv "CONFIG_SHELL" (string-append (assoc-ref inputs "bash")
+                                                   "/bin/sh")))))))
+    (inputs
+     `(("gmp" ,gmp)
+       ("ocaml-graph" ,ocaml-graph)
+       ("ocaml-zarith" ,ocaml-zarith)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
