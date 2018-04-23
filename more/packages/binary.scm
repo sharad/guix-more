@@ -23,14 +23,18 @@
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix utils)
+  #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system python)
+  #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages glib)
   #:use-module (gnu packages libffi)
   #:use-module (gnu packages multiprecision)
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-crypto)
+  #:use-module (gnu packages qt)
   #:use-module (gnu packages tls)
   #:use-module (more packages python)
   #:use-module (more packages smt))
@@ -544,3 +548,45 @@ enterprise hypervisors; and both benign and security-critical hardware bugs in
 x86 chips.")
     ;; No license!
     (license license:expat)))
+
+(define-public veles
+  (package
+    (name "veles")
+    (version "2017.06.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/codilime/veles/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0sv0y0sbx9pjdg755ily3ga7h021531066s0q8niy8nsz7ql9m9b"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:configure-flags
+       (list (string-append "-DMSGPACK_INCLUDE_PATH="
+                            (assoc-ref %build-inputs "python-msgpack")
+                            "/include"))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'fix-python-deps
+           (lambda _
+             (substitute* "python/requirements.txt"
+               (("six==1.10.0") "six>=1.10.0")
+               (("msgpack-python==0.4.8") "msgpack>=0.4.8"))
+             #t)))))
+    (inputs
+     `(("openssl" ,openssl)
+       ("python" ,python)
+       ("python-msgpack" ,python-msgpack)
+       ("python-pbr" ,python-pbr)
+       ("python-pyopenssl" ,python-pyopenssl)
+       ("python-six" ,python-six)
+       ("qtbase" ,qtbase)
+       ("zlib" ,zlib)))
+    (native-inputs
+     `(("googletest" ,googletest)))
+    (home-page "https://codisec.com/veles/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
