@@ -21,6 +21,7 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix svn-download)
+  #:use-module (guix git-download)
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages)
   #:use-module (gnu packages admin)
@@ -30,6 +31,7 @@
   #:use-module (more packages cdrom)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages flex)
+  #:use-module (gnu packages gettext)
   #:use-module (gnu packages gl)
   #:use-module (gnu packages gnome)
   #:use-module (gnu packages image)
@@ -50,6 +52,7 @@
   (package
     (name "kbuild")
     (version "0.1.9998")
+    ;(version "0.1.5-p2")
     (source (origin
               ;(method url-fetch)
               ;(uri (string-append "ftp://ftp.netlabs.org/pub/kbuild/kBuild-"
@@ -57,21 +60,31 @@
               ;(sha256
               ; (base32
               ;  "19j2sswdqqjzjzmg0xam8nmwmxg422iii0fl9cwzcznjfigdn1c2"))))
-              (method svn-fetch)
-              (uri (svn-reference
-                     (url "http://svn.netlabs.org/repos/kbuild/trunk")
-                     (revision 3025)))
+              ;(method svn-fetch)
+              ;(uri (svn-reference
+              ;       (url "http://svn.netlabs.org/repos/kbuild/trunk")
+              ;       (revision 3224)))
+              ;(file-name (string-append name "-" version))
+              ;(sha256
+              ; (base32
+              ;  "0dvp6j61v92afhkz392zbk0myx27mzqpqcfqr7yyaj3kigbnmal8"))))
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://framagit.org/tyreunom/kbuild-snapshot.git")
+                     (commit "f3a865c4671242524860097c819152447a03a7f7")))
               (file-name (string-append name "-" version))
               (sha256
                (base32
-                "1k7y2lqqhsfwfzzi7rms7a2kakimm7g46qa2gypkvzdd3drbpanj"))))
+                "1xkirw4xdwpgcrvnwdqdr7d3fyg6yg2dzgyi83vxmvib6k4xwvxr"))))
     (build-system gnu-build-system)
     (native-inputs
      `(("autoconf" ,autoconf)
        ("automake" ,automake)
        ("bison" ,bison)
        ("flex" ,flex)
+       ("gettext-minimal" ,gettext-minimal)
        ("perl" ,perl)
+       ("pkg-config" ,pkg-config)
        ("texinfo" ,texinfo)))
     (arguments
      `(#:tests? #f
@@ -81,21 +94,53 @@
          (add-before 'patch-generated-file-shebangs 'reconfigure
            (lambda _
              (chdir "src/kmk")
+             (substitute* "Makefile.am"
+               (("AM_CPPFLAGS =") "AM_CPPFLAGS = -I$(srcdir)/../lib//kStuff/include")
+               (("kmkbuiltin\\.c")
+                "kmkbuiltin.c kmkbuiltin/getopt_r.c kmkbuiltin/getopt1_r.c")
+               (("kmk_redirect_SOURCES =")
+                "kmk_redirect_SOURCES = output.c"))
              (system* "autoreconf" "-fiv")
              (chdir "../..")))
          (add-before 'build 'fix-binaries
            (lambda _
              (substitute* "Config.kmk"
                (("\\+= rt") "+= rt pthread"))
-             (substitute* "src/ash/output.h"
+             (substitute* "src/kash/output.h"
                (("dprintf") "debugprintf"))
-             (substitute* "src/ash/output.c"
+             (substitute* "src/kash/output.c"
                (("dprintf") "debugprintf"))
              (substitute* "bootstrap.gmk"
                ((" /bin/sh") (string-append " " (which "sh")))
                ((" /bin/echo") (string-append " " (which "echo"))))
              (substitute* "kBuild/env.sh"
                (("/bin/pwd") (which "pwd")))))
+         (add-before 'build 'fix-errors
+           (lambda _
+             (copy-file "src/sed/po/Makefile.in.in" "src/kmk/po/Makefile.in.in")
+             (substitute* "src/kmk/kmkbuiltin.c"
+               (("int kmk_builtin_dircache.*")
+                "int kmk_builtin_dircache(int argc, char **argv, char **envp, PKMKBUILTINCTX pCtx)"))
+             (substitute* "src/kmk/kmkbuiltin.h"
+               (("#include <fcntl.h>")
+                "#include <fcntl.h>\n#include <stdint.h>"))
+             (substitute* "src/kmk/output.h"
+               (("#define INCLUDED_MAKE_OUTPUT_H")
+                "#define INCLUDED_MAKE_OUTPUT_H\n#include <stdio.h>"))
+             (substitute* "src/kmk/kmkbuiltin/install.c"
+               (("\tuid") "\tThis.uid")
+               (("\tgid") "\tThis.gid"))
+             (substitute* "src/kmk/kmkbuiltin/rm.c"
+               (("\\(vflag\\)") "(pThis->vflag)"))
+             (substitute* "src/kmk/kmkbuiltin/getopt_r.h"
+               (("typedef struct") "#include <stddef.h>\ntypedef struct"))
+             (substitute* "src/kmk/output.c"
+               (("unsigned int stdio_traced = 0;")
+                "unsigned int stdio_traced = 0;\nssize_t output_write_text (struct output *out, int is_err, const char *src, size_t len){return len;}"))
+             ;  (("/\\* write/fwrite like function, text mode. \\*/") "#endif")
+             ;  (("return output_write_bin \\(out, is_err, src, len\\);")
+             ;   "return output_write_bin (out, is_err, src, len);\n#if 1"))
+             #t))
          (replace 'build
            (lambda _
              (zero? (system* "kBuild/env.sh" "--full" "make" "-f" "bootstrap.gmk"
@@ -149,7 +194,7 @@ for complex tasks.")
 (define-public virtualbox
   (package
     (name "virtualbox")
-    (version "5.1.14")
+    (version "5.2.8")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -158,7 +203,15 @@ for complex tasks.")
               (file-name (string-append name "-" version ".tar.bz2"))
               (sha256
                (base32
-                "12i2kyn7svy2kd6j40fzzhy7173xfq884ygb6x9fbihpcw1bnrw2"))))
+                "1s44h0d2khclkgkfgcwpq09dpckzr22r8737icdwhjhbgga5j9zf"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   ;; TODO: frmts contains a lot more bundled code.
+                   (for-each delete-file-recursively
+                     '("src/libs/libpng-1.2.54"
+                       "src/libs/libxml2-2.9.4"
+                       "src/libs/zlib-1.2.8"))))))
     (build-system gnu-build-system)
     (native-inputs
      `(;("kbuild" ,kbuild)
@@ -183,7 +236,7 @@ for complex tasks.")
        ("lvm2" ,lvm2)
        ("mesa" ,mesa)
        ("python" ,python-2)
-       ("qt5" ,qt)
+       ("qt" ,qt)
        ("openssl" ,openssl)
        ("sdl" ,sdl)))
     (arguments
@@ -192,8 +245,11 @@ for complex tasks.")
          (add-before 'configure 'fix-paths
            (lambda* (#:key inputs #:allow-other-keys)
              (substitute* "configure"
+               (("CXX=.*") "CXX=\"g++ -std=c++11\"\n")
                (("PYTHONDIR=.*")
-                (string-append "PYTHONDIR=" (assoc-ref inputs "python") "\n")))))
+                (string-append "PYTHONDIR=" (assoc-ref inputs "python") "\n"))
+               (("QT5DIR=.*")
+                (string-append "QT5DIR=" (assoc-ref inputs "qt") "\n")))))
          ;(add-before 'configure 'remove-binaries
            ;(lambda* _
              ;(substitute* "configure"
@@ -202,14 +258,20 @@ for complex tasks.")
              ;(delete-file-recursively "kBuild/bin")))
          (replace 'configure
            (lambda* (#:key outputs inputs #:allow-other-keys)
-             (zero? (system* "./configure" "--disable-java" "--disable-pulse"
-                             "--disable-vmmraw"
-                             (string-append "--with-makeself=" (which "echo"))))))
-                             ;(string-append "--with-kbuild="
-                             ;               (assoc-ref inputs "kbuild"))))))
+             (setenv "I_INCXML2" (string-append "-I" (assoc-ref inputs "libxml2")
+                                                "/include/libxml2"))
+             (setenv "I_INCSDL" (string-append "-I" (assoc-ref inputs "sdl")
+                                               "/include/SDL"))
+             (invoke "./configure" "--disable-java" "--disable-pulse"
+                     "--disable-vmmraw"
+                     (string-append "--with-makeself=" (which "echo")))
+                     ;(string-append "--with-kbuild="
+                     ;               (assoc-ref inputs "kbuild"))))
+             #t))
          (replace 'build
            (lambda* _
-             (zero? (system* "kmk")))))))
+             (invoke "kmk")
+             #t)))))
     (home-page "https://www.virtualbox.org")
     (synopsis "Virtual Machine manager")
     (description
