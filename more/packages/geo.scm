@@ -129,7 +129,7 @@ delivered to any client.")
        ("pcre" ,pcre)
        ("zlib" ,zlib)))
     (home-page "http://www.gdal.org/")
-    (synopsis "Raster and vector geospation data format library")
+    (synopsis "Raster and vector geospatial data format library")
     (description "GDAL is a translator library for raster and vector geospatial
 data formats.  As a library, it presents a single raster abstract data model
 and single vector abstract data model to the calling application for all
