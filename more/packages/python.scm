@@ -19,10 +19,13 @@
 (define-module (more packages python)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages aspell)
   #:use-module (gnu packages audio)
   #:use-module (gnu packages check)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
+  #:use-module (gnu packages enchant)
+  #:use-module (gnu packages libreoffice)
   #:use-module (gnu packages maths)
   #:use-module (gnu packages networking)
   #:use-module (gnu packages python)
@@ -689,3 +692,69 @@ navigated in, similar to a file or stream.")
     (synopsis "")
     (description "")
     (license license:agpl3+)))
+
+(define-public python-pyenchant
+  (package
+    (name "python-pyenchant")
+    (version "2.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "pyenchant" version))
+              (sha256
+               (base32
+                "1872ckgdip8nj9rnh167m0gsj5754qfg2hjxzsl1s06f5akwscgw"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f; FIXME: Dictionary for language 'en_US' could not be found
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'setenv
+           (lambda* (#:key inputs #:allow-other-keys)
+             (setenv "PYENCHANT_LIBRARY_PATH"
+                     (string-append (assoc-ref inputs "enchant") "/lib/libenchant.so")))))))
+    (inputs
+     `(("enchant" ,enchant)
+       ("hunspell" ,hunspell)))
+    (native-inputs
+     `(("hunspell-dict-en-us" ,hunspell-dict-en-us)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
+
+(define-public offlate
+  (package
+    (name "offlate")
+    (version "0.1")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://framagit.org/tyreunom/offlate")
+                     (commit "ed8579552331ecdf5975c4bcbbf1f17651282b30")))
+              (sha256
+               (base32
+                "0hisx9x5a15yk3y18ra4mvca5iv7rcsnijcaly4z3aqc56bg1rm0"))))
+    ;(source (origin
+    ;          (method url-fetch)
+    ;          (uri (pypi-uri "offlate" version))
+    ;          (sha256
+    ;           (base32
+    ;            "1872ckgdip8nj9rnh167m0gsj5754qfg2hjxzsl1s06f5akwscgw"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-setup
+           (lambda _
+             (substitute* "setup.py"
+               (("config', \\['d") "offlate', ['offlate/d"))
+             #t)))))
+    (propagated-inputs
+     `(("python-android-stringslib" ,python-android-stringslib)
+       ("python-dateutil" ,python-dateutil)
+       ("python-pyenchant" ,python-pyenchant)))
+    (home-page "https://framagit.org/tyreunom/offlate")
+    (synopsis "")
+    (description "")
+    (license license:gpl3+)))
