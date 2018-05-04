@@ -25,6 +25,7 @@
   #:use-module (guix build-system trivial)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages assembly)
   #:use-module (gnu packages audio)
   #:use-module (gnu packages base)
   #:use-module (gnu packages boost)
@@ -165,10 +166,12 @@ and anki.")
               (method git-fetch)
               (uri (git-reference
                      (url "https://git.khaganat.net/khaganat/mmorpg_khanat/khanat-opennel-code.git")
-                     (commit "0ca90c49a5e1e6f8865ef15517bd25e388a2db96")))
+                     ;(commit "0ca90c49a5e1e6f8865ef15517bd25e388a2db96")))
+                     (commit "302ee7e20ea93caded5d46637918ba0092f207fd")))
               (sha256
                (base32
-                "0rfrk43ya8mx576ycs4rln67kdrci37ryixk7abf1cqjdrz7a883"))))
+                ;"1rfrk43ya8mx576ycs4rln67kdrci37ryixk7abf1cqjdrz7a883"))))
+                "1w0bhspsgf3dg33xdyypc4rm935n6g5d7shid92jf4j6jb0cjahh"))))
     (build-system cmake-build-system)
     (inputs
      `(("boost" ,boost)
@@ -198,7 +201,13 @@ and anki.")
        (modify-phases %standard-phases
          (add-before 'configure 'chdir
            (lambda _
-             (chdir "code"))))))
+             (chdir "code")))
+         (add-after 'install 'link-khanat
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (game (string-append out "/games/khanat_client"))
+                    (bin (string-append out "/bin/khanat_client")))
+             (symlink game bin)))))))
     (home-page "https://khaganat.net/")
     (synopsis "")
     (description "")
@@ -291,3 +300,32 @@ and anki.")
 emojis.  Emojicode is a straightforward language to learn, whatever background
 you have.")
     (license license:artistic2.0)))
+
+(define-public torque3d
+  (package
+    (name "torque3d")
+    (version "3.10.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/GarageGames/Torque3D/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0qxaybdmir90ynfqs7l45di7vh0xa619abq53l9avj6yycihgw8b"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:configure-flags
+       (list "-DTORQUE_APP_NAME=Torque3D")
+       #:tests? #f))
+    (inputs
+     `(("gtk+" ,gtk+)
+       ("libxft" ,libxft)
+       ("openal" ,openal)))
+    (native-inputs
+     `(("nasm" ,nasm)
+       ("pkg-config" ,pkg-config)))
+    (home-page "http://torque3d.org/")
+    (synopsis "Game engine")
+    (description "")
+    (license license:expat)))
