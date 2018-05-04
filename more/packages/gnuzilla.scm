@@ -79,21 +79,21 @@
                  ((#:configure-flags flags)
                   `(cons* "--enable-skia" ,flags))))))
 
-(define-public icu4c-for-firefox
-  (package
-   (inherit icu4c)
-   (name "icu4c")
-   (version "59.1")
-   (source (origin
-            (method url-fetch)
-            (uri (string-append
-                  "http://download.icu-project.org/files/icu4c/"
-                  version
-                  "/icu4c-"
-                  (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
-                  "-src.tgz"))
-            (sha256
-             (base32 "1zkmbg2932ggvpgjp8pys0cj6z8bw087y8858009shkrjfpzscki"))))))
+;(define-public icu4c-for-firefox
+;  (package
+;   (inherit icu4c)
+;   (name "icu4c")
+;   (version "59.1")
+;   (source (origin
+;            (method url-fetch)
+;            (uri (string-append
+;                  "http://download.icu-project.org/files/icu4c/"
+;                  version
+;                  "/icu4c-"
+;                  (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
+;                  "-src.tgz"))
+;            (sha256
+;             (base32 "1zkmbg2932ggvpgjp8pys0cj6z8bw087y8858009shkrjfpzscki"))))))
 
 (define nss-for-firefox
   (package
@@ -168,15 +168,18 @@
 (define-public firefox
   (package
     (name "firefox")
-    (version "58.0")
+    (version "59.0.2")
     (source (origin
               (method url-fetch)
-              (uri (string-append "https://archive.mozilla.org/pub/firefox/"
-                                  "releases/" version "/source/firefox-"
-                                  version ".source.tar.xz"))
+              (uri (string-append "https://hg.mozilla.org/releases/mozilla-release/"
+                                  "archive/239e434d6d2b8e1e2b697c3416d1e96d48fe98e5.tar.bz2"))
+              ;(uri (string-append "https://archive.mozilla.org/pub/firefox/"
+              ;                    "releases/" version "/source/firefox-"
+              ;                    version ".source.tar.xz"))
               (sha256
                (base32
-                "1zxapyir31zr1k7qrixqayzafh3kkvx0hh5vv1kp8kgrmg53j2hf"))
+                "0cr8b6hrhr8ql31w9vjy79gzyzx4d608fwr8bv7apqlp0sn84wsv"))
+              (file-name (string-append name "-" version ".tar.bz2"))
       (modules '((guix build utils)))
       (snippet
        '(begin
@@ -231,70 +234,119 @@
     (arguments
      `(#:out-of-source? #t
        #:tests? #f
-       #:configure-flags (list "--disable-necko-wifi"
-                               "--disable-stylo"
-                               "--disable-crashreporter"
-                               "--disable-updater"
-                               "--disable-tests"; Remove if we want to test
-                               "--enable-application=browser"
-                               "--enable-optimize=-O2"
-                               "--with-pthreads"
-                               ;; use system libraries
-                               "--enable-system-hunspell"
-                               "--enable-startup-notification"
-                               "--enable-alsa" "--enable-pulseaudio"
-                               "--enable-system-sqlite"
-                               "--with-system-libevent"
-                               "--with-system-libvpx"
-                               "--with-system-nspr"
-                               "--with-system-nss"
-                               "--with-system-icu"
-                               "--enable-system-cairo"
-                               "--enable-system-ffi"
-                               "--enable-system-pixman"
-                               "--with-system-bz2"
-                               "--with-system-jpeg"
-                               "--with-system-png"
-                               "--with-system-zlib")
-                               ;; clang is not found because it is assumed to be in
-                               ;; the same location as llvm.
-                               ;(string-append "--with-clang-path="
-                               ;               (assoc-ref %build-inputs "clang-3.9.1")
-                               ;               "/bin/clang"))
-                               ;(string-append "--with-libclang-path="
-                               ;               (assoc-ref %build-inputs "clang-3.9.1")
-                               ;               "/lib"))
+       ;#:configure-flags (list "--disable-necko-wifi"
+       ;                        "--disable-stylo"
+       ;                        "--disable-crashreporter"
+       ;                        "--disable-updater"
+       ;                        "--disable-tests"; Remove if we want to test
+       ;                        "--enable-application=browser"
+       ;                        "--enable-optimize=-O2"
+       ;                        "--with-pthreads"
+       ;                        ;; use system libraries
+       ;                        "--enable-system-hunspell"
+       ;                        "--enable-startup-notification"
+       ;                        "--enable-alsa" "--enable-pulseaudio"
+       ;                        "--enable-system-sqlite"
+       ;                        "--with-system-libevent"
+       ;                        "--with-system-libvpx"
+       ;                        "--with-system-nspr"
+       ;                        "--with-system-nss"
+       ;                        "--with-system-icu"
+       ;                        "--enable-system-cairo"
+       ;                        "--enable-system-ffi"
+       ;                        "--enable-system-pixman"
+       ;                        "--with-system-bz2"
+       ;                        "--with-system-jpeg"
+       ;                        "--with-system-png"
+       ;                        "--with-system-zlib")
+       ;                        ;; clang is not found because it is assumed to be in
+       ;                        ;; the same location as llvm.
+       ;                        ;(string-append "--with-clang-path="
+       ;                        ;               (assoc-ref %build-inputs "clang-3.9.1")
+       ;                        ;               "/bin/clang"))
+       ;                        ;(string-append "--with-libclang-path="
+       ;                        ;               (assoc-ref %build-inputs "clang-3.9.1")
+       ;                        ;               "/lib"))
        ;; Race condition in python?
        ;;   EOFError: EOF read where object expected
-       #:parallel-build? #f
+       ;#:parallel-build? #f
        #:phases
        (modify-phases %standard-phases
-         (replace
-          'configure
-          ;; configure does not work followed by both "SHELL=..." and
-          ;; "CONFIG_SHELL=..."; set environment variables instead
+         (replace 'build
+           (lambda _
+             (invoke (which "sh") "mach" "build" "--verbose")
+             #t))
+         (replace 'install
+           (lambda _
+             (invoke (which "sh") "mach" "install")
+             #t))
+         (replace 'configure
           (lambda* (#:key outputs configure-flags #:allow-other-keys)
-            (let* ((out (assoc-ref outputs "out"))
-                   (bash (which "bash"))
-                   (abs-srcdir (getcwd))
-                   (srcdir (string-append "../" (basename abs-srcdir)))
-                   (flags `(,(string-append "--prefix=" out)
-                            ,(string-append "--with-l10n-base="
-                                            abs-srcdir "/intl/l10n")
-                            ,@configure-flags)))
-              ;; We removed the embedded sqlite, so don't reference it.
-              (substitute* '("storage/moz.build" "dom/indexedDB/moz.build")
-                (("'/db/sqlite3/src',") ""))
-              (setenv "SHELL" bash)
-              (setenv "CONFIG_SHELL" bash)
-              (setenv "AUTOCONF" (which "autoconf")) ; must be autoconf-2.13
-              (mkdir "../build")
-              (chdir "../build")
-              (format #t "build directory: ~s~%" (getcwd))
-              (format #t "configure flags: ~s~%" flags)
-              (zero? (apply system* bash
-                            (string-append srcdir "/configure")
-                            flags))))))))
+            (setenv "SHELL" (which "bash"))
+            (with-output-to-file "mozconfig"
+              (lambda _
+                (display (string-append
+                           "ac_add_options --disable-necko-wifi
+ac_add_options --enable-system-hunspell
+ac_add_options --enable-startup-notification
+ac_add_options --enable-system-sqlite
+ac_add_options --with-system-libevent
+ac_add_options --with-system-libvpx
+ac_add_options --with-system-nspr
+ac_add_options --with-system-nss
+ac_add_options --with-system-icu
+ac_add_options --prefix=" (assoc-ref outputs "out") "
+ac_add_options --enable-application=browser
+
+# For now, disable stylo: it requires clang which is not found by llvm-config
+ac_add_options --disable-stylo
+
+ac_add_options --disable-crashreporter
+ac_add_options --disable-updater
+# enabling the tests will use a lot more space and significantly
+# increase the build time, for no obvious benefit.
+ac_add_options --disable-tests
+
+# Optimization for size is broken with gcc7
+ac_add_options --enable-optimize=\"-O2\"
+
+ac_add_options --enable-official-branding
+
+# In firefox-59.0 system cairo breaks the build, so comment it.
+#ac_add_options --enable-system-cairo
+ac_add_options --enable-system-ffi
+ac_add_options --enable-system-pixman
+
+ac_add_options --with-pthreads
+
+ac_add_options --with-system-bz2
+ac_add_options --with-system-jpeg
+ac_add_options --with-system-png
+ac_add_options --with-system-zlib
+
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/firefox-build-dir
+")))))))))
+            ;(let* ((out (assoc-ref outputs "out"))
+            ;       (bash (which "bash"))
+            ;       (abs-srcdir (getcwd))
+            ;       (srcdir (string-append "../" (basename abs-srcdir)))
+            ;       (flags `(,(string-append "--prefix=" out)
+            ;                ,(string-append "--with-l10n-base="
+            ;                                abs-srcdir "/intl/l10n")
+            ;                ,@configure-flags)))
+            ;  ;; We removed the embedded sqlite, so don't reference it.
+            ;  (substitute* '("storage/moz.build" "dom/indexedDB/moz.build")
+            ;    (("'/db/sqlite3/src',") ""))
+            ;  (setenv "SHELL" bash)
+            ;  (setenv "CONFIG_SHELL" bash)
+            ;  (setenv "AUTOCONF" (which "autoconf")) ; must be autoconf-2.13
+            ;  (mkdir "../build")
+            ;  (chdir "../build")
+            ;  (format #t "build directory: ~s~%" (getcwd))
+            ;  (format #t "configure flags: ~s~%" flags)
+            ;  (zero? (apply system* bash
+            ;                (string-append srcdir "/configure")
+            ;                flags))))))))
     (inputs
      `(("alsa-lib" ,alsa-lib)
        ("bzip2" ,bzip2)
@@ -321,7 +373,7 @@
        ("ffmpeg" ,ffmpeg)
        ("libpng-apng" ,libpng-apng-for-firefox)
        ("libvpx" ,libvpx)
-       ("icu4c" ,icu4c-for-firefox)
+       ("icu4c" ,icu4c)
        ("pixman" ,pixman)
        ("pulseaudio" ,pulseaudio)
        ("mesa" ,mesa)
@@ -341,7 +393,8 @@
        ("autoconf" ,autoconf-2.13)
        ("which" ,which)
        ("rust" ,rust)
-       ("cargo" ,cargo)
+       ("cargo" ,rust "cargo")
+       ("libtool" ,libtool)
        ("clang-3.9.1" ,clang-3.9.1)
        ("llvm-3.9.1" ,llvm-3.9.1)))
     (home-page "https://mozilla.org")
