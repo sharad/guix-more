@@ -434,32 +434,18 @@ provers.")
 (define-public compcert
   (package
     (name "compcert")
-    (version "3.1")
+    (version "3.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://compcert.inria.fr/release/compcert-"
                                   version ".tgz"))
               (sha256
                (base32
-                "0irfwlw2chalp0g2gw0makc699hn3z37sha1a239p9d90mzx03cx"))))
+                "11q4121s0rxva63njjwya7syfx9w0p4hzr6avh8s57vfbrcakc93"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'fix-newer-coq
-           (lambda _
-             (substitute* "configure"
-               (("8.6|8.6.1") "8.6|8.6.1|8.7.0"))
-             ;; functional induction is now defined in FunInd rather than in the
-             ;; toplevel.
-             (substitute* '("common/Globalenvs.v" "backend/ValueDomain.v")
-               (("Require Import Zwf")
-                "Require Import Zwf FunInd."))
-             (substitute* '("lib/Intv.v" "lib/Heaps.v" "lib/Parmov.v"
-                            "backend/Selectionproof.v" "backend/ValueAnalysis.v"
-                            "x86/CombineOpproof.v" "backend/Deadcodeproof.v")
-               (("Require Import Coqlib")
-                "Require Import Coqlib FunInd"))))
          (replace 'configure
            (lambda* (#:key outputs #:allow-other-keys)
              (zero? (system* "./configure" "x86_64-linux" "-prefix"
@@ -683,3 +669,17 @@ algorithms are typical examples of such systems.")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
+
+(define-public coq-8.8
+  (package
+    (inherit coq)
+    (name "coq")
+    (version "8.8.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/coq/coq/archive/V"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0g96k2x6lbddlmkmdaczvcpb2gwqi1ydbq9bv4gf9q38kv9w3xya"))))))
