@@ -32,6 +32,7 @@
   #:use-module (gnu packages base)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages docbook)
+  #:use-module (gnu packages groovy)
   #:use-module (gnu packages java)
   #:use-module (gnu packages libffi)
   #:use-module (gnu packages maven)
@@ -39,7 +40,6 @@
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg)
-  #:use-module (more packages groovy)
   #:use-module (more packages maven)
   #:use-module (more packages python))
 
