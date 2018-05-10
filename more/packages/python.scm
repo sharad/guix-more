@@ -31,6 +31,8 @@
   #:use-module (gnu packages python)
   #:use-module (gnu packages python-crypto)
   #:use-module (gnu packages python-web)
+  #:use-module (gnu packages qt)
+  #:use-module (gnu packages serialization)
   #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
   #:use-module (guix packages)
@@ -708,11 +710,16 @@ navigated in, similar to a file or stream.")
      `(#:tests? #f; FIXME: Dictionary for language 'en_US' could not be found
        #:phases
        (modify-phases %standard-phases
-         (add-before 'build 'setenv
+         (add-before 'build 'setlib
            (lambda* (#:key inputs #:allow-other-keys)
-             (setenv "PYENCHANT_LIBRARY_PATH"
-                     (string-append (assoc-ref inputs "enchant") "/lib/libenchant.so")))))))
-    (inputs
+             (substitute* "enchant/_enchant.py"
+               (("/opt/local/lib/libenchant.dylib\"")
+                (string-append "/opt/local/lib/libenchant.dylib\"\n"
+                               "    yield \"" (assoc-ref inputs "enchant")
+                               "/lib/libenchant.so\""))))))))
+             ;(setenv "PYENCHANT_LIBRARY_PATH"
+             ;        (string-append (assoc-ref inputs "enchant") "/lib/libenchant.so")))))))
+    (propagated-inputs
      `(("enchant" ,enchant)
        ("hunspell" ,hunspell)))
     (native-inputs
@@ -730,30 +737,22 @@ navigated in, similar to a file or stream.")
               (method git-fetch)
               (uri (git-reference
                      (url "https://framagit.org/tyreunom/offlate")
-                     (commit "ed8579552331ecdf5975c4bcbbf1f17651282b30")))
+                     (commit "341bf4422116ec914f8229315e62463002d4d251")))
               (sha256
                (base32
-                "0hisx9x5a15yk3y18ra4mvca5iv7rcsnijcaly4z3aqc56bg1rm0"))))
-    ;(source (origin
-    ;          (method url-fetch)
-    ;          (uri (pypi-uri "offlate" version))
-    ;          (sha256
-    ;           (base32
-    ;            "1872ckgdip8nj9rnh167m0gsj5754qfg2hjxzsl1s06f5akwscgw"))))
+                "1nbcnhggnvbvlbhqsa1db6nvhqbgjc7khsb55lc9xnwk5ar8bf0j"))))
     (build-system python-build-system)
     (arguments
-     `(#:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'fix-setup
-           (lambda _
-             (substitute* "setup.py"
-               (("config', \\['d") "offlate', ['offlate/d"))
-             #t)))))
+     `(#:tests? #f))
     (propagated-inputs
      `(("python-android-stringslib" ,python-android-stringslib)
        ("python-dateutil" ,python-dateutil)
-       ("python-pyenchant" ,python-pyenchant)))
+       ("python-lxml" ,python-lxml)
+       ("python-pyenchant" ,python-pyenchant)
+       ("python-ruamel.yaml" ,python-ruamel.yaml)
+       ("python-polib" ,python-polib)
+       ("python-pyqt" ,python-pyqt)
+       ("python-requests" ,python-requests)))
     (home-page "https://framagit.org/tyreunom/offlate")
     (synopsis "")
     (description "")
