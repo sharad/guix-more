@@ -24,6 +24,7 @@
   #:use-module (guix git-download)
   #:use-module (guix svn-download)
   #:use-module (guix cvs-download)
+  #:use-module (guix hg-download)
   #:use-module (guix utils)
   #:use-module (guix build-system ant)
   #:use-module (guix build-system gnu)
@@ -31,10 +32,14 @@
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages compression)
+  #:use-module (gnu packages cups)
   #:use-module (gnu packages docbook)
+  #:use-module (gnu packages elf)
+  #:use-module (gnu packages fontutils)
   #:use-module (gnu packages groovy)
   #:use-module (gnu packages java)
   #:use-module (gnu packages libffi)
+  #:use-module (gnu packages linux)
   #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
@@ -4280,3 +4285,85 @@ documentation tools.")
     (synopsis "Build system")
     (description "")
     (license license:asl2.0)))
+
+(define-public openjdk9
+  (package
+    (name "openjdk")
+    (version "9+181")
+    (source (origin
+              ;(method hg-fetch)
+              ;(uri (hg-reference
+              ;       (url "http://hg.openjdk.java.net/jdk9/jdk9/")
+              ;       (changeset "b656dea9398ef601f7fc08d1a5157a560e0ccbe0")))
+              ;(uri (hg-reference
+              ;       (url "http://hg.openjdk.java.net/jdk/jdk/")
+              ;       (changeset "3cc80be736f2")))
+              (method url-fetch)
+              (uri "http://hg.openjdk.java.net/jdk/jdk/archive/3cc80be736f2.tar.bz2")
+              (file-name (string-append name "-" version ".tar.bz2"))
+              (sha256
+               (base32
+                ;"0mnyfknznp0bwxvnl9yv6p8vzmwra482ya612mkfw37frbvs5b8x"))))
+                "01ihmyf7k5z17wbr7xig7y40l9f01d5zjgkcmawn1102hw5kchpq"))))
+    (build-system gnu-build-system)
+    (outputs '("out" "jdk" "doc"))
+    (arguments
+     `(#:tests? #f; TODO: requires jtreg
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'patch-source-shebangs)
+         (replace 'configure
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (invoke "bash" "./configure"
+                     (string-append "--with-freetype=" (assoc-ref inputs "freetype"))
+                     "--disable-freetype-bundling"
+                     "--disable-warnings-as-errors"
+                     "--disable-hotspot-gtest"
+                     (string-append "--prefix=" (assoc-ref outputs "out")))
+             #t))
+         (replace 'build
+           (lambda _
+             (with-output-to-file ".src-rev"
+               (lambda _
+                 (display ,version)))
+             (setenv "GUIX_LD_WRAPPER_ALLOW_IMPURITIES" "yes")
+             (invoke "make" "all")
+             #t))
+         (replace 'check
+           (lambda _
+             (invoke "make" "test")
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out"))
+                   (jdk (assoc-ref outputs "jdk"))
+                   (doc (assoc-ref outputs "doc"))
+                   (images (car (find-files "build" ".*-server-release"))))
+               (copy-recursively (string-append images "/images/jdk") jdk)
+               (copy-recursively (string-append images "/images/jre") out)
+               (copy-recursively (string-append images "/images/docs") doc))
+             #t)))))
+    (inputs
+     `(("alsa-lib" ,alsa-lib)
+       ("cups" ,cups)
+       ("fontconfig" ,fontconfig)
+       ("freetype" ,freetype)
+       ("libelf" ,libelf)
+       ("libice" ,libice)
+       ("libx11" ,libx11)
+       ("libxcomposite" ,libxcomposite)
+       ("libxi" ,libxi)
+       ("libxinerama" ,libxinerama)
+       ("libxrender" ,libxrender)
+       ("libxt" ,libxt)
+       ("libxtst" ,libxtst)))
+    (native-inputs
+     `(("icedtea-8" ,icedtea-8)
+       ("icedtea-8:jdk" ,icedtea-8 "jdk")
+       ("unzip" ,unzip)
+       ("which" ,which)
+       ("zip" ,zip)))
+    (home-page "http://openjdk.java.net/projects/jdk9/")
+    (synopsis "")
+    (description "")
+    (license license:gpl2)))
