@@ -26,6 +26,7 @@
   #:use-module (guix cvs-download)
   #:use-module (guix hg-download)
   #:use-module (guix utils)
+  #:use-module (guix build syscalls)
   #:use-module (guix build-system ant)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system trivial)
@@ -2849,6 +2850,54 @@ namespaces.")
                  (("@IgnoreJRERequirement") "")))
              #t)))))))
 
+(define-public java-guava-25
+  (package
+    (inherit java-guava)
+    (version "25.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/google/guava/"
+                                  "archive/v" version ".tar.gz"))
+              (file-name (string-append "java-guava-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0jxwp8kfjcj4hyjwvnakk4d0yszp9np2l8c3hwz3ipxmwxk4dx7k"))))
+    (arguments
+     `(#:tests? #f                      ; no tests included
+       #:jar-name "guava.jar"
+       #:source-dir "guava/src"
+       #:jdk ,openjdk9
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'trim-sources
+           (lambda _
+             (with-directory-excursion "guava/src/com/google/common"
+               ;; Remove annotations to avoid extra dependencies:
+               ;; * "j2objc" annotations are used when converting Java to
+               ;;   Objective C;
+               ;; * "errorprone" annotations catch common Java mistakes at
+               ;;   compile time;
+               ;; * "IgnoreJRERequirement" is used for Android.
+               (substitute* (find-files "." "\\.java$")
+                 (("import com.google.j2objc.*") "")
+                 (("import com.google.errorprone.annotation.*") "")
+                 (("import org.codehaus.mojo.animal_sniffer.*") "")
+                 (("@CanIgnoreReturnValue") "")
+                 (("@LazyInit") "")
+                 (("@WeakOuter") "")
+                 (("@RetainedWith") "")
+                 (("@Weak") "")
+                 (("@ForOverride") "")
+                 (("@J2ObjCIncompatible") "")
+                 (("@CompatibleWith\\(\"[A-Z]\"\\)") "")
+                 (("@Immutable\\([^\\)]*\\)") "")
+                 (("@Immutable") "")
+                 (("@ReflectionSupport\\([^\\)]*\\)") "")
+                 (("@DoNotMock.*") "")
+                 (("@MustBeClosed") "")
+                 (("@IgnoreJRERequirement") "")))
+             #t)))))))
+
 ;(define-public java-xml-commons
 ;  (package
 ;    (name "java-xml-commons")
@@ -4308,7 +4357,11 @@ documentation tools.")
     (build-system gnu-build-system)
     (outputs '("out" "jdk" "doc"))
     (arguments
-     `(#:tests? #f; TODO: requires jtreg
+     `(#:tests? #f; require jtreg
+       #:imported-modules
+       (;(guix build gnu-build-system)
+        (guix build syscalls)
+        ,@%gnu-build-system-modules)
        #:phases
        (modify-phases %standard-phases
          (delete 'patch-source-shebangs)
@@ -4329,19 +4382,60 @@ documentation tools.")
              (setenv "GUIX_LD_WRAPPER_ALLOW_IMPURITIES" "yes")
              (invoke "make" "all")
              #t))
-         (replace 'check
-           (lambda _
-             (invoke "make" "test")
+         ;(replace 'check
+         ;  (lambda _
+         ;    (invoke "make" "test")
+         ;    #t))
+         ;; Some of the libraries in the lib/ folder link to libjvm.so.
+         ;; But that shared object is located in the server/ folder, so it
+         ;; cannot be found.  This phase creates a symbolic link in the
+         ;; lib/ folder so that the other libraries can find it.
+         ;;
+         ;; See:
+         ;; https://lists.gnu.org/archive/html/guix-devel/2017-10/msg00169.html
+         ;;
+         ;; FIXME: Find the bug in the build system, so that this symlink is
+         ;; not needed.
+         (add-after 'install 'install-libjvm
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((lib-out (string-append (assoc-ref outputs "out")
+                                             "/lib"))
+                    (lib-jdk (string-append (assoc-ref outputs "jdk")
+                                             "/lib")))
+               (symlink (string-append lib-jdk "/server/libjvm.so")
+                        (string-append lib-jdk "/libjvm.so"))
+               (symlink (string-append lib-out "/server/libjvm.so")
+                        (string-append lib-out "/libjvm.so")))
              #t))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (let ((out (assoc-ref outputs "out"))
                    (jdk (assoc-ref outputs "jdk"))
                    (doc (assoc-ref outputs "doc"))
-                   (images (car (find-files "build" ".*-server-release"))))
+                   (images (car (find-files "build" ".*-server-release"
+                                            #:directories? #t))))
                (copy-recursively (string-append images "/images/jdk") jdk)
                (copy-recursively (string-append images "/images/jre") out)
                (copy-recursively (string-append images "/images/docs") doc))
+             #t))
+         (add-after 'install 'strip-zip-timestamps
+           (lambda* (#:key outputs #:allow-other-keys)
+             (use-modules (guix build syscalls))
+             (for-each (lambda (zip)
+                         (let ((dir (mkdtemp! "zip-contents.XXXXXX")))
+                           (with-directory-excursion dir
+                             (invoke "unzip" zip))
+                           (delete-file zip)
+                           (for-each (lambda (file)
+                                       (let ((s (lstat file)))
+                                         (unless (eq? (stat:type s) 'symlink)
+                                           (format #t "reset ~a~%" file)
+                                           (utime file 0 0 0 0))))
+                             (find-files dir #:directories? #t))
+                           (with-directory-excursion dir
+                             (let ((files (find-files "." ".*" #:directories? #t)))
+                               (apply invoke "zip" "-0" "-X" zip files)))))
+               (find-files (assoc-ref outputs "doc") ".*.zip$"))
              #t)))))
     (inputs
      `(("alsa-lib" ,alsa-lib)
