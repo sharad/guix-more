@@ -968,15 +968,39 @@ methods.  It is similar in speed with deflate but offers more dense compression.
     (description "")
     (license license:gpl2)))
 
+(define-public java-zstd
+  (package
+    (name "java-zstd")
+    (version "1.3.0-1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/luben/zstd-jni/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1an6gqps3n1ddxdz8vyzdrq7xz2p6nvwdwpmwf52mfia0w71xl9a"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-zstd.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f)); Require scala
+    (inputs
+     `(("zstd" ,zstd)))
+    (home-page "https://github.com/luben/zstd-jni")
+    (synopsis "")
+    (description "")
+    (license license:bsd-2)))
+
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "13576")
+    (version "13878")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                     (url "https://github.com/openstreetmap/josm.git")
-                    (commit "ac76e49953464260a30b110a86dfd8529171db50")))
+                    (commit "1771fe8e7386f9e9a1fbf90837a6dda4371c5670")))
               ;; https://josm.openstreetmap.de/browser
               ;; FIXME: Fetching from mirror on github because svn-fetch result
               ;; is not deterministic: hash differs each time it fetches the repo.
@@ -985,12 +1009,13 @@ methods.  It is similar in speed with deflate but offers more dense compression.
               ;      (revision (string->number version))))
               (sha256
                (base32
-                "0x8xh0cn6dbyn55n3davyv6r84pgd4yb52fbxj6qdwh2icprkz92"))
+                "0mkbaijlzxq828si3f46avvi4vj8c88gg7g72bq95n75lj8i0saa"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
                 '(begin
                    (for-each delete-file (find-files "." ".*.jar"))
+                   (delete-file-recursively "test/lib")
                    (delete-file-recursively "windows")))))
     (build-system ant-build-system)
     (native-inputs
@@ -1011,7 +1036,8 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        ("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-collections" ,java-commons-collections)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ("java-commons-compress" ,java-commons-compress-latest)))
+       ("java-commons-compress" ,java-commons-compress-latest)
+       ("java-zstd" ,java-zstd)))
     (arguments
      `(#:tests? #f
        #:jdk ,icedtea-8
@@ -1020,7 +1046,8 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        (modify-phases %standard-phases
          (add-after 'unpack 'rm-build.xml
            (lambda* _
-             (delete-file "build.xml")))
+             (delete-file "build.xml")
+             #t))
          (add-before 'build 'fix-revision
            (lambda* _
              (with-output-to-file "REVISION.XML"
@@ -1028,18 +1055,20 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                  (display
                    (string-append "<info><entry><commit revision=\"" ,version "\">"
                                   "<date>1970-01-01 00:00:00 +0000</date>"
-                                  "</commit></entry></info>"))))))
+                                  "</commit></entry></info>"))))
+             #t))
          (add-before 'build 'generate-parser
            (lambda* _
              (let* ((dir "src/org/openstreetmap/josm/gui/mappaint/mapcss")
                     (out (string-append dir "/parsergen"))
                     (file (string-append dir "/MapCSSParser.jj")))
                (mkdir-p "src/org/openstreetmap/josm/gui/mappaint/mapcss/parsergen")
-               (zero? (system* "javacc" "-DEBUG_PARSER=false"
-                               "-DEBUG_TOKEN_MANAGER=false" "-JDK_VERSION=1.8"
-                               "-GRAMMAR_ENCODING=UTF-8"
-                               (string-append "-OUTPUT_DIRECTORY=" out)
-                               file)))))
+               (invoke "javacc" "-DEBUG_PARSER=false"
+                       "-DEBUG_TOKEN_MANAGER=false" "-JDK_VERSION=1.8"
+                       "-GRAMMAR_ENCODING=UTF-8"
+                       (string-append "-OUTPUT_DIRECTORY=" out)
+                       file))
+             #t))
          (add-after 'build 'generate-epsg
            (lambda _
              (system* "javac" "scripts/BuildProjectionDefinitions.java"
@@ -1047,26 +1076,31 @@ methods.  It is similar in speed with deflate but offers more dense compression.
              (mkdir-p "data/projection")
              (with-output-to-file "data/projection/custom-epsg"
                (lambda _ (display "")))
-             (zero? (system* "java" "-cp" "build/classes:scripts:."
-                             "BuildProjectionDefinitions" "."))))
+             (invoke "java" "-cp" "build/classes:scripts:."
+                     "BuildProjectionDefinitions" ".")
+             #t))
          (add-after 'generate-epsg 'copy-data
            (lambda _
              (mkdir-p "build/classes")
-             (rename-file "data" "build/classes/data")))
+             (rename-file "data" "build/classes/data")
+             #t))
          (add-before 'install 'regenerate-jar
            (lambda _
              ;; We need to regenerate the jar file to add data.
              (delete-file "build/jar/josm.jar")
-             (zero? (system* "jar" "-cf" "build/jar/josm.jar" "-C"
-                             "build/classes" "."))))
+             (invoke "jar" "-cf" "build/jar/josm.jar" "-C"
+                     "build/classes" ".")
+             #t))
          (add-before 'build 'copy-styles
            (lambda _
              (mkdir-p "build/classes")
-             (rename-file "styles" "build/classes/styles")))
+             (rename-file "styles" "build/classes/styles")
+             #t))
          (add-before 'build 'copy-images
            (lambda _
              (mkdir-p "build/classes")
-             (rename-file "images" "build/classes/images")))
+             (rename-file "images" "build/classes/images")
+             #t))
          (add-before 'build 'copy-revision
            (lambda _
              (mkdir-p "build/classes")
@@ -1075,7 +1109,8 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                  (display
                    (string-append "Revision: " ,version "\n"
                                   "Is-Local-Build: true\n"
-                                  "Build-Date: 1970-01-01 00:00:00 +0000\n"))))))
+                                  "Build-Date: 1970-01-01 00:00:00 +0000\n"))))
+             #t))
          (add-after 'install 'install-bin
            (lambda* (#:key outputs inputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
@@ -1089,7 +1124,8 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                                     " -cp " out "/share/java/josm.jar:"
                                     (getenv "CLASSPATH")
                                     " org.openstreetmap.josm.gui.MainApplication"))))
-               (chmod (string-append bin "/josm") #o755)))))))
+               (chmod (string-append bin "/josm") #o755))
+             #t)))))
     (home-page "https://josm.openstreetmap.de")
     (synopsis "OSM editor")
     (description "OSM editor.")
@@ -4340,27 +4376,18 @@ documentation tools.")
     (name "openjdk")
     (version "9+181")
     (source (origin
-              ;(method hg-fetch)
-              ;(uri (hg-reference
-              ;       (url "http://hg.openjdk.java.net/jdk9/jdk9/")
-              ;       (changeset "b656dea9398ef601f7fc08d1a5157a560e0ccbe0")))
-              ;(uri (hg-reference
-              ;       (url "http://hg.openjdk.java.net/jdk/jdk/")
-              ;       (changeset "3cc80be736f2")))
               (method url-fetch)
               (uri "http://hg.openjdk.java.net/jdk/jdk/archive/3cc80be736f2.tar.bz2")
               (file-name (string-append name "-" version ".tar.bz2"))
               (sha256
                (base32
-                ;"0mnyfknznp0bwxvnl9yv6p8vzmwra482ya612mkfw37frbvs5b8x"))))
                 "01ihmyf7k5z17wbr7xig7y40l9f01d5zjgkcmawn1102hw5kchpq"))))
     (build-system gnu-build-system)
     (outputs '("out" "jdk" "doc"))
     (arguments
      `(#:tests? #f; require jtreg
        #:imported-modules
-       (;(guix build gnu-build-system)
-        (guix build syscalls)
+       ((guix build syscalls)
         ,@%gnu-build-system-modules)
        #:phases
        (modify-phases %standard-phases
@@ -4382,10 +4409,6 @@ documentation tools.")
              (setenv "GUIX_LD_WRAPPER_ALLOW_IMPURITIES" "yes")
              (invoke "make" "all")
              #t))
-         ;(replace 'check
-         ;  (lambda _
-         ;    (invoke "make" "test")
-         ;    #t))
          ;; Some of the libraries in the lib/ folder link to libjvm.so.
          ;; But that shared object is located in the server/ folder, so it
          ;; cannot be found.  This phase creates a symbolic link in the
@@ -4454,6 +4477,121 @@ documentation tools.")
     (native-inputs
      `(("icedtea-8" ,icedtea-8)
        ("icedtea-8:jdk" ,icedtea-8 "jdk")
+       ("gcc6" ,gcc-6)
+       ("unzip" ,unzip)
+       ("which" ,which)
+       ("zip" ,zip)))
+    (home-page "http://openjdk.java.net/projects/jdk9/")
+    (synopsis "")
+    (description "")
+    (license license:gpl2)))
+
+(define-public openjdk10
+  (package
+    (name "openjdk")
+    (version "10+46")
+    (source (origin
+              (method url-fetch)
+              (uri "http://hg.openjdk.java.net/jdk/jdk/archive/6fa770f9f8ab.tar.bz2")
+              (file-name (string-append name "-" version ".tar.bz2"))
+              (sha256
+               (base32
+                "0zywq2203b4hx4jms9vbwvjcj1d3k2v3qpx4s33729fkpmid97r4"))))
+    (build-system gnu-build-system)
+    (outputs '("out" "jdk" "doc"))
+    (arguments
+     `(#:tests? #f; require jtreg
+       #:imported-modules
+       ((guix build syscalls)
+        ,@%gnu-build-system-modules)
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'patch-source-shebangs)
+         (replace 'configure
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (invoke "bash" "./configure"
+                     (string-append "--with-freetype=" (assoc-ref inputs "freetype"))
+                     "--disable-freetype-bundling"
+                     "--disable-warnings-as-errors"
+                     "--disable-hotspot-gtest"
+                     (string-append "--prefix=" (assoc-ref outputs "out")))
+             #t))
+         (replace 'build
+           (lambda _
+             (with-output-to-file ".src-rev"
+               (lambda _
+                 (display ,version)))
+             (setenv "GUIX_LD_WRAPPER_ALLOW_IMPURITIES" "yes")
+             (invoke "make" "all")
+             #t))
+         ;; Some of the libraries in the lib/ folder link to libjvm.so.
+         ;; But that shared object is located in the server/ folder, so it
+         ;; cannot be found.  This phase creates a symbolic link in the
+         ;; lib/ folder so that the other libraries can find it.
+         ;;
+         ;; See:
+         ;; https://lists.gnu.org/archive/html/guix-devel/2017-10/msg00169.html
+         ;;
+         ;; FIXME: Find the bug in the build system, so that this symlink is
+         ;; not needed.
+         (add-after 'install 'install-libjvm
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((lib-out (string-append (assoc-ref outputs "out")
+                                             "/lib"))
+                    (lib-jdk (string-append (assoc-ref outputs "jdk")
+                                             "/lib")))
+               (symlink (string-append lib-jdk "/server/libjvm.so")
+                        (string-append lib-jdk "/libjvm.so"))
+               (symlink (string-append lib-out "/server/libjvm.so")
+                        (string-append lib-out "/libjvm.so")))
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out"))
+                   (jdk (assoc-ref outputs "jdk"))
+                   (doc (assoc-ref outputs "doc"))
+                   (images (car (find-files "build" ".*-server-release"
+                                            #:directories? #t))))
+               (copy-recursively (string-append images "/images/jdk") jdk)
+               (copy-recursively (string-append images "/images/jre") out)
+               (copy-recursively (string-append images "/images/docs") doc))
+             #t))
+         (add-after 'install 'strip-zip-timestamps
+           (lambda* (#:key outputs #:allow-other-keys)
+             (use-modules (guix build syscalls))
+             (for-each (lambda (zip)
+                         (let ((dir (mkdtemp! "zip-contents.XXXXXX")))
+                           (with-directory-excursion dir
+                             (invoke "unzip" zip))
+                           (delete-file zip)
+                           (for-each (lambda (file)
+                                       (let ((s (lstat file)))
+                                         (unless (eq? (stat:type s) 'symlink)
+                                           (format #t "reset ~a~%" file)
+                                           (utime file 0 0 0 0))))
+                             (find-files dir #:directories? #t))
+                           (with-directory-excursion dir
+                             (let ((files (find-files "." ".*" #:directories? #t)))
+                               (apply invoke "zip" "-0" "-X" zip files)))))
+               (find-files (assoc-ref outputs "doc") ".*.zip$"))
+             #t)))))
+    (inputs
+     `(("alsa-lib" ,alsa-lib)
+       ("cups" ,cups)
+       ("fontconfig" ,fontconfig)
+       ("freetype" ,freetype)
+       ("libelf" ,libelf)
+       ("libice" ,libice)
+       ("libx11" ,libx11)
+       ("libxcomposite" ,libxcomposite)
+       ("libxi" ,libxi)
+       ("libxinerama" ,libxinerama)
+       ("libxrender" ,libxrender)
+       ("libxt" ,libxt)
+       ("libxtst" ,libxtst)))
+    (native-inputs
+     `(("openjdk9" ,openjdk9)
+       ("openjdk9:jdk" ,openjdk9 "jdk")
        ("unzip" ,unzip)
        ("which" ,which)
        ("zip" ,zip)))
