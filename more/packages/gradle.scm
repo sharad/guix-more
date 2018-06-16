@@ -30,8 +30,7 @@
   #:use-module (gnu packages maven)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
-  #:use-module (more packages java)
-  #:use-module (more packages maven))
+  #:use-module (more packages java))
 
 ;; Gradle requires guava@17.
 ;; TODO: patch gradle to support at least guava@20 and send it upstream.

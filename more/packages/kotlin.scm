@@ -37,8 +37,7 @@
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
-  #:use-module (more packages java)
-  #:use-module (more packages maven))
+  #:use-module (more packages java))
 
 ;; Needs maven-core
 (define-public kotlin
