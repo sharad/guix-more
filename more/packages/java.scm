@@ -48,6 +48,38 @@
   #:use-module (gnu packages xorg)
   #:use-module (more packages python))
 
+(define-public java-fastutil
+  (package
+    (name "java-fastutil")
+    (version "8.2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://fastutil.di.unimi.it/fastutil-"
+                                  version "-src.tar.gz"))
+              (sha256
+               (base32
+                "039gh3b9a72dvc9jmijfhshd2i7bnj18p2yi67200qfrnw17wbkj"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jdk ,icedtea-8
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-sources
+           (lambda _
+             (invoke "make" "CC=gcc" "sources")
+             #t))
+         (add-after 'build 'generate-javadoc
+           (lambda _
+             (invoke "ant" "javadoc")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (home-page "http://fastutil.di.unimi.it/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 ;; Maintained version of http-builder (groovyx.net.http)
 (define-public java-http-builder-ng
   (package
@@ -267,14 +299,14 @@
 (define-public java-jcifs
   (package
     (name "java-jcifs")
-    (version "1.3.18")
+    (version "1.3.19")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://jcifs.samba.org/src/jcifs-"
                                   version ".tgz"))
               (sha256
                (base32
-                "04li1j2y9ndvp77g67dzp8yra1899wx21mg5gkbldpy4f190vq0m"))
+                "19kzac3c19j0fyssibcj47868k8079wlj9azgsd7i6yqmdgqyk3y"))
               (modules '((guix build utils)))
               (snippet
                 `(delete-file (string-append "jcifs-" ,version ".jar")))))

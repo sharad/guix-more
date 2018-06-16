@@ -29,6 +29,7 @@
   #:use-module (gnu packages java)
   #:use-module (gnu packages maven)
   #:use-module (gnu packages web)
+  #:use-module (gnu packages version-control)
   #:use-module (gnu packages xml)
   #:use-module (more packages java))
 
@@ -61,7 +62,7 @@ that contain dependency information. This file is created using the
 @code{projects} and @code{runtime} parameters."
   (package
     (name (string-append "gradle-" subproject))
-    (version "4.4.0")
+    (version "4.8.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/gradle/gradle/archive/v"
@@ -69,15 +70,15 @@ that contain dependency information. This file is created using the
               (file-name (string-append "gradle-" version ".tar.gz"))
               (sha256
                (base32
-                "026232dy578nl8gzj1nfc9r25p8alcwdbwb9b8s3bw4krxmy6saz"))
+                "1jbw9044g0czn8pm46i6j4y0gx6l3b3iwamh9d7ja14i2wrx5shf"))
               (patches
                 (search-patches
-                  "gradle-match-files-witouht-version-number.patch"))))
+                  "gradle-match-files-without-version-number.patch"))))
     (build-system ant-build-system)
     (arguments
      ;; The jar-name must be this exactly: gradle will not find its jar files
      ;; if they are named differently.
-     `(#:jar-name (string-append "gradle-" ,subproject "-4.4.jar")
+     `(#:jar-name (string-append "gradle-" ,subproject "-4.8.jar")
        #:source-dir (string-append "subprojects/" ,subproject "/src/main/java")
        #:jdk ,icedtea-8
        #:tests? #f;; Ignore tests for now
@@ -92,7 +93,7 @@ that contain dependency information. This file is created using the
                (("message=\"")
                 (string-append "message=\"Implementation-Title: Gradle"
                                "${line.separator}"
-                               "Implementation-Version: 4.4"
+                               "Implementation-Version: 4.8"
                                "${line.separator}")))
              #t))
          (add-before 'build 'add-properties
@@ -129,9 +130,11 @@ that contain dependency information. This file is created using the
              (let ((resources (string-append "subprojects/" ,subproject
                                              "/src/main/resources")))
                (if (file-exists? resources)
-                 (copy-recursively resources "build/classes"))))))))
+                 (copy-recursively resources "build/classes")))
+             #t)))))
     (inputs '())
-    (native-inputs '())
+    (native-inputs
+      `(("java-junit" ,java-junit)))
     (home-page "")
     (synopsis "Build system")
     (description "Build system")
@@ -167,7 +170,9 @@ builds a module containing groovy source code."
                    ;; FIXME: Can't we use groovy-ant for that?
                    (("<project basedir=\".\">")
                     "<project basedir=\".\"><taskdef name=\"groovyc\"
-classname=\"org.codehaus.groovy.ant.Groovyc\" />"))))))))
+classname=\"org.codehaus.groovy.ant.Groovyc\" />")
+                   ;; Tests are in test.home/groovy, not /java
+                   (("\\}/java") "}/groovy"))))))))
       (native-inputs
        `(("groovy" ,groovy)
          ,@(package-inputs groovy))))))
@@ -241,7 +246,8 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))))))))
            (lambda _
              (substitute* '("buildSrc/src/main/groovy/org/gradle/build/docs/dsl/source/SourceMetaDataVisitor.java"
                             "buildSrc/src/main/groovy/org/gradle/build/docs/dsl/source/ExtractDslMetaDataTask.groovy")
-               (("groovyjarjarantlr") "antlr"))))
+               (("groovyjarjarantlr") "antlr"))
+             #t))
          (add-before 'build 'fixes
            (lambda _
              (substitute* "buildSrc/src/main/groovy/org/gradle/binarycompatibility/rules/SinceAnnotationMissingRule.java"
@@ -339,11 +345,11 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))
                  (mkdir-p "build/classes/org/gradle")
                  (with-output-to-file "build/classes/org/gradle/build-receipt.properties"
                    (lambda _
-                     (format #t "baseVersion=4.4
+                     (format #t "baseVersion=4.8
 commitId=cf7821a6f79f8e2a598df21780e3ff7ce8db2b82
 buildTimestamp=19710101000000+0000
 buildTimestampIso=1971-01-01 00\\:00\\:00 UTC
-versionNumber=4.4
+versionNumber=4.8
 isSnapshot=false")))
                  #t))))))
       (inputs
@@ -377,8 +383,7 @@ isSnapshot=false")))
        ("java-jsr305" ,java-jsr305)))))
 
 (define-public gradle-cli
-  (package
-    (inherit (gradle-subproject "cli" '() '()))))
+  (gradle-subproject "cli" '() '()))
 
 (define-public gradle-native
   (package
@@ -417,6 +422,7 @@ isSnapshot=false")))
          ("gradle-base-services-groovy" ,gradle-base-services-groovy)
          ("java-asm-6" ,java-asm-6)
          ("java-commons-lang" ,java-commons-lang)
+         ("java-fastutil" ,java-fastutil)
          ("java-guava-for-gradle" ,java-guava-for-gradle)
          ("java-jsr305" ,java-jsr305)
          ("java-kryo" ,java-kryo)
@@ -589,6 +595,25 @@ isSnapshot=false")))
      `(("gradle-base-services" ,gradle-base-services)
        ("gradle-process-services" ,gradle-process-services)))))
 
+(define-public gradle-plugin-use
+  (let ((base (gradle-subproject
+                "plugin-use"
+                '("gradle-resources-http" "gradle-core" "gradle-dependency-management")
+                '())))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-dependency-management" ,gradle-dependency-management)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-messaging" ,gradle-messaging)
+         ("groovy" ,groovy)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-jsr305" ,java-jsr305))))))
+
 (define-public gradle-core
   (let ((base (gradle-subproject
                 "core"
@@ -698,7 +723,7 @@ isSnapshot=false")))
 (define-public gradle-launcher
   (let ((base (gradle-subproject
                 "launcher"
-                '("gradle-base-services" "gradle-core-api" "gradle-core")
+                '("gradle-base-services" "gradle-core-api" "gradle-core" "gradle-tooling-api")
                 '("java-asm-6" "java-commons-io" "java-slf4j-api"))))
     (package
       (inherit base)
@@ -732,11 +757,17 @@ isSnapshot=false")))
                    (substitute* "build.xml"
                      (("message=\"")
                       (string-append "message=\"Class-Path: "
-                                     "gradle-base-services-4.4.jar "
-                                     "gradle-core-api-4.4.jar "
-                                     "gradle-core-4.4.jar"
+                                     "gradle-base-services-4.8.jar "
+                                     "gradle-core-api-4.8.jar "
+                                     "gradle-core-4.8.jar"
                                      "${line.separator}")))
-                   #t))))))))))
+                   #t))
+                ;; This phase fails, because the jar files are not actually
+                ;; present in the output directory.  This is because gradle
+                ;; uses class loading: we need to put all its dependencies
+                ;; in the same package, which is done later.  Then the
+                ;; classpath becomes correct.
+                (delete 'generate-jar-indices)))))))))
 
 (define-public gradle-installation-beacon
   (package
@@ -776,7 +807,8 @@ isSnapshot=false")))
        ("java-commons-lang" ,java-commons-lang)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-jatl" ,java-jatl)
-       ("java-javax-inject" ,java-javax-inject)))))
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-jsr305" ,java-jsr305)))))
 
 (define-public gradle-resources-http
   (package
@@ -784,7 +816,7 @@ isSnapshot=false")))
                "resources-http"
                '("gradle-resources" "gradle-base-services" "gradle-core")
                ;; TODO: jcl-over-slf4j
-               '("java-httpcomponents-client" "java-httpcomponents-core"
+               '("java-httpcomponents-httpclient" "java-httpcomponents-httpcore"
                  "java-commons-codec" "java-jcifs" "java-slf4j-api"
                  "java-guava-for-gradle" "java-commons-lang" "java-commons-io"
                  "java-nekohtml" "java-xerces" "java-jaxp")))
@@ -798,14 +830,39 @@ isSnapshot=false")))
        ("java-commons-io" ,java-commons-io)
        ("java-commons-lang" ,java-commons-lang)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
-       ("java-httpcomponents-client" ,java-httpcomponents-client)
-       ("java-httpcomponents-core" ,java-httpcomponents-core)
+       ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
+       ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
        ("java-jaxp" ,java-jaxp)
        ("java-jcifs" ,java-jcifs)
        ("java-jsr305" ,java-jsr305)
        ("java-nekohtml" ,java-nekohtml)
        ("java-slf4j-api" ,java-slf4j-api)
        ("java-xerces" ,java-xerces)))))
+
+(define-public gradle-version-control
+  (let ((base (gradle-subproject
+                "version-control"
+                '("gradle-core" "gradle-core-api")
+                ;TODO: jcl-over-slf4j-1.7.16.jar
+                '("java-httpcomponents-httpclient" "java-httpcomponents-httpcore"
+                  "java-commons-codec" "java-jgit" "java-jsch"
+                  "java-slf4j-api"))))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-persistent-cache" ,gradle-persistent-cache)
+         ("java-commons-codec" ,java-commons-codec)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
+         ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
+         ("java-jgit" ,java-jgit)
+         ("java-jsch" ,java-jsch)
+         ("java-jsr305" ,java-jsr305)
+         ("java-slf4j-api" ,java-slf4j-api))))))
 
 (define-public gradle-dependency-management
   (let ((base (gradle-subproject
@@ -823,7 +880,7 @@ isSnapshot=false")))
                  ;; maven-settings maven-settings-builder xbean-reflect
                  '("java-asm-6" "java-commons-lang" "java-commons-io"
                    "java-apache-ivy" "java-slf4j-api" "java-gson"
-                   "java-jcip-annotations" "java-bouncycastle-bcprov"
+                   "java-jcip-annotations" "java-bouncycastle"
                    "java-jsch"))))
     (package
       (inherit base)
@@ -852,6 +909,7 @@ isSnapshot=false")))
          ("gradle-persistent-cache" ,gradle-persistent-cache)
          ("gradle-resources" ,gradle-resources)
          ("gradle-resources-http" ,gradle-resources-http)
+         ("gradle-version-control" ,gradle-version-control)
          ("groovy" ,groovy)
          ("java-apache-ivy" ,java-apache-ivy)
          ("java-asm-6" ,java-asm-6)
@@ -1117,6 +1175,7 @@ isSnapshot=false")))
        ("groovy" ,groovy)
        ("java-asm-6" ,java-asm-6)
        ("java-commons-lang" ,java-commons-lang)
+       ("java-fastutil" ,java-fastutil)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-javax-inject" ,java-javax-inject)
        ("java-jsr305" ,java-jsr305)
@@ -1471,8 +1530,9 @@ org/objectweb/asm
 org/objenesis
 "))))
              (mkdir-p "build/jar")
-             (zero? (system* "jar" "cf" "build/jar/gradle-gradle-runtime-api-info-4.4.jar"
-                             "-C" "build/classes" ".")))))))))))
+             (invoke "jar" "cf" "build/jar/gradle-runtime-api-info-4.8.jar"
+                             "-C" "build/classes" ".")
+             #t)))))))))
 
 ;; This package doesn't work. I need to understand how api-mapping.txt and
 ;; default-imports.txt are generated. Currently they are generated by a custom
@@ -2671,7 +2731,8 @@ WorkerConfiguration:org.gradle.workers.WorkerConfiguration;
 WorkerExecutionException:org.gradle.workers.WorkerExecutionException;
 WorkerExecutor:org.gradle.workers.WorkerExecutor;
 ")))
-                (zero? (system* "ant" "jar")))))))))))
+                (invoke "ant" "jar")
+                #t)))))))))
 
 ;; Gradle doesn't provide a gradle binary or script, so we provide it instead.
 ;; Gradle expects that all its modules and dependency jars are located in the
@@ -2702,6 +2763,7 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                           (filename (string-append bindir "/gradle"))
                           (plugins
                            '("gradle-workers"
+                             "gradle-version-control"
                              "gradle-testing-jvm"
                              "gradle-testing-base"
                              "gradle-resources-http"
@@ -2710,11 +2772,31 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "gradle-platform-native"
                              "gradle-platform-jvm"
                              "gradle-platform-base"
+                             "gradle-plugin-use"
                              "gradle-language-jvm"
                              "gradle-language-java"
                              "gradle-language-groovy"
                              "gradle-diagnostics"
-                             "gradle-dependency-management"))
+                             "gradle-dependency-management"
+                             "java-apache-ivy"
+                             "java-bouncycastle"
+                             "java-bsh"
+                             "java-commons-codec"
+                             "java-gson"
+                             "java-hamcrest-all"
+                             "java-httpcomponents-httpclient"
+                             "java-httpcomponents-httpcore"
+                             "java-jatl"
+                             "java-jcifs"
+                             "java-jcommander"
+                             "java-jgit"
+                             "java-jsch"
+                             "java-snakeyaml"
+                             "java-testng"
+                             "java-junit"
+                             "java-nekohtml"
+                             "java-xerces"))
+                          ;; java-asm-6 and java-jansi are already present in groovy.
                           (dependencies 
                            '("gradle-wrapper"
                              "gradle-tooling-api"
@@ -2739,13 +2821,11 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "gradle-base-services-groovy"
                              "gradle-base-services"
                              "groovy"
-                             "java-asm-6"
                              "java-commons-compress"
                              "java-commons-collections"
                              "java-commons-io"
                              "java-commons-lang"
                              "java-guava-for-gradle"
-                             "java-jansi"
                              "java-jansi-native"
                              "java-javax-inject"
                              "java-jaxp"
@@ -2771,7 +2851,7 @@ export GRADLE_HOME=~a\n
                                  output
                                  (string-append (assoc-ref %build-inputs "icedtea-8")
                                                 "/bin/java")
-                                 (string-append libdir "/gradle-launcher-4.4.jar"))))
+                                 (string-append libdir "/gradle-launcher-4.8.jar"))))
                      (chmod filename #o755)
                      ;; Create a symlink for every dependency listed above.
                      (for-each
@@ -2793,14 +2873,15 @@ export GRADLE_HOME=~a\n
                                          ".*.jar"))
                            plugins)))
                      ;; Using a symlink for gradle-launcher doesn't seem to work.
-                     (delete-file (string-append libdir "/gradle-launcher-4.4.jar"))
+                     (delete-file (string-append libdir "/gradle-launcher-4.8.jar"))
                      (copy-file (string-append (assoc-ref %build-inputs "gradle-launcher")
-                                               "/share/java/gradle-launcher-4.4.jar")
+                                               "/share/java/gradle-launcher-4.8.jar")
                                 (string-append libdir
-                                               "/gradle-launcher-4.4.jar"))))))
+                                               "/gradle-launcher-4.8.jar"))))))
     (inputs
      `(("gradle-wrapper"               ,gradle-wrapper)
        ("gradle-workers"               ,gradle-workers)
+       ("gradle-version-control"       ,gradle-version-control)
        ("gradle-tooling-api"           ,gradle-tooling-api)
        ("gradle-testing-jvm"           ,gradle-testing-jvm)
        ("gradle-testing-base"          ,gradle-testing-base)
@@ -2809,6 +2890,7 @@ export GRADLE_HOME=~a\n
        ("gradle-resources"             ,gradle-resources)
        ("gradle-reporting"             ,gradle-reporting)
        ("gradle-process-services"      ,gradle-process-services)
+       ("gradle-plugin-use"            ,gradle-plugin-use)
        ("gradle-plugins"               ,gradle-plugins)
        ("gradle-platform-native"       ,gradle-platform-native)
        ("gradle-platform-jvm"          ,gradle-platform-jvm)
@@ -2839,24 +2921,42 @@ export GRADLE_HOME=~a\n
        ("groovy" ,groovy)
        ("icedtea-8" ,icedtea-8)
        ("java-asm-6" ,java-asm-6)
+       ("java-apache-ivy" ,java-apache-ivy)
+       ("java-bouncycastle" ,java-bouncycastle)
+       ("java-bsh" ,java-bsh)
+       ("java-commons-codec" ,java-commons-codec)
        ("java-commons-compress" ,java-commons-compress)
        ("java-commons-collections" ,java-commons-collections)
        ("java-commons-io" ,java-commons-io)
        ("java-commons-lang" ,java-commons-lang)
+       ("java-gson" ,java-gson)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
+       ("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
+       ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
        ("java-jansi" ,java-jansi)
        ("java-jansi-native" ,java-jansi-native)
+       ("java-jatl" ,java-jatl)
        ("java-javax-inject" ,java-javax-inject)
        ("java-jaxp" ,java-jaxp)
+       ("java-jcifs" ,java-jcifs)
        ("java-jcip-annotations" ,java-jcip-annotations)
+       ("java-jcommander" ,java-jcommander)
+       ("java-jgit" ,java-jgit)
+       ("java-jsch" ,java-jsch)
        ("java-jsr305" ,java-jsr305)
        ("java-jul-to-slf4j" ,java-jul-to-slf4j)
+       ("java-junit" ,java-junit)
        ("java-kryo" ,java-kryo)
        ("java-minlog" ,java-minlog)
        ("java-native-platform" ,java-native-platform)
+       ("java-nekohtml" ,java-nekohtml)
        ("java-objenesis" ,java-objenesis)
        ("java-reflectasm" ,java-reflectasm)
        ("java-slf4j-api" ,java-slf4j-api)
+       ("java-snakeyaml" ,java-snakeyaml)
+       ("java-testng" ,java-testng)
+       ("java-xerces" ,java-xerces)
        ("ant" ,ant)
        ("bash" ,bash)))
     (native-inputs '())))
