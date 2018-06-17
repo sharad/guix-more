@@ -598,6 +598,56 @@ framework for Java.  The project is useful any time objects need to be
 persisted, whether to a file, database, or over the network.")
     (license license:bsd-3)))
 
+;(define-public java-jformatstring
+;  (package
+;    (name "java-jformatstring")
+;    (version "3.0.0")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://framagit.org/tyreunom/j-format-string/-/archive/"
+;                                  version "/j-format-string-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "0ypqnchxif7rkq3n9vshj3j0d24kw3wr6k00yb5i14jm59m21r90"))
+;              (modules '((guix build utils)))
+;              (snippet
+;                '(begin
+;                   (for-each delete-file (find-files "." ".*.jar"))))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:jar-name "jformatstring.jar"))
+;    (inputs
+;     `(("java-jsr305" ,java-jsr305)
+;       ("java-junit" ,java-junit)))
+;    (home-page "http://findbugs.sourceforge.net/")
+;    (synopsis "")
+;    (description "")
+;    ;; license: gpl2 only, with classpath exception
+;    (license license:gpl2)))
+
+;(define-public java-commons-bcel-5
+;  (package
+;    (inherit java-commons-bcel)
+;    (version "6.0")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://archive.apache.org/dist/commons/"
+;                                  "bcel/source/bcel-" version "-src.tar.gz"))
+;              (sha256
+;               (base32
+;                "0n39601zcj7ymjihfv53r260mf3n8kj6bqhxv90dw5sgc7qbjqxr"))))
+;    (arguments
+;     `(#:jar-name "commons-bcel.jar"
+;       #:source-dir "src/java"
+;       #:tests? #f
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'build 'use-iso8859
+;           (lambda _
+;             (substitute* "build.xml"
+;               (("<javac ") "<javac encoding=\"iso-8859-1\" "))
+;             #t)))))))
+
 (define-public java-findbugs
   (package
     (name "java-findbugs")
@@ -608,22 +658,84 @@ persisted, whether to a file, database, or over the network.")
                                   "findbugs-" version "-source.zip"))
               (sha256
                (base32
-                "1zrkpmd87lcz62lk5dr0mpf5gbzrd1i8mmrv510fs6fla1jwd3mx"))))
+                "1zrkpmd87lcz62lk5dr0mpf5gbzrd1i8mmrv510fs6fla1jwd3mx"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin
+                   (for-each delete-file (find-files "." ".*.jar"))))))
     (build-system ant-build-system)
-    (native-inputs
-     `(("unzip" ,unzip)))
     (arguments
      `(#:build-target "jars"
        #:test-target "test"
        #:make-flags (list "-Dgitrnum=0")
        #:phases
        (modify-phases %standard-phases
+         (add-before 'build 'add-formatstring
+           (lambda* (#:key inputs #:allow-other-keys)
+             (invoke "tar" "xf" (assoc-ref inputs "java-jformatstring"))
+             (copy-recursively "j-format-string-3.0.0/src/java" "src/java")
+             (copy-recursively "j-format-string-3.0.0/src/junit" "src/junit")
+             #t))
+         (add-before 'build 'fix-bcel-version
+           (lambda _
+             ;; Findbugs requires an older version of bcel. Fix it to support
+             ;; newer bcel versions.
+             (with-directory-excursion "src/java/edu/umd/cs/findbugs"
+               (with-fluids ((%default-port-encoding "ISO-8859-1"))
+                 (substitute* '("visitclass/PreorderVisitor.java"
+                                "StackMapAnalyzer.java")
+                   ;; The two classes were merged in the latter
+                   (("StackMapTable")
+                    "StackMap"))))
+             #t))
+         (add-before 'build 'remove-osx
+           (lambda _
+             ;; Requires AppleJavaExtensions.jar (com.apple.eawt.*)
+             (delete-file "src/gui/edu/umd/cs/findbugs/gui2/OSXAdapter.java")
+             #t))
+         (add-before 'build 'find-dependencies
+           (lambda* (#:key inputs #:allow-other-keys)
+             (for-each
+               (lambda (input)
+                 (for-each
+                   (lambda (file)
+                     (display file) (display " -> ")
+                     (display (string-append "lib/" (basename file))) (newline)
+                     (newline)
+                     (copy-file file (string-append "lib/" (basename file))))
+                   (find-files (assoc-ref inputs input) ".*.jar")))
+               '("java-jsr305" "java-commons-bcel-5" "java-dom4j" "java-asm"
+                 "java-jcip-annotations" "java-commons-lang"))
+             #t))
          (add-before 'build 'no-git
            (lambda _
              ;; We are not building a git revision
              (substitute* "build.xml"
                ((",-get-git-revision") ""))
-             #t)))))
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (inputs
+     `(("java-asm" ,java-asm)
+       ("java-commons-bcel-5" ,java-commons-bcel-6.0)
+       ("java-commons-lang" ,java-commons-lang)
+       ("java-dom4j" ,java-dom4j)
+       ("java-jcip-annotations" ,java-jcip-annotations)
+       ("java-jsr305" ,java-jsr305)))
+    (native-inputs
+     `(("unzip" ,unzip)
+       ("java-jformatstring"
+        ,(origin
+           (method url-fetch)
+           (uri (string-append "https://framagit.org/tyreunom/j-format-string/-/archive/"
+                               "3.0.0/j-format-string-3.0.0.tar.gz"))
+           (sha256
+            (base32
+             "0ypqnchxif7rkq3n9vshj3j0d24kw3wr6k00yb5i14jm59m21r90"))
+           (modules '((guix build utils)))
+           (snippet
+             '(begin
+                (for-each delete-file (find-files "." ".*.jar"))))))))
     (home-page "http://findbugs.sourceforge.net/")
     (synopsis "")
     (description "")
@@ -2870,7 +2982,7 @@ namespaces.")
     (description "")
     (license license:public-domain)))
 
-(define-public java-commons-bcel
+(define-public java-commons-bcel-6.0
   (package
     (name "java-commons-bcel")
     (version "6.0")
@@ -2884,7 +2996,7 @@ namespaces.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "commons-bcel.jar"
-       #:jdk ,icedtea-8
+       ;#:jdk ,icedtea-8
        #:source-dir "src/main/java"
        ;; FIXME: requires org.openjdk.jmh.* and com.sun.jna.platform.win32 for tests
        #:tests? #f))
