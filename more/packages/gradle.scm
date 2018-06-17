@@ -1122,10 +1122,12 @@ isSnapshot=false")))
        ("gradle-dependency-management" ,gradle-dependency-management)
        ("gradle-launcher" ,gradle-launcher)
        ("gradle-logging" ,gradle-logging)
+       ("gradle-messaging" ,gradle-messaging)
        ("gradle-model-core" ,gradle-model-core)
        ("groovy" ,groovy)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-javax-inject" ,java-javax-inject)
+       ("java-jsr305" ,java-jsr305)
        ("java-slf4j-api" ,java-slf4j-api)))))
 
 (define-public gradle-language-jvm
@@ -1533,6 +1535,203 @@ org/objenesis
              (invoke "jar" "cf" "build/jar/gradle-runtime-api-info-4.8.jar"
                              "-C" "build/classes" ".")
              #t)))))))))
+
+(define-public gradle-announce
+  (let ((base (gradle-subproject
+                "announce"
+                '("gradle-core")
+                '("java-commons-codec" "java-commons-io" "java-slf4j-api"))))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-process-services" ,gradle-process-services)
+         ("java-commons-codec" ,java-commons-codec)
+         ("java-commons-io" ,java-commons-io)
+         ("java-slf4j-api" ,java-slf4j-api))))))
+
+(define-public gradle-antlr
+  (let ((base (gradle-subproject
+                "antlr"
+                '("gradle-core" "gradle-plugins" "gradle-workers")
+                '("java-slf4j-api"))))
+    (package
+      (inherit base)
+      (inputs
+       `(("antlr2" ,antlr2)
+         ("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-plugins" ,gradle-plugins)
+         ("gradle-process-services" ,gradle-process-services)
+         ("groovy" ,groovy)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305)
+         ("java-slf4j-api" ,java-slf4j-api))))))
+
+(define-public gradle-build-cache-http
+  (let ((base (gradle-subproject
+                "build-cache-http"
+                '("gradle-resources" "gradle-resources-http"
+                  "gradle-base-services" "gradle-core")
+                ; TODO: jcl-over-slf4j-1.7.16.jar
+                '("java-httpcomponents-httpclient" "java-httpcomponents-httpcore"
+                  "java-commons-codec" "java-slf4j-api" "java-commons-lang"))))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-build-cache" ,gradle-build-cache)
+         ("grade-core" ,gradle-core)
+         ("grade-core-api" ,gradle-core-api)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-resources" ,gradle-resources)
+         ("gradle-resources-http" ,gradle-resources-http)
+         ("java-commons-codec" ,java-commons-codec)
+         ("java-commons-lang" ,java-commons-lang)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
+         ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305)
+         ("java-slf4j-api" ,java-slf4j-api))))))
+
+(define-public gradle-ear
+  (let ((base (gradle-subproject
+                "ear"
+                '("gradle-core" "gradle-plugins")
+                '("java-javax-inject"))))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-native" ,gradle-native)
+         ("gradle-platform-jvm" ,gradle-platform-jvm)
+         ("gradle-plugins" ,gradle-plugins)
+         ("groovy" ,groovy)
+         ("java-commons-io" ,java-commons-io)
+         ("java-commons-lang" ,java-commons-lang)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305))))))
+
+(define-public gradle-build-comparison
+  (let ((base (gradle-groovy-subproject
+                "build-comparison"
+                '("gradle-resources" "gradle-core" "gradle-tooling-api"
+                  "gradle-reporting" "gradle-plugins" "gradle-ear")
+                '("groovy" "java-guava-for-gradle" "java-slf4j-api"))))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:source-dir source-dir)
+          `(string-append "subprojects/build-comparison/src/main/java:"
+                          "subprojects/build-comparison/src/main/groovy"))))
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-ear" ,gradle-ear)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-platform-jvm" ,gradle-platform-jvm)
+         ("gradle-plugins" ,gradle-plugins)
+         ("gradle-reporting" ,gradle-reporting)
+         ("gradle-resources" ,gradle-resources)
+         ("gradle-tooling-api" ,gradle-tooling-api)
+         ("groovy" ,groovy)
+         ("java-commons-io" ,java-commons-io)
+         ("java-commons-lang" ,java-commons-lang)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-slf4j-api" ,java-slf4j-api))))))
+
+(define-public gradle-build-init
+  (let ((base (gradle-groovy-subproject
+                "build-init"
+                '("gradle-core" "gradle-plugins" "gradle-wrapper")
+                '("groovy" "java-junit" "java-hamcrest-all" "java-guava-for-gradle"
+                  "java-plexus-classworlds" "java-plexus-container-default"
+                  "java-plexus-interpolation" "java-plexus-utils"
+                  "java-slf4j-api"
+                  "maven-artifact" "maven-compat" "maven-core" "maven-model"
+                  "maven-model-builder" "maven-repository-metadata" "maven-plugin-api"
+                  "maven-resolver-api" "maven-resolver-impl" "maven-resolver-spi"
+                  "maven-resolver-util"
+                  "maven-settings" "maven-settings-builder"))))
+    ; TODO:
+    ; xbean-reflect jcl-over-slf4j log4j-over-slf4j
+    ; plexus-component-annotations
+    ; wagon-provider-api
+    ; plexus-sec-dispatcher plexus-cipher
+    ; maven-aether-provider
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:source-dir source-dir)
+          `(string-append "subprojects/build-init/src/main/java:"
+                          "subprojects/build-init/src/main/groovy"))
+         ((#:phases phases)
+          `(modify-phases ,phases
+             (add-before 'build 'fix-aether
+               (lambda _
+                 ;; We use maven-resolver, instead of aether-resolver, so fix it:
+                 (substitute* (find-files "subprojects/build-init" ".*.java")
+                   (("org.sonatype.aether") "org.eclipse.aether")
+                   (("org.eclipse.aether.util.DefaultRepositorySystemSession")
+                    "org.eclipse.aether.DefaultRepositorySystemSession"))
+                 #t))))))
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-dependency-management" ,gradle-dependency-management)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-plugins" ,gradle-plugins)
+         ("gradle-wrapper" ,gradle-wrapper)
+         ("groovy" ,groovy)
+         ("java-commons-lang" ,java-commons-lang)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-hamcrest-all" ,java-hamcrest-all)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305)
+         ("java-junit" ,java-junit)
+         ("java-plexus-classworlds" ,java-plexus-classworlds)
+         ("java-plexus-container-default" ,java-plexus-container-default)
+         ("java-plexus-interpolation" ,java-plexus-interpolation)
+         ("java-plexus-utils" ,java-plexus-utils)
+         ("java-slf4j-api" ,java-slf4j-api)
+         ("maven-artifact" ,maven-artifact)
+         ("maven-compat" ,maven-compat)
+         ("maven-core" ,maven-core)
+         ("maven-model" ,maven-model)
+         ("maven-model-builder" ,maven-model-builder)
+         ("maven-repository-metadata" ,maven-repository-metadata)
+         ("maven-plugin-api" ,maven-plugin-api)
+         ("maven-resolver-api" ,maven-resolver-api)
+         ("maven-resolver-impl" ,maven-resolver-impl)
+         ("maven-resolver-spi" ,maven-resolver-spi)
+         ("maven-resolver-util" ,maven-resolver-util)
+         ("maven-settings" ,maven-settings)
+         ("maven-settings-builder" ,maven-settings-builder))))))
 
 ;; This package doesn't work. I need to understand how api-mapping.txt and
 ;; default-imports.txt are generated. Currently they are generated by a custom
@@ -2776,8 +2975,15 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "gradle-language-jvm"
                              "gradle-language-java"
                              "gradle-language-groovy"
+                             "gradle-ear"
                              "gradle-diagnostics"
                              "gradle-dependency-management"
+                             "gradle-build-comparison"
+                             "gradle-composite-builds"
+                             "gradle-build-init"
+                             "gradle-build-cache-http"
+                             "gradle-antlr"
+                             "gradle-announce"
                              "java-apache-ivy"
                              "java-bouncycastle"
                              "java-bsh"
@@ -2795,7 +3001,24 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "java-testng"
                              "java-junit"
                              "java-nekohtml"
-                             "java-xerces"))
+                             "java-plexus-classworlds"
+                             "java-plexus-container-default"
+                             "java-plexus-interpolation"
+                             "java-plexus-utils"
+                             "java-xerces"
+                             "maven-artifact"
+                             "maven-compat"
+                             "maven-core"
+                             "maven-model"
+                             "maven-model-builder"
+                             "maven-repository-metadata"
+                             "maven-plugin-api"
+                             "maven-resolver-api"
+                             "maven-resolver-impl"
+                             "maven-resolver-spi"
+                             "maven-resolver-util"
+                             "maven-settings"
+                             "maven-settings-builder"))
                           ;; java-asm-6 and java-jansi are already present in groovy.
                           (dependencies 
                            '("gradle-wrapper"
@@ -2908,16 +3131,23 @@ export GRADLE_HOME=~a\n
        ("gradle-jvm-services"          ,gradle-jvm-services)
        ("gradle-internal-testing"      ,gradle-internal-testing)
        ("gradle-installation-beacon"   ,gradle-installation-beacon)
+       ("gradle-ear"                   ,gradle-ear)
        ("gradle-docs"                  ,gradle-docs)
        ("gradle-diagnostics"           ,gradle-diagnostics)
        ("gradle-dependency-management" ,gradle-dependency-management)
        ("gradle-core-api"              ,gradle-core-api)
        ("gradle-core"                  ,gradle-core)
+       ("gradle-composite-builds"      ,gradle-composite-builds)
        ("gradle-cli"                   ,gradle-cli)
        ("gradle-build-option"          ,gradle-build-option)
+       ("gradle-build-init"            ,gradle-build-init)
+       ("gradle-build-comparison"      ,gradle-build-comparison)
+       ("gradle-build-cache-http"      ,gradle-build-cache-http)
        ("gradle-build-cache"           ,gradle-build-cache)
        ("gradle-base-services-groovy"  ,gradle-base-services-groovy)
        ("gradle-base-services"         ,gradle-base-services)
+       ("gradle-antlr"                 ,gradle-antlr)
+       ("gradle-announce"              ,gradle-announce)
        ("groovy" ,groovy)
        ("icedtea-8" ,icedtea-8)
        ("java-asm-6" ,java-asm-6)
@@ -2952,11 +3182,28 @@ export GRADLE_HOME=~a\n
        ("java-native-platform" ,java-native-platform)
        ("java-nekohtml" ,java-nekohtml)
        ("java-objenesis" ,java-objenesis)
+       ("java-plexus-classworlds" ,java-plexus-classworlds)
+       ("java-plexus-container-default" ,java-plexus-container-default)
+       ("java-plexus-interpolation" ,java-plexus-interpolation)
+       ("java-plexus-utils" ,java-plexus-utils)
        ("java-reflectasm" ,java-reflectasm)
        ("java-slf4j-api" ,java-slf4j-api)
        ("java-snakeyaml" ,java-snakeyaml)
        ("java-testng" ,java-testng)
        ("java-xerces" ,java-xerces)
+       ("maven-artifact" ,maven-artifact)
+       ("maven-compat" ,maven-compat)
+       ("maven-core" ,maven-core)
+       ("maven-model" ,maven-model)
+       ("maven-model-builder" ,maven-model-builder)
+       ("maven-repository-metadata" ,maven-repository-metadata)
+       ("maven-plugin-api" ,maven-plugin-api)
+       ("maven-resolver-api" ,maven-resolver-api)
+       ("maven-resolver-impl" ,maven-resolver-impl)
+       ("maven-resolver-spi" ,maven-resolver-spi)
+       ("maven-resolver-util" ,maven-resolver-util)
+       ("maven-settings" ,maven-settings)
+       ("maven-settings-builder" ,maven-settings-builder)
        ("ant" ,ant)
        ("bash" ,bash)))
     (native-inputs '())))
