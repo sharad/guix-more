@@ -31,7 +31,8 @@
   #:use-module (gnu packages web)
   #:use-module (gnu packages version-control)
   #:use-module (gnu packages xml)
-  #:use-module (more packages java))
+  #:use-module (more packages java)
+  #:use-module (more packages maven))
 
 ;; Gradle requires guava@17.
 ;; TODO: patch gradle to support at least guava@20 and send it upstream.
@@ -1804,6 +1805,141 @@ org/objenesis
          ("java-javax-inject" ,java-javax-inject)
          ("java-jsr305" ,java-jsr305))))))
 
+(define-public gradle-maven
+  (let ((base (gradle-subproject
+                "maven"
+                '("gradle-core" "gradle-dependency-management" "gradle-plugins"
+                  "gradle-plugin-use" "gradle-publish")
+                ; aether-connector-wagon-1.13.1.jar,commons-codec-1.10.jar,jcl-over-slf4j-1.7.16.jar,xbean-reflect-3.4.jar,log4j-over-slf4j-1.7.16.jar
+                '("groovy" "java-apache-ivy" "java-hamcrest-all"
+                  "java-httpcomponents-httpclient" "java-httpcomponents-httpcore"
+                  "java-junit" "java-slf4j-api"
+                  "java-guava-for-gradle" "java-commons-io"
+                  "java-plexus-utils" "java-plexus-classworlds"
+                  "java-plexus-container-default" "java-plexus-sec-dispatcher"
+                  "java-plexus-cipher" "java-plexus-component-annotations"
+                  "java-plexus-interpolation" "maven-core" "maven-artifact"
+                  "maven-settings-builder" "maven-settings" "maven-model"
+                  "maven-model-builder" "maven-repository-metadata"
+                  "maven-polyglot-common" "maven-polyglot-groovy"
+                  "maven-resolver-provider"
+                  "maven-resolver-api" "maven-resolver-impl" "maven-resolver-spi"
+                  "maven-resolver-util"
+                  "maven-wagon-provider-api" "maven-wagon-file" "maven-wagon-http"
+                  "maven-wagon-http-shared"))))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:phases phases)
+          `(modify-phases ,phases
+             (add-before 'build 'fix-aether
+               (lambda _
+                 ;; We use maven-resolver, instead of aether-resolver, so fix it:
+                 (substitute* (find-files "subprojects/maven" ".*.java")
+                   (("org.sonatype.aether") "org.eclipse.aether")
+                   (("org.eclipse.aether.util.artifact")
+                    "org.eclipse.aether.artifact")
+                   (("org.eclipse.aether.impl.internal")
+                    "org.eclipse.aether.internal.impl")
+                   (("org.eclipse.aether.util.DefaultRepositorySystemSession")
+                    "org.eclipse.aether.DefaultRepositorySystemSession"))
+                 #t))
+             (add-before 'build 'fix-newer-maven
+               (lambda _
+                 (substitute* "subprojects/maven/src/main/java/org/gradle/api/publication/maven/internal/action/AbstractMavenPublishAction.java"
+                   (("internal.MavenRepositorySystemSession")
+                    "internal.MavenRepositorySystemUtils")
+                   (("new MavenRepositorySystemSession")
+                    "MavenRepositorySystemUtils.newSession")
+                   (("\\.SimpleLocalRepositoryManager")
+                    ".SimpleLocalRepositoryManagerFactory;
+import org.eclipse.aether.repository.NoLocalRepositoryManagerException;
+import org.eclipse.aether.repository.LocalRepository")
+                   (("session.setLocalRepositoryManager\\(new SimpleLocalRepositoryManager\\(localMavenRepository\\)\\);")
+                    "try {
+session.setLocalRepositoryManager(
+  new SimpleLocalRepositoryManagerFactory().newInstance(
+    session, new LocalRepository(localMavenRepository)));
+} catch(NoLocalRepositoryManagerException e) {
+  throw UncheckedException.throwAsUncheckedException(e);
+}")
+                   (("deployer.setMetadataFactories\\(null\\);")
+                    ""))
+                 (substitute* "subprojects/maven/src/main/java/org/gradle/api/publication/maven/internal/action/SnapshotVersionManager.java"
+                   (("public int getPriority") "public float getPriority"))
+                 (substitute* "subprojects/maven/src/main/java/org/gradle/api/publication/maven/internal/action/MavenDeployAction.java"
+                   (("Authentication;") "Authentication;\nimport org.eclipse.aether.util.repository.AuthenticationBuilder;")
+                   (("org.eclipse.aether.repository.RemoteRepository repo")
+                    "org.eclipse.aether.repository.RemoteRepository.Builder repoBuilder")
+                   (("org.eclipse.aether.repository.RemoteRepository\\(")
+                    "org.eclipse.aether.repository.RemoteRepository.Builder(")
+                   (("org.sonatype.aether.repository.RemoteRepository")
+                    "org.eclipse.aether.repository.RemoteRepository")
+                   (("Authentication proxyAuth = new Authentication.*")
+                    "Authentication proxyAuth = new AuthenticationBuilder().addUsername(proxy.getUserName()).addPassword(proxy.getPassword()).build();")
+                   (("\\(repo\\)") "(repoBuilder.build())")
+                   (("repo\\.set") "repoBuilder.set")
+                   (("return repo") "return repoBuilder.build()")
+                   (("repo.*Authentication\\(auth.getUserName.*")
+                    "repoBuilder.setAuthentication(new AuthenticationBuilder()
+                                                       .addUsername(auth.getUserName())
+                                                       .addPassword(auth.getPassword())
+                                                       .addPrivateKey(auth.getPrivateKey(), auth.getPassphrase()).build());"))
+                 (substitute* "subprojects/maven/src/main/java/org/gradle/api/publication/maven/internal/pom/CustomModelBuilder.java"
+                   (("initialize\\(\\);") "registerFactories();")
+                   (("import org.codehaus.plexus.personality.plexus.lifecycle.phase.*") "")
+                   (("InitializationException") "Exception"))
+                 #t))))))
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-dependency-management" ,gradle-dependency-management)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-plugins" ,gradle-plugins)
+         ("gradle-publish" ,gradle-publish)
+         ("gradle-resources" ,gradle-resources)
+         ("groovy" ,groovy)
+         ("java-apache-ivy" ,java-apache-ivy)
+         ("java-commons-io" ,java-commons-io)
+         ("java-commons-lang" ,java-commons-lang)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-hamcrest-all" ,java-hamcrest-all)
+         ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
+         ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305)
+         ("java-junit" ,java-junit)
+         ("java-plexus-cipher" ,java-plexus-cipher)
+         ("java-plexus-classworlds" ,java-plexus-classworlds)
+         ("java-plexus-component-annotations" ,java-plexus-component-annotations)
+         ("java-plexus-container-default" ,java-plexus-container-default)
+         ("java-plexus-interpolation" ,java-plexus-interpolation)
+         ("java-plexus-sec-dispatcher" ,java-plexus-sec-dispatcher)
+         ("java-plexus-utils" ,java-plexus-utils)
+         ("java-slf4j-api" ,java-slf4j-api)
+         ("maven-artifact" ,maven-artifact)
+         ("maven-core" ,maven-core)
+         ("maven-model" ,maven-model)
+         ("maven-model-builder" ,maven-model-builder)
+         ("maven-polyglot-common" ,maven-polyglot-common)
+         ("maven-polyglot-groovy" ,maven-polyglot-groovy)
+         ("maven-repository-metadata" ,maven-repository-metadata)
+         ("maven-resolver-api" ,maven-resolver-api)
+         ("maven-resolver-impl" ,maven-resolver-impl)
+         ("maven-resolver-provider" ,maven-resolver-provider)
+         ("maven-resolver-spi" ,maven-resolver-spi)
+         ("maven-resolver-util" ,maven-resolver-util)
+         ("maven-settings" ,maven-settings)
+         ("maven-settings-builder" ,maven-settings-builder)
+         ("maven-wagon-file" ,maven-wagon-file)
+         ("maven-wagon-http" ,maven-wagon-http)
+         ("maven-wagon-http-shared" ,maven-wagon-http-shared)
+         ("maven-wagon-provider-api" ,maven-wagon-provider-api))))))
+
 ;; This package doesn't work. I need to understand how api-mapping.txt and
 ;; default-imports.txt are generated. Currently they are generated by a custom
 ;; task defined in buildsrc that is run by gradle, but we don't have enough of
@@ -3044,6 +3180,7 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "gradle-platform-jvm"
                              "gradle-platform-base"
                              "gradle-plugin-use"
+                             "gradle-maven"
                              "gradle-language-jvm"
                              "gradle-language-java"
                              "gradle-language-groovy"
@@ -3075,8 +3212,11 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "java-junit"
                              "java-nekohtml"
                              "java-plexus-classworlds"
+                             "java-plexus-cipher"
+                             "java-plexus-component-annotations"
                              "java-plexus-container-default"
                              "java-plexus-interpolation"
+                             "java-plexus-sec-dispatcher"
                              "java-plexus-utils"
                              "java-xerces"
                              "maven-artifact"
@@ -3086,12 +3226,19 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "maven-model-builder"
                              "maven-repository-metadata"
                              "maven-plugin-api"
+                             "maven-polyglot-common"
+                             "maven-polyglot-groovy"
                              "maven-resolver-api"
                              "maven-resolver-impl"
+                             "maven-resolver-provider"
                              "maven-resolver-spi"
                              "maven-resolver-util"
                              "maven-settings"
-                             "maven-settings-builder"))
+                             "maven-settings-builder"
+                             "maven-wagon-provider-api"
+                             "maven-wagon-file"
+                             "maven-wagon-http"
+                             "maven-wagon-http-shared"))
                           ;; java-asm-6 and java-jansi are already present in groovy.
                           (dependencies 
                            '("gradle-wrapper"
@@ -3197,6 +3344,7 @@ export GRADLE_HOME=~a\n
        ("gradle-model-groovy"          ,gradle-model-groovy)
        ("gradle-model-core"            ,gradle-model-core)
        ("gradle-messaging"             ,gradle-messaging)
+       ("gradle-maven"                 ,gradle-maven)
        ("gradle-logging"               ,gradle-logging)
        ("gradle-launcher"              ,gradle-launcher)
        ("gradle-language-jvm"          ,gradle-language-jvm)
@@ -3258,8 +3406,11 @@ export GRADLE_HOME=~a\n
        ("java-nekohtml" ,java-nekohtml)
        ("java-objenesis" ,java-objenesis)
        ("java-plexus-classworlds" ,java-plexus-classworlds)
+       ("java-plexus-cipher" ,java-plexus-cipher)
+       ("java-plexus-component-annotations" ,java-plexus-component-annotations)
        ("java-plexus-container-default" ,java-plexus-container-default)
        ("java-plexus-interpolation" ,java-plexus-interpolation)
+       ("java-plexus-sec-dispatcher" ,java-plexus-sec-dispatcher)
        ("java-plexus-utils" ,java-plexus-utils)
        ("java-reflectasm" ,java-reflectasm)
        ("java-slf4j-api" ,java-slf4j-api)
@@ -3273,12 +3424,19 @@ export GRADLE_HOME=~a\n
        ("maven-model-builder" ,maven-model-builder)
        ("maven-repository-metadata" ,maven-repository-metadata)
        ("maven-plugin-api" ,maven-plugin-api)
+       ("maven-polyglot-common" ,maven-polyglot-common)
+       ("maven-polyglot-groovy" ,maven-polyglot-groovy)
        ("maven-resolver-api" ,maven-resolver-api)
        ("maven-resolver-impl" ,maven-resolver-impl)
+       ("maven-resolver-provider" ,maven-resolver-provider)
        ("maven-resolver-spi" ,maven-resolver-spi)
        ("maven-resolver-util" ,maven-resolver-util)
        ("maven-settings" ,maven-settings)
        ("maven-settings-builder" ,maven-settings-builder)
+       ("maven-wagon-provider-api" ,maven-wagon-provider-api)
+       ("maven-wagon-file" ,maven-wagon-file)
+       ("maven-wagon-http" ,maven-wagon-http)
+       ("maven-wagon-http-shared" ,maven-wagon-http-shared)
        ("ant" ,ant)
        ("bash" ,bash)))
     (native-inputs '())))
