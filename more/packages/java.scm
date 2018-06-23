@@ -101,9 +101,7 @@
        #:test-dir "http-builder-ng-core/src/test"
        #:tests? #f)); TODO: com.stehno.ersatz
     (inputs
-     `(("groovy-bootstrap" ,groovy-bootstrap)
-       ("groovy-json" ,groovy-json)
-       ("groovy-xml" ,groovy-xml)
+     `(("groovy" ,groovy)
        ("java-apache-xml-commons-resolver" ,java-apache-xml-commons-resolver)
        ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
        ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
