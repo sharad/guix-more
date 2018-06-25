@@ -211,6 +211,7 @@ provers.")
              (string-append "OCAMLBUILD_MANDIR=" (assoc-ref %outputs "out") "/share/man"))
        #:phases
        (modify-phases %standard-phases
+         (delete 'bootstrap)
          (delete 'configure)
          ;(replace 'configure
          ;  (lambda* (#:key outputs #:allow-other-keys)
@@ -372,10 +373,14 @@ provers.")
            (lambda* (#:key outputs #:allow-other-keys)
              ;; This package supposes we install to the same directory as
              ;; the ocaml package.
+             (substitute* "src/META"
+               (("\"\\^\"") (string-append "\"" (assoc-ref outputs "out")
+                                           "/lib/ocaml/site-lib\"")))
              (substitute* "src/Makefile"
                (("\\) \\$\\(STDLIBDIR\\)")
                 (string-append ") " (assoc-ref outputs "out")
-                               "/lib/ocaml/site-lib"))))))))
+                               "/lib/ocaml/site-lib")))
+             #t)))))
     (home-page "https://github.com/ocaml/num")
     (synopsis "")
     (description "")
@@ -393,7 +398,7 @@ provers.")
        ("python" ,python-2)
        ("camlp5" ,camlp5-fix)
        ;; ocaml-num was removed from the ocaml package in 4.06.
-       ("num" ,ocaml-num)))
+       ("ocaml-num" ,ocaml-num)))
     (arguments
      `(#:ocaml ,ocaml-fix
        #:findlib ,ocaml-findlib-fix
@@ -404,22 +409,24 @@ provers.")
              (let* ((out (assoc-ref outputs "out"))
                     (mandir (string-append out "/share/man"))
                     (browser "icecat -remote \"OpenURL(%s,new-tab)\""))
-               (zero? (system* "./configure"
-                               "-prefix" out
-                               "-mandir" mandir
-                               "-browser" browser
-                               "-coqide" "opt")))))
+               (invoke "./configure"
+                       "-prefix" out
+                       "-mandir" mandir
+                       "-browser" browser
+                       "-coqide" "opt"))
+             #t))
          (replace 'build
            (lambda* (#:key inputs #:allow-other-keys)
              (substitute* "ide/ideutils.ml"
                (("Bytes.unsafe_to_string read_string") "read_string"))
-             (zero? (system* "make" "-j" (number->string
-                                          (parallel-job-count))
-                             (string-append
-                               "USERFLAGS=-I "
-                               (assoc-ref inputs "num")
-                               "/lib/ocaml/site-lib")
-                             "world"))))
+             (invoke "make" "-j" (number->string
+                                  (parallel-job-count))
+                     (string-append
+                       "USERFLAGS=-I "
+                       (assoc-ref inputs "ocaml-num")
+                       "/lib/ocaml/site-lib")
+                     "world")
+             #t))
          (delete 'check)
          (add-after 'install 'check
            (lambda _
@@ -429,7 +436,8 @@ provers.")
                (delete-file-recursively "coq-makefile/timing")
                ;; This one fails because we didn't build coqtop.byte.
                (delete-file-recursively "coq-makefile/findlib-package")
-               (zero? (system* "make"))))))))))
+               (invoke "make"))
+             #t)))))))
 
 (define-public compcert
   (package
@@ -669,17 +677,3 @@ algorithms are typical examples of such systems.")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
-
-(define-public coq-8.8
-  (package
-    (inherit coq)
-    (name "coq")
-    (version "8.8.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/coq/coq/archive/V"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0g96k2x6lbddlmkmdaczvcpb2gwqi1ydbq9bv4gf9q38kv9w3xya"))))))
