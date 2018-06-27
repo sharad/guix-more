@@ -63,7 +63,7 @@ that contain dependency information. This file is created using the
 @code{projects} and @code{runtime} parameters."
   (package
     (name (string-append "gradle-" subproject))
-    (version "4.8.0")
+    (version "4.8.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/gradle/gradle/archive/v"
@@ -71,7 +71,7 @@ that contain dependency information. This file is created using the
               (file-name (string-append "gradle-" version ".tar.gz"))
               (sha256
                (base32
-                "1jbw9044g0czn8pm46i6j4y0gx6l3b3iwamh9d7ja14i2wrx5shf"))
+                "0khq8lvw5gp9nrwqhr9818xfmijz14z5lg9l6b2c4zrbsckqw940"))
               (patches
                 (search-patches
                   "gradle-match-files-without-version-number.patch"))))
@@ -459,6 +459,7 @@ isSnapshot=false")))
                  "gradle-cli" "gradle-build-option")
                ;; Maybe log4j-over-slf4j and jcl-over-slf4j
                '("java-slf4j-api" "java-jul-to-slf4j" "ant" "java-commons-lang"
+                 "java-commons-logging-minimal"
                  "java-guava-for-gradle" "java-jansi" "java-jansi-native"
                  "java-jcip-annotations")))
     (inputs
@@ -468,6 +469,7 @@ isSnapshot=false")))
        ("gradle-messaging" ,gradle-messaging)
        ("gradle-native" ,gradle-native)
        ("java-commons-lang" ,java-commons-lang)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-jansi" ,java-jansi)
        ("java-jansi-native" ,java-jansi-native)
@@ -475,6 +477,60 @@ isSnapshot=false")))
        ("java-jsr305" ,java-jsr305)
        ("java-slf4j-api" ,java-slf4j-api)
        ("java-jul-to-slf4j" ,java-jul-to-slf4j)))))
+
+(define-public gradle-scala
+  (let ((base (gradle-subproject
+                "scala"
+                '("gradle-core" "gradle-language-jvm"
+                  "gradle-language-scala" "gradle-plugins")
+                '("groovy"))))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-platform-base" ,gradle-platform-base)
+         ("gradle-plugins" ,gradle-plugins)
+         ("gradle-reporting" ,gradle-reporting)
+         ("groovy" ,groovy)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305))))))
+
+(define-public gradle-ide
+  (let ((base (gradle-subproject
+                "ide"
+                '("gradle-scala" "gradle-core" "gradle-plugins" "gradle-ear"
+                  "gradle-tooling-api")
+                '("java-slf4j-api" "java-javax-inject" "groovy"))))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-composite-builds" ,gradle-composite-builds)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-dependency-management" ,gradle-dependency-management)
+         ("gradle-docs" ,gradle-docs)
+         ("gradle-ear" ,gradle-ear)
+         ("gradle-language-java" ,gradle-language-java)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-platform-base" ,gradle-platform-base)
+         ("gradle-platform-jvm" ,gradle-platform-jvm)
+         ("gradle-plugins" ,gradle-plugins)
+         ("gradle-process-services" ,gradle-process-services)
+         ("gradle-scala" ,gradle-scala)
+         ("gradle-tooling-api" ,gradle-tooling-api)
+         ("groovy" ,groovy)
+         ("java-commons-lang" ,java-commons-lang)
+         ("java-commons-io" ,java-commons-io)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305)
+         ("java-slf4j-api" ,java-slf4j-api))))))
 
 (define-public gradle-model-core
   (package
@@ -3198,6 +3254,7 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "java-bouncycastle"
                              "java-bsh"
                              "java-commons-codec"
+                             "java-commons-logging-minimal"
                              "java-gson"
                              "java-hamcrest-all"
                              "java-httpcomponents-httpclient"
@@ -3382,6 +3439,7 @@ export GRADLE_HOME=~a\n
        ("java-commons-collections" ,java-commons-collections)
        ("java-commons-io" ,java-commons-io)
        ("java-commons-lang" ,java-commons-lang)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-gson" ,java-gson)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-hamcrest-all" ,java-hamcrest-all)
