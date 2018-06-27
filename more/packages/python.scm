@@ -732,18 +732,24 @@ navigated in, similar to a file or stream.")
 (define-public offlate
   (package
     (name "offlate")
-    (version "0.1")
+    (version "0.1.dev")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                      (url "https://framagit.org/tyreunom/offlate")
-                     (commit "341bf4422116ec914f8229315e62463002d4d251")))
+                     (commit "52edc87f21e89eaea8eef21e376ef02b0a8d1cbb")))
               (sha256
                (base32
-                "1nbcnhggnvbvlbhqsa1db6nvhqbgjc7khsb55lc9xnwk5ar8bf0j"))))
+                "0rdg2vv16wld4zsf8jnk1ghc08wi05ydny6z9z0jj4f7ra64zbw0"))))
     (build-system python-build-system)
     (arguments
-     `(#:tests? #f))
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-translations
+         (lambda _
+           (invoke "make" "update-langs")
+           #t)))))
     (propagated-inputs
      `(("python-android-stringslib" ,python-android-stringslib)
        ("python-dateutil" ,python-dateutil)
