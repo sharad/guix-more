@@ -93,18 +93,21 @@ patch-/bin/sh-references: ~a: changing `\"/bin/sh\"' to `~a'~%"
                     (mandir (string-append out "/share/man")))
                ;; Custom configure script doesn't recognize
                ;; --prefix=<PREFIX> syntax (with equals sign).
-               (zero? (system* "./configure"
-                               "--prefix" out
-                               "--mandir" mandir)))))
+               (invoke "./configure"
+                       "--prefix" out
+                       "--mandir" mandir))
+             #t))
          (replace 'build
            (lambda _
-             (zero? (system* "make" "-j1" ;; fails to build otherwise
-                             "world.opt"))))
+             (invoke "make" "-j1" ;; fails to build otherwise
+                     "world.opt")
+             #t))
          (delete 'check)
          (add-after 'install 'check
            (lambda _
              (with-directory-excursion "testsuite"
-               (zero? (system* "make" "all"))))))))))
+               (invoke "make" "all"))
+             #t)))))))
 
 (define-public proof-general2
   (package
@@ -456,8 +459,8 @@ provers.")
        (modify-phases %standard-phases
          (replace 'configure
            (lambda* (#:key outputs #:allow-other-keys)
-             (zero? (system* "./configure" "x86_64-linux" "-prefix"
-                             (assoc-ref outputs "out"))))))
+             (invoke "./configure" "x86_64-linux" "-prefix"
+                     (assoc-ref outputs "out")))))
        #:tests? #f))
     (native-inputs
      `(("ocaml" ,ocaml-fix)
