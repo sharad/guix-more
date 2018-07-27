@@ -1137,28 +1137,23 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "13878")
+    (version "14026")
     (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                    (url "https://github.com/openstreetmap/josm.git")
-                    (commit "1771fe8e7386f9e9a1fbf90837a6dda4371c5670")))
-              ;; https://josm.openstreetmap.de/browser
-              ;; FIXME: Fetching from mirror on github because svn-fetch result
-              ;; is not deterministic: hash differs each time it fetches the repo.
-              ;(uri (svn-reference
-              ;      (url "https://svn.openstreetmap.org/applications/editors/josm")
-              ;      (revision (string->number version))))
+              (method svn-fetch)
+              (uri (svn-reference
+                    (url "https://svn.openstreetmap.org/applications/editors/josm")
+                    (revision (string->number version))))
               (sha256
                (base32
-                "0mkbaijlzxq828si3f46avvi4vj8c88gg7g72bq95n75lj8i0saa"))
+                "0w84qcdp80mjryn5wcz3vqs8vw4zxcg4z2ynlhqi9wxrzl86yd7m"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
-                '(begin
+                `(begin
                    (for-each delete-file (find-files "." ".*.jar"))
-                   (delete-file-recursively "test/lib")
-                   (delete-file-recursively "windows")))))
+		   (with-directory-excursion (string-append "java-josm-" ,version "/core")
+                     (delete-file-recursively "test/lib")
+                     (delete-file-recursively "windows"))))))
     (build-system ant-build-system)
     (native-inputs
      `(("java-javacc" ,java-javacc)))
@@ -2044,7 +2039,7 @@ from ORO, Inc.")
               (sha256
                (base32
                 "0rk7s04hkrr2k3glccx0yrglzqzj4qbipcrxhglk46yhx92vravc"))
-	      (patches
+              (patches
             (search-patches "java-velocity-dont-use-werken-xpath.patch"))))
     (build-system ant-build-system)
     (arguments
@@ -4071,3 +4066,38 @@ import java.util.Collection;")
     (synopsis "")
     (description "")
     (license license:gpl2)))
+
+(define-public java-procyon
+  (package
+    (name "java-procyon")
+    (version "0.5.30+1")
+    (source (origin
+              (method hg-fetch)
+              (uri (hg-reference
+                     (url "https://bitbucket.org/mstrobel/procyon")
+                     (changeset "1aa0bd29339b8782b7e9ffafe367b94ee15a7039")))
+              (sha256
+               (base32
+                "0khihmkmv4lrx67mp2s6h5ifd5sk7hf0adfp64ybiq4c3w7786b0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "procyon.jar"
+       #:jdk ,icedtea-8
+       #:source-dir
+       (string-append "Procyon.CompilerTools/src/main/java:"
+                      "Procyon.Core/src/main/java:"
+                      "Procyon.Decompiler/src/main/java:"
+                      "Procyon.Expressions/src/main/java:"
+                      "Procyon.Reflection/src/main/java")
+       ;; Tests in CompilerTools depend on .class files, no tests in Core or Decompiler.
+       ;; Tests in Expressions and Reflections, but build.xml doesn't support tests
+       ;; in more than one dir.
+       #:tests? #f))
+    (inputs
+     `(("java-jcommander" ,java-jcommander)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
