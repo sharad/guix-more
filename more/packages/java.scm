@@ -26,6 +26,7 @@
   #:use-module (guix cvs-download)
   #:use-module (guix hg-download)
   #:use-module (guix utils)
+  #:use-module (guix gexp)
   #:use-module (guix build syscalls)
   #:use-module (guix build-system ant)
   #:use-module (guix build-system gnu)
@@ -47,6 +48,7 @@
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg)
+  #:use-module (more packages maven)
   #:use-module (more packages python))
 
 (define-public java-fastutil
@@ -1151,9 +1153,10 @@ methods.  It is similar in speed with deflate but offers more dense compression.
               (snippet
                 `(begin
                    (for-each delete-file (find-files "." ".*.jar"))
-		   (with-directory-excursion (string-append "java-josm-" ,version "/core")
+		   (with-directory-excursion "core"
                      (delete-file-recursively "test/lib")
-                     (delete-file-recursively "windows"))))))
+                     (delete-file-recursively "windows"))
+		   #t))))
     (build-system ant-build-system)
     (native-inputs
      `(("java-javacc" ,java-javacc)))
@@ -1181,7 +1184,11 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        #:jar-name "josm.jar"
        #:phases
        (modify-phases %standard-phases
-         (add-after 'unpack 'rm-build.xml
+	 (add-after 'unpack 'chdir
+	   (lambda _
+	     (chdir "core")
+	     #t))
+         (add-after 'chdir 'rm-build.xml
            (lambda* _
              (delete-file "build.xml")
              #t))
@@ -1312,7 +1319,7 @@ from ORO, Inc.")
                                   "_spec-1.0.1.Final.tar.gz"))
               (sha256
                (base32
-                "0zvglvscq177lahvp8n9nlm0vkdxlf6db0fs8jcy8zf82z6k4d2n"))))
+                "0qmczwma8wiyqvs95yy6dibjhkzqyhfvik1qk01bxp9kzah9k882"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-jboss-annotations-api_spec.jar"
@@ -1406,7 +1413,7 @@ from ORO, Inc.")
                                   ".RELEASE.tar.gz"))
               (sha256
                (base32
-                "13vbshq61cb6r37yb87rky1q16dzh5l76l9iiskgbzqpzp4igjk5"))))
+                "036jcwh2g3qlv14lalhkpkjnwc1hjn4zdqf251231vywxyd838zm"))))
     (arguments
      `(#:jar-name "java-spring-framework-core.jar"
        #:jdk ,icedtea-8
@@ -1430,21 +1437,25 @@ from ORO, Inc.")
          (add-before 'configure 'chdir
            (lambda _
              ;; Needed because tests look for data in src/... directly.
-             (chdir "spring-core")))
+             (chdir "spring-core")
+	     #t))
          (add-before 'configure 'rename-dep
            (lambda _
              (substitute* "src/main/java/org/springframework/objenesis/SpringObjenesis.java"
-               (("org.springframework.objenesis") "org.objenesis"))))
+               (("org.springframework.objenesis") "org.objenesis"))
+	     #t))
          (add-before 'configure 'add-import
            (lambda _
              (substitute* "src/main/java/org/springframework/cglib/core/SpringNamingPolicy.java"
                (("public class")
-                "import net.sf.cglib.core.DefaultNamingPolicy;\npublic class"))))
+                "import net.sf.cglib.core.DefaultNamingPolicy;\npublic class"))
+	     #t))
          (add-before 'check 'remove-log4j-1-dep
            (lambda _
              ;; These tests require log4j-1 (log4j-1.2-api doesn't work)
              (delete-file "src/test/java/org/springframework/util/MockLog4jAppender.java")
-             (delete-file "src/test/java/org/springframework/util/Log4jConfigurerTests.java")))
+             (delete-file "src/test/java/org/springframework/util/Log4jConfigurerTests.java")
+	     #t))
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
              (let ((dir (string-append (getcwd) "/build/test-classes/")))
@@ -1452,7 +1463,8 @@ from ORO, Inc.")
                  (for-each (lambda (file)
                              (mkdir-p (dirname (string-append dir file)))
                              (copy-file file (string-append dir file)))
-                   (find-files "." ".*")))))))))
+                   (find-files "." ".*"))))
+	     #t)))))
     (inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-jopt-simple" ,java-jopt-simple)
@@ -1474,6 +1486,76 @@ from ORO, Inc.")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-spring-framework-beans
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-beans")
+    (arguments
+     `(#:jar-name "java-spring-framework-core.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-beans")
+	     #t))
+	 (add-before 'build 'copy-resources
+	   (lambda _
+	     (copy-recursively "src/main/resources" "build/classes")
+	     #t))
+         (add-before 'configure 'rename-dep
+           (lambda _
+             (substitute* "src/main/java/org/springframework/beans/factory/support/CglibSubclassingInstantiationStrategy.java"
+               (("org.springframework.cglib") "net.sf.cglib")
+               (("net.sf.cglib.core.SpringNamingPolicy") "org.springframework.cglib.core.SpringNamingPolicy"))
+	     #t))
+	 (add-before 'check 'copy-test-classes
+	   (lambda _
+	     (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
+			"src/test/java/org/springframework/tests/Assume.java")
+	     (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
+			"src/test/java/org/springframework/tests/TestGroup.java")
+	     (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
+			"src/test/java/org/springframework/tests/TestResourceUtils.java")
+	     (mkdir-p "src/test/java/org/springframework/stereotype")
+	     (mkdir-p "src/test/java/org/springframework/util")
+	     (copy-file "../spring-core/src/test/java/org/springframework/stereotype/Component.java"
+			"src/test/java/org/springframework/stereotype/Component.java")
+	     (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
+			"src/test/java/org/springframework/util/SerializationTestUtils.java")
+	     (substitute* "src/test/java/org/springframework/beans/factory/BeanFactoryUtilsTests.java"
+	       (("org.springframework.cglib") "net.sf.cglib"))
+	     #t))
+         ;(add-before 'configure 'add-import
+         ;  (lambda _
+         ;    (substitute* "src/main/java/org/springframework/cglib/core/SpringNamingPolicy.java"
+         ;      (("public class")
+         ;       "import net.sf.cglib.core.DefaultNamingPolicy;\npublic class"))
+	 ;    #t))
+         ;(add-before 'check 'remove-log4j-1-dep
+         ;  (lambda _
+         ;    ;; These tests require log4j-1 (log4j-1.2-api doesn't work)
+         ;    (delete-file "src/test/java/org/springframework/util/MockLog4jAppender.java")
+         ;    (delete-file "src/test/java/org/springframework/util/Log4jConfigurerTests.java")
+	 ;    #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+	     (copy-recursively "src/test/resources"
+			       "build/test-classes")
+	     #t)))))
+    (inputs
+     `(("java-cglib" ,java-cglib)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-snakeyaml" ,java-snakeyaml)
+       ("java-spring-framework-core" ,java-spring-framework-core)
+       ;; Note: for javax-el (el-api)
+       ("java-tomcat" ,java-tomcat)))
+    (description "")))
 
 (define-public java-lucene-core
   (package
@@ -1969,19 +2051,10 @@ from ORO, Inc.")
                ((".*clover-setup.*") "")
                ((".*src/test/\\*\\*/\\*.java.*") "")
                (("<files>") "")
-               (("</files>") ""))))
+               (("</files>") ""))
+	     #t))
          (replace 'install
-           (lambda* (#:key outputs inputs #:allow-other-keys)
-             (install-file "build/ognl-2.7.2.jar" (string-append (assoc-ref outputs "out") "/share/java")))))))
-             ;(zero? (system* "ant" "dist" "-Dcompile.version=7"
-             ;                (string-append "-Ddist="
-             ;                               (assoc-ref outputs "out")
-             ;                               "/share/java")
-             ;                (string-append "-Ddocbook.xsl.path="
-             ;                               (assoc-ref inputs "docbook-xsl"))
-             ;                (string-append "-Ddocbook.xml.path="
-             ;                               (assoc-ref inputs "docbook-xml"))
-             ;                               )))))))
+	   (install-jars ".")))))
     (inputs
      `(("java-jboss-javassist" ,java-jboss-javassist)))
     (native-inputs
@@ -1998,19 +2071,20 @@ from ORO, Inc.")
 (define-public java-apache-struts
   (package
     (name "java-apache-struts")
-    (version "2.5.13")
+    (version "2.5.16")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/struts/" version "/struts-"
                                   version "-src.zip"))
               (sha256
                (base32
-                "1pi3ymql7d9axxzi6pd8iqap1d3s2pij88mc7zywbw7mva61y8qy"))))
+                "14by1nsz7ky7zdw7ikmki1w9xznnvbyrjj9lbplk7wxsyhqak270"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "apache-struts.jar"
        #:source-dir "src/core/src/main/java"
-       #:test-dir "src/core/src/test"))
+       #:test-dir "src/core/src/test"
+       #:jdk ,icedtea-8))
     (inputs
      `(("java-log4j-api" ,java-log4j-api)
        ("java-commons-lang3" ,java-commons-lang3)
@@ -2018,6 +2092,8 @@ from ORO, Inc.")
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-classpathx-servletapi" ,java-classpathx-servletapi)
        ("java-ognl" ,java-ognl)
+       ("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-core" ,java-spring-framework-core)
        ("java-velocity" ,java-velocity)
        ("java-testng" ,java-testng)))
     (native-inputs
@@ -2055,14 +2131,16 @@ from ORO, Inc.")
              ;; Don't download anything
              (substitute* "build/build.xml"
                ((".*download.xml.*") ""))
-             (chdir "build")))
+             (chdir "build")
+	     #t))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
                     (dir (string-append out "/share/java")))
                (mkdir-p dir)
                (copy-file "../bin/velocity-1.7.jar"
-                          (string-append dir "/velocity-1.7.jar"))))))))
+                          (string-append dir "/velocity-1.7.jar")))
+	     #t)))))
     (native-inputs
      `(("javacc" ,java-javacc)
        ("antlr" ,antlr2)))
@@ -2104,32 +2182,25 @@ from ORO, Inc.")
          (add-before 'build 'copy-resources
            (lambda _
              (copy-recursively "velocity-engine-core/src/main/resources"
-                               "build/classes")))
+                               "build/classes")
+	     #t))
          (add-before 'build 'generate-parser
            (lambda _
-             (and
-               (zero?
-                 (system*
-                   "jjtree" "-STATIC=false" "-MULTI=true"
-                   "-NODE_PACKAGE=org.apache.velocity.runtime.parser.node"
-                   "-BUILD_NODE_FILES=false" "-NODE_USES_PARSER=true"
-                   ;(string-append "-OUTPUT_DIRECTORY=velocity-engine-core/src"
-                   ;               "/main/java/org/apache/velocity/runtime/parser")
-                   "velocity-engine-core/src/main/parser/Parser.jjt"))
-               (begin
-                 (rename-file "Parser.jj"
-                              "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/Parser.jj")
-                 (rename-file "ParserTreeConstants.java"
-                              "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/node/ParserTreeConstants.java")
-                 (rename-file "JJTParserState.java"
-                              "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/node/JJTParserState.java")
-                 #t)
-               (zero?
-                 (system*
-                   "javacc" "-STATIC=false" "-JDK_VERSION=1.8"
-                   (string-append "-OUTPUT_DIRECTORY=velocity-engine-core/src"
-                                  "/main/java/org/apache/velocity/runtime/parser")
-                   "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/Parser.jj"))))))))
+             (invoke "jjtree" "-STATIC=false" "-MULTI=true"
+                     "-NODE_PACKAGE=org.apache.velocity.runtime.parser.node"
+                     "-BUILD_NODE_FILES=false" "-NODE_USES_PARSER=true"
+                     "velocity-engine-core/src/main/parser/Parser.jjt")
+             (rename-file "Parser.jj"
+                          "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/Parser.jj")
+             (rename-file "ParserTreeConstants.java"
+                          "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/node/ParserTreeConstants.java")
+             (rename-file "JJTParserState.java"
+                          "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/node/JJTParserState.java")
+	     (invoke "javacc" "-STATIC=false" "-JDK_VERSION=1.8"
+                     (string-append "-OUTPUT_DIRECTORY=velocity-engine-core/src"
+                                    "/main/java/org/apache/velocity/runtime/parser")
+                     "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/Parser.jj")
+	     #t)))))
     (native-inputs
      `(("java-javacc-5" ,java-javacc-5)))
     (propagated-inputs '())
@@ -2175,15 +2246,50 @@ from ORO, Inc.")
                     (dir (string-append out "/share/java")))
                (mkdir-p dir)
                (copy-file "../bin/velocity-tools-2.0.jar"
-                          (string-append dir "/velocity-tools-2.0.jar"))))))))
+                          (string-append dir "/velocity-tools-2.0.jar")))
+	     #t)))))
     (inputs
      `(("java-dom4j" ,java-dom4j)
        ("java-velocity" ,java-velocity)
        ("java-commons-digester" ,java-commons-digester)
        ("java-commons-validator" ,java-commons-validator)
-       ("java-commons-beanutils", java-commons-beanutils)))
+       ("java-commons-beanutils", java-commons-beanutils)
+       ("java-apache-struts" ,java-apache-struts)))
     ;; apache struts
     (home-page "https://velocity.apache.org/tools/devel")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-velocity-component
+  (package
+    (name "java-plexus-velocity-component")
+    (version "1.2")
+    (source (origin
+	      (method url-fetch)
+	      (uri (string-append "https://github.com/codehaus-plexus/"
+				  "plexus-velocity/archive/plexus-velocity-"
+				  version ".tar.gz"))
+	      (sha256
+	       (base32
+		"04d34iny6364zcr1xy1xmg4grp6av8pcw3gsb1abrpxz4qhm84a6"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-plexus-velocity-component.jar"
+       #:source-dir "src/main/java"
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("java-commons-collections" ,java-commons-collections)
+       ("java-geronimo-xbean-reflect" ,java-geronimo-xbean-reflect)
+       ("java-guava" ,java-guava)
+       ("java-plexus-classworlds" ,java-plexus-classworlds)
+       ("java-plexus-component-annotations" ,java-plexus-component-annotations)
+       ("java-plexus-container-default" ,java-plexus-container-default)
+       ("java-plexus-utils" ,java-plexus-utils)
+       ("java-velocity" ,java-velocity)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "https://codehaus-plexus.github.io/plexus-velocity/")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
@@ -3115,33 +3221,6 @@ namespaces.")
     (description "")
     (license (list license:gpl2
                    license:cddl1.1))))
-
-(define-public java-apache-ivy-bootstrap
-  (package
-    (name "java-apache-ivy-bootstrap")
-    (version "2.4.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "mirror://apache//ant/ivy/" version
-                                  "/apache-ivy-" version "-src.tar.gz"))
-              (sha256
-               (base32
-                "1xkfn57g2m7l6y0xdq75x5rnrgk52m9jx2xah70g3ggl8750hbr0"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:build-target "compile-core"
-       #:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (system* "jar" "cf" "ivy.jar" "-C" "build/classes/core" ".")
-             (install-file "ivy.jar" (string-append (assoc-ref outputs "out")
-                                                    "/share/java")))))))
-    (home-page "https://ant.apache.org/ivy")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
 
 (define-public ant-junit
   (package
@@ -4101,3 +4180,92 @@ import java.util.Collection;")
     (synopsis "")
     (description "")
     (license license:expat)))
+
+(define-public java-modello-plugins-xsd
+  (package
+    (inherit java-modello-core)
+    (name "java-modello-plugins-xsd")
+    (arguments
+     `(#:jar-name "modello-plugins-xsd.jar"
+       #:source-dir "modello-plugins/modello-plugin-xsd/src/main/java"
+       #:test-dir "modello-plugins/modello-plugin-xsd/src/test"
+       #:tests? #f; Require some test classes from java-modello
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (mkdir-p "build/classes")
+             (copy-recursively
+               "modello-plugins/modello-plugin-xsd/src/main/resources"
+               "build/classes")
+             #t)))))
+    (inputs
+     `(("java-modello-core" ,java-modello-core)
+       ("java-modello-plugins-xml" ,java-modello-plugins-xml)
+       ,@(package-inputs java-modello-core)))
+    (native-inputs
+     `(("java-modello-test" ,java-modello-test)
+       ,@(package-native-inputs java-modello-core)))
+    (synopsis "Modello XSD Plugin")
+    (description "Modello XSD Plugin generates an XML Schema from the model to
+be able to validate XML content.")))
+
+(define-public java-xmlunit-matchers
+  (package
+    (inherit java-xmlunit)
+    (name "java-xmlunit-matchers")
+    (arguments
+     `(#:jar-name "java-xmlunit-matchers.jar"
+       #:source-dir "xmlunit-matchers/src/main/java"
+       #:test-dir "xmlunit-matchers/src/test"
+       #:test-exclude
+       ;; Cannot open xsd for http://www.xmlunit.org/test-support/Book.xsd
+       (list "**/ValidationMatcherTest.java")
+       #:phases
+       (modify-phases %standard-phases
+	 (add-before 'build 'copy-test-class
+	   (lambda _
+	     (copy-file "xmlunit-core/src/test/java/org/xmlunit/TestResources.java"
+			"xmlunit-matchers/src/test/java/org/xmlunit/TestResources.java")
+	     #t))
+	 (add-before 'build 'fix-test-resources-path
+	   (lambda _
+	     (substitute* (find-files "xmlunit-matchers/src/test" ".*.java")
+	       (("../test-resources") "test-resources"))
+	     #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-recursively (assoc-ref inputs "resources") "test-resources")
+             #t)))))
+    (inputs
+     `(("java-xmlunit" ,java-xmlunit)
+       ("java-junit" ,java-junit)))))
+
+(define-public java-jtidy
+  (package
+    (name "java-jtidy")
+    (version "r938")
+    (source (origin
+	      (method url-fetch)
+	      (uri (string-append "mirror://sourceforge/jtidy/JTidy/r938/jtidy-r938-sources.zip"))
+              (sha256
+               (base32
+                "19kszpqjihdfacxwk0bzv8ajwbs86k1qb9j67vzg8lwvxcxdkmsh"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+	 (add-before 'build 'chdir
+	   (lambda _
+	     (chdir "..")
+	     #t))
+	 (replace 'install
+	   (install-jars ".")))))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
