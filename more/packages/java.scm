@@ -599,55 +599,58 @@ framework for Java.  The project is useful any time objects need to be
 persisted, whether to a file, database, or over the network.")
     (license license:bsd-3)))
 
-;(define-public java-jformatstring
-;  (package
-;    (name "java-jformatstring")
-;    (version "3.0.0")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://framagit.org/tyreunom/j-format-string/-/archive/"
-;                                  version "/j-format-string-" version ".tar.gz"))
-;              (sha256
-;               (base32
-;                "0ypqnchxif7rkq3n9vshj3j0d24kw3wr6k00yb5i14jm59m21r90"))
-;              (modules '((guix build utils)))
-;              (snippet
-;                '(begin
-;                   (for-each delete-file (find-files "." ".*.jar"))))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:jar-name "jformatstring.jar"))
-;    (inputs
-;     `(("java-jsr305" ,java-jsr305)
-;       ("java-junit" ,java-junit)))
-;    (home-page "http://findbugs.sourceforge.net/")
-;    (synopsis "")
-;    (description "")
-;    ;; license: gpl2 only, with classpath exception
-;    (license license:gpl2)))
+(define-public java-jformatstring
+  (package
+    (name "java-jformatstring")
+    (version "3.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://framagit.org/tyreunom/j-format-string/-/archive/"
+                                  version "/j-format-string-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0ypqnchxif7rkq3n9vshj3j0d24kw3wr6k00yb5i14jm59m21r90"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin
+                   (for-each delete-file (find-files "." ".*.jar"))))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jformatstring.jar"
+       ; tests are not in a java directory
+       #:tests? #f))
+    (inputs
+     `(("java-jsr305" ,java-jsr305)
+       ("java-junit" ,java-junit)
+       ("java-spotbugs-annotations" ,java-spotbugs-annotations)))
+    (home-page "http://findbugs.sourceforge.net/")
+    (synopsis "")
+    (description "")
+    ;; license: gpl2 only, with classpath exception
+    (license license:gpl2)))
 
-;(define-public java-commons-bcel-5
-;  (package
-;    (inherit java-commons-bcel)
-;    (version "6.0")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://archive.apache.org/dist/commons/"
-;                                  "bcel/source/bcel-" version "-src.tar.gz"))
-;              (sha256
-;               (base32
-;                "0n39601zcj7ymjihfv53r260mf3n8kj6bqhxv90dw5sgc7qbjqxr"))))
-;    (arguments
-;     `(#:jar-name "commons-bcel.jar"
-;       #:source-dir "src/java"
-;       #:tests? #f
-;       #:phases
-;       (modify-phases %standard-phases
-;         (add-before 'build 'use-iso8859
-;           (lambda _
-;             (substitute* "build.xml"
-;               (("<javac ") "<javac encoding=\"iso-8859-1\" "))
-;             #t)))))))
+(define-public java-commons-bcel-5
+  (package
+    (inherit java-commons-bcel)
+    (version "5.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/commons/"
+                                  "bcel/source/bcel-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "15djmay72mzk38v183j6fr3j7fj3dhkp5z53bsvdfyc3ldcrs0v8"))))
+    (arguments
+     `(#:jar-name "commons-bcel.jar"
+       #:source-dir "src/java"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'use-iso8859
+           (lambda _
+             (substitute* "build.xml"
+               (("<javac ") "<javac encoding=\"iso-8859-1\" "))
+             #t)))))))
 
 (define-public java-findbugs
   (package
@@ -669,6 +672,7 @@ persisted, whether to a file, database, or over the network.")
      `(#:build-target "jars"
        #:test-target "test"
        #:make-flags (list "-Dgitrnum=0")
+       #:jdk ,icedtea-7
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'add-formatstring
@@ -684,10 +688,58 @@ persisted, whether to a file, database, or over the network.")
              (with-directory-excursion "src/java/edu/umd/cs/findbugs"
                (with-fluids ((%default-port-encoding "ISO-8859-1"))
                  (substitute* '("visitclass/PreorderVisitor.java"
-                                "StackMapAnalyzer.java")
+                                "StackMapAnalyzer.java"
+				"classfile/engine/ClassParserUsingASM.java")
                    ;; The two classes were merged in the latter
-                   (("StackMapTable")
-                    "StackMap"))))
+                   (("StackMapTable") "StackMap")
+		   (("Constants") "Const")
+		   (("Const2") "Constants2")
+		   (("getByteCodeOffsetDelta") "getByteCodeOffset"))
+		 (substitute* "detect/DumbMethods.java"
+		   (("import org.apache.bcel.classfile.Attribute;")
+		    "import org.apache.bcel.classfile.Attribute;
+import org.apache.bcel.Const;")
+		   (("MAJOR_1") "Const.MAJOR_1"))
+                 (substitute* "ba/AbstractFrameModelingVisitor.java"
+                   (("VisitorSupportsInvokeDynamic") "Visitor"))
+		 (substitute* "xml/XMLUtil.java"
+		   (("<T> List<T>") "List<Node>"))
+                 (substitute* "visitclass/PreorderVisitor.java"
+                   (("import org.apache.bcel.classfile.Attribute;")
+                    "import org.apache.bcel.classfile.Attribute;
+import org.apache.bcel.Const;
+import org.apache.bcel.classfile.BootstrapMethods;
+import org.apache.bcel.classfile.ConstantInvokeDynamic;
+import org.apache.bcel.classfile.ConstantMethodHandle;
+import org.apache.bcel.classfile.ConstantMethodType;
+import org.apache.bcel.classfile.MethodParameters;
+import org.apache.bcel.classfile.ParameterAnnotationEntry;")
+                   (("^}")
+                    "    @Override
+    public void visitBootstrapMethods(BootstrapMethods arg0) {
+        // TODO Auto-generated method stub
+    }
+    @Override
+    public void visitConstantInvokeDynamic(ConstantInvokeDynamic arg0) {
+        // TODO Auto-generated method stub
+    }
+    @Override
+    public void visitConstantMethodHandle(ConstantMethodHandle arg0) {
+        // TODO Auto-generated method stub
+    }
+    @Override
+    public void visitConstantMethodType(ConstantMethodType arg0) {
+        // TODO Auto-generated method stub
+    }
+    @Override
+    public void visitMethodParameters(MethodParameters arg0) {
+        // TODO Auto-generated method stub
+    }
+    @Override
+    public void visitParameterAnnotationEntry(ParameterAnnotationEntry arg0) {
+        // TODO Auto-generated method stub
+    }
+}"))))
              #t))
          (add-before 'build 'remove-osx
            (lambda _
@@ -719,6 +771,7 @@ persisted, whether to a file, database, or over the network.")
     (inputs
      `(("java-asm" ,java-asm)
        ("java-commons-bcel-5" ,java-commons-bcel-6.0)
+       ;("java-commons-bcel-5" ,java-commons-bcel-5)
        ("java-commons-lang" ,java-commons-lang)
        ("java-dom4j" ,java-dom4j)
        ("java-jcip-annotations" ,java-jcip-annotations)
@@ -741,6 +794,65 @@ persisted, whether to a file, database, or over the network.")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-spotbugs-annotations
+  (package
+    (name "java-spotbugs-annotations")
+    (version "3.1.6")
+    (source (origin
+              (method url-fetch)
+	      (uri (string-append "https://github.com/spotbugs/spotbugs/archive/"
+				  version ".tar.gz"))
+              (sha256
+               (base32
+                "198gzk2vs4id90fxgpida51ygwpb31xwkv6lf91kgmvqcsknf6y4"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin
+                   (for-each delete-file (find-files "." ".*.jar"))))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "spotbugs.jar"
+       #:source-dir "spotbugs-annotations/src/main/java"
+       #:tests? #f
+       #:jdk ,icedtea-8))
+    (inputs
+     `(("java-jsr305" ,java-jsr305)))
+    (home-page "https://spotbugs.github.io/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-spotbugs
+  (package
+    (inherit java-spotbugs-annotations)
+    (name "java-spotbugs")
+    (arguments
+     `(#:jar-name "spotbugs.jar"
+       #:source-dir "spotbugs/src/main/java:spotbugs-annotations/src/main/java:spotbugs/src/gui"
+       #:test-dir "spotbugs/src/test"
+       #:tests? #f; depend on jdepend
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+	 (add-before 'build 'remove-osx
+	   (lambda _
+	     ;; Requires AppleJavaExtensions.jar (com.apple.eawt.*)
+	     (delete-file "spotbugs/src/gui/edu/umd/cs/findbugs/gui2/OSXAdapter.java")
+	     #t)))))
+    (inputs
+     `(("java-asm" ,java-asm)
+       ("java-commons-bcel" ,java-commons-bcel)
+       ("java-commons-lang" ,java-commons-lang)
+       ("java-dom4j" ,java-dom4j)
+       ("java-jcip-annotations" ,java-jcip-annotations)
+       ("java-jformatstring" ,java-jformatstring)
+       ("java-jsr305" ,java-jsr305)))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest-core" ,java-hamcrest-core)))
+    (synopsis "")
+    (description "")))
 
 (define-public java-mangosdk-spi
   (package
@@ -1153,10 +1265,10 @@ methods.  It is similar in speed with deflate but offers more dense compression.
               (snippet
                 `(begin
                    (for-each delete-file (find-files "." ".*.jar"))
-		   (with-directory-excursion "core"
+                   (with-directory-excursion "core"
                      (delete-file-recursively "test/lib")
                      (delete-file-recursively "windows"))
-		   #t))))
+                   #t))))
     (build-system ant-build-system)
     (native-inputs
      `(("java-javacc" ,java-javacc)))
@@ -1184,10 +1296,10 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        #:jar-name "josm.jar"
        #:phases
        (modify-phases %standard-phases
-	 (add-after 'unpack 'chdir
-	   (lambda _
-	     (chdir "core")
-	     #t))
+         (add-after 'unpack 'chdir
+           (lambda _
+             (chdir "core")
+             #t))
          (add-after 'chdir 'rm-build.xml
            (lambda* _
              (delete-file "build.xml")
@@ -1402,6 +1514,346 @@ from ORO, Inc.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-aspectj-rt
+  (package
+    (inherit java-aspectj-weaver)
+    (name "java-aspectj-rt")
+    (arguments
+     `(#:jar-name "java-aspectj-rt.jar"
+       #:source-dir "."
+       #:jdk ,icedtea-8
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'unpack-jar
+           (lambda _
+             (mkdir-p "rt-src")
+             (chdir "rt-src")
+             (zero? (system* "jar" "xf" "../src/aspectjrt1.8.10-src.jar")))))))
+    (inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-asm" ,java-asm)))
+    (description "")))
+
+(define-public java-jsr107
+  (package
+    (name "java-jsr107")
+    (version "1.1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jsr107/jsr107spec/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "19gxsanr9l3cbvpxzvvgs2cgxbpbl6llmfg7nbmdzxpv7mhmprxs"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jsr107.jar"
+       #:source-dir "src/main/java"
+       ; no tests
+       #:tests? #f))
+    (inputs
+     `(("java-cdi-api" ,java-cdi-api)))
+    (home-page "https://github.com/jsr107/jsr107spec")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-minimal-json
+  (package
+    (name "java-minimal-json")
+    (version "0.9.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ralfstx/minimal-json/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0y51icz6bdzd3x9nzf9npwwc7inag3hn1b685izys7qy0kgw9nih"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-minimal-json.jar"
+       #:source-dir "com.eclipsesource.json/src/main/java"
+       #:test-dir "com.eclipsesource.json/src/test"
+       #:test-exclude
+       ;; Unable to set MockitoNamingPolicy on cglib generator which creates FastClasses
+       (list "**/JsonValue_Test.java")))
+    (native-inputs
+     `(("java-asm" ,java-asm)
+       ("java-cglib" ,java-cglib)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)
+       ("java-mockito-1" ,java-mockito-1)
+       ("java-objenesis" ,java-objenesis)))
+    (home-page "https://github.com/ralfstx/minimal-json")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public javacc-6
+  (package
+    (inherit javacc)
+    (version "6.1.3")
+    (source (origin
+	      (method url-fetch)
+	      (uri (string-append "https://github.com/javacc/javacc/archive/release_"
+                                  (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
+				  ".tar.gz"))
+              (sha256
+               (base32
+                "03xpipk365szfzrab7divlr1i1r58j1hh47mhj5cpj1kv9zc2p6c"))))
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+	 (add-after 'unpack 'delete-bundled-libs
+	   (lambda _
+	     (delete-file-recursively "lib")
+	      #t))
+	 (replace 'install (install-jars "target")))))
+    (native-inputs
+     `(("java-junit" ,java-junit)))))
+
+(define-public java-apache-freemarker
+  (package
+    (name "java-apache-freemarker")
+    (version "2.3.28")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/freemarker/engine/" version
+                                  "/source/apache-freemarker-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0zar7lrjliklldihhpn0v5j3n4jlc022rj299yzmwc1yqzj7nzmv"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-apache-freemarker.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-unpackaged-dependencies
+	   ;; TODO: package these dependencies
+	   (lambda _
+	     (delete-file-recursively "src/main/java/freemarker/ext/jython")
+	     (delete-file-recursively "src/main/java/freemarker/ext/rhino")
+	     ;; This class depends on javareble, a non-free package
+	     (delete-file "src/main/java/freemarker/ext/beans/JRebelClassChangeNotifier.java")
+	     (delete-file "src/main/java/freemarker/ext/ant/UnlinkedJythonOperationsImpl.java")
+	     (delete-file "src/main/java/freemarker/template/utility/JythonRuntime.java")
+	     #t))
+	 (add-before 'build 'run-javacc
+	   (lambda _
+	     (invoke "java" "-cp" (getenv "CLASSPATH") "javacc"
+		     "-OUTPUT_DIRECTORY=src/main/java/freemarker/core"
+		     "src/main/javacc/FTL.jj")
+	     #t)))))
+    (inputs
+     `(("java-avalon-logkit" ,java-avalon-logkit)
+       ("java-commons-jxpath" ,java-commons-jxpath)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-dom4j" ,java-dom4j)
+       ("java-jaxen" ,java-jaxen)
+       ("java-jdom" ,java-jdom)
+       ("java-log4j-api" ,java-log4j-api)
+       ("java-slf4j-api" ,java-slf4j-api)
+       ("java-spotbugs-annotations" ,java-spotbugs-annotations)
+       ("java-tomcat" ,java-tomcat)
+       ("java-xalan" ,java-xalan)))
+    (native-inputs
+     `(("javacc" ,javacc-6)))
+    (home-page "https://github.com/ralfstx/minimal-json")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define java-hazelcast-client-protocol-version "1.7.0-3")
+(define java-hazelcast-version "3.10.4")
+
+(define java-hazelcast-client-protocol-source
+  (origin
+    (method url-fetch)
+    (uri (string-append "https://github.com/hazelcast/"
+                        "hazelcast-client-protocol/archive/v"
+                        java-hazelcast-client-protocol-version ".tar.gz"))
+    (file-name (string-append "hazelcast-client-protocol-" java-hazelcast-client-protocol-version ".tar.gz"))
+    (sha256
+     (base32
+      "091j9as0zsm4rldj4x605hh0rmiwly39y0kg8zi6c2rkabzp2qpb"))))
+
+(define java-hazelcast-source
+  (origin
+    (method url-fetch)
+    (uri (string-append "https://github.com/hazelcast/hazelcast/archive/v"
+                        java-hazelcast-version ".tar.gz"))
+    (file-name (string-append "java-hazelcast-" java-hazelcast-version ".tar.gz"))
+    (sha256
+     (base32
+      "0bmhjh15xcqc4k77ncfw60b0gfnh6ndc3rr8am09ys8yga4w59hf"))))
+
+(define-public java-hazelcast-code-generator
+  (package
+    (name "java-hazelcast-code-generator")
+    (version java-hazelcast-client-protocol-version)
+    (source java-hazelcast-client-protocol-source)
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-hazelcast-code-generator.jar"
+       #:source-dir "hazelcast-code-generator/src/main/java"
+       #:test-dir "hazelcast-core-generator/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "hazelcast-core-generator/src/main/resources"
+                               "build/classes")
+             #t)))))
+    (home-page "https://hazelcast.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-hazelcast-client-protocol
+  (package
+    (name "java-hazelcast-client-protocol")
+    (version java-hazelcast-client-protocol-version)
+    (source java-hazelcast-client-protocol-source)
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-hazelcast-client-protocol.jar"
+       #:source-dir "hazelcast/src/main/java"
+       #:test-dir "hazelcast/src/test"))
+    (home-page "https://hazelcast.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-hazelcast-bootstrap
+  (package
+    (name "java-hazelcast-bootstrap")
+    (version java-hazelcast-version)
+    (source java-hazelcast-source)
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-hazelcast-bootstrap.jar"
+       #:source-dir
+       (string-append "hazelcast-client/src/main/java:hazelcast/src/main/java:"
+                      "hazelcast-client-protocol-" ,java-hazelcast-client-protocol-version
+                      "/hazelcast/src/main/java")
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'unpack-client-protocol
+           (lambda* (#:key inputs #:allow-other-keys)
+             (display (assoc-ref inputs "java-hazelcast-client-protocol-source"))
+             (newline)
+             (invoke "tar" "xzf" (assoc-ref inputs "java-hazelcast-client-protocol-source"))
+             #t))
+         (add-before 'build 'remove-package-info
+           (lambda _
+             (for-each delete-file (find-files "." "package-info.java"))
+             #t)))))
+    (inputs
+     `(("java-jsr107" ,java-jsr107)
+       ("java-jsr305" ,java-jsr305)
+       ("java-minimal-json" ,java-minimal-json)
+       ("java-hazelcast-client-protocol-source" ,java-hazelcast-client-protocol-source)))
+    (home-page "https://hazelcast.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-hazelcast
+  (package
+    (inherit java-hazelcast-bootstrap)
+    (name "java-hazelcast")
+    (arguments
+     `(#:jar-name "java-hazelcast.jar"
+       #:source-dir "hazelcast/src/main/java"
+       #:test-dir "hazelcast/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "hazelcast/src/main/resources" "build/classes")
+             #t))
+         (add-before 'build 'copy-template
+           (lambda _
+             (with-directory-excursion "hazelcast/src/main"
+               (copy-file "template/com/hazelcast/instance/GeneratedBuildProperties.java"
+                            "java/com/hazelcast/instance/GeneratedBuildProperties.java")
+               (substitute* "java/com/hazelcast/instance/GeneratedBuildProperties.java"
+                 (("\\$\\{project.version\\}") ,version)
+                 (("\\$\\{timestamp\\}") "0")
+                 (("\\$\\{git.commit.id.abbrev\\}") "0f51fcf")
+                 (("\\$\\{hazelcast.distribution\\}") "Hazelcast")
+                 (("\\$\\{hazelcast.serialization.version\\}") "1")))
+             #t))
+         (add-before 'build 'remove-fb
+           (lambda _
+             (substitute* (find-files "hazelcast/src/main/java" ".*.java")
+              ; (("@SuppressFBWarnings.*") "")
+              ; (("justification = \".*") "")
+               (("import edu.umd.cs.findbugs.*") ""))
+             #t)))))
+    (description "")))
+
+(define-public java-jamonapi-jamon-bootstrap
+  (package
+    (name "java-jamonapi-jamon")
+    (version "2.81")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/stevensouza/jamonapi/archive/v"
+                                  (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
+                                  ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0kh0p1h546k6myd268jlr681bx15q6ip15an56rmqdw4q87xk23v"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-jamonapi-jamon.jar"
+       #:source-dir "jamon/src/main/java"
+       #:test-dir "jamon/src/test"
+       #:jdk ,icedtea-8
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-cyclic-dependency
+           (lambda _
+             ;; Classes in this directory depend on spring-framework-context,
+             ;; which depends on spring-framework-aop which depends on jamonapi.
+             (delete-file-recursively "jamon/src/main/java/com/jamonapi/aop")
+             #t))
+         (add-before 'build 'port-to-jetty9
+           (lambda _
+             (substitute* "jamon/src/main/java/com/jamonapi/http/JettyHttpMonItem.java"
+               (("org.mortbay.jetty.Request")
+                "org.eclipse.jetty.server.Request"))
+             (substitute* "jamon/src/main/java/com/jamonapi/http/JAMonJettyHandler.java"
+               (("org.mortbay.jetty.Request")
+                "org.eclipse.jetty.server.Request")
+               (("org.mortbay.jetty.Response")
+                "org.eclipse.jetty.server.Response")
+               (("org.mortbay.jetty.HttpConnection")
+                "org.eclipse.jetty.server.HttpConnection")
+               (("org.mortbay.jetty.handler.HandlerWrapper")
+                "org.eclipse.jetty.server.handler.HandlerWrapper"))
+             #t)))))
+    (inputs
+     `(("java-aspectj-rt" ,java-aspectj-rt)
+       ("java-eclipse-jetty-server" ,java-eclipse-jetty-server)
+       ;("java-javaee-servletapi" ,java-javaee-servletapi)
+       ("java-tomcat" ,java-tomcat) ; for catalina and servletapi
+       ("java-log4j-api" ,java-log4j-api)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    ;; A link to the license is present in pom.xml
+    (license license:bsd-3)))
+
 (define-public java-spring-framework-core
   (package
     (name "java-spring-framework-core")
@@ -1438,24 +1890,24 @@ from ORO, Inc.")
            (lambda _
              ;; Needed because tests look for data in src/... directly.
              (chdir "spring-core")
-	     #t))
+             #t))
          (add-before 'configure 'rename-dep
            (lambda _
              (substitute* "src/main/java/org/springframework/objenesis/SpringObjenesis.java"
                (("org.springframework.objenesis") "org.objenesis"))
-	     #t))
+             #t))
          (add-before 'configure 'add-import
            (lambda _
              (substitute* "src/main/java/org/springframework/cglib/core/SpringNamingPolicy.java"
                (("public class")
                 "import net.sf.cglib.core.DefaultNamingPolicy;\npublic class"))
-	     #t))
+             #t))
          (add-before 'check 'remove-log4j-1-dep
            (lambda _
              ;; These tests require log4j-1 (log4j-1.2-api doesn't work)
              (delete-file "src/test/java/org/springframework/util/MockLog4jAppender.java")
              (delete-file "src/test/java/org/springframework/util/Log4jConfigurerTests.java")
-	     #t))
+             #t))
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
              (let ((dir (string-append (getcwd) "/build/test-classes/")))
@@ -1464,7 +1916,7 @@ from ORO, Inc.")
                              (mkdir-p (dirname (string-append dir file)))
                              (copy-file file (string-append dir file)))
                    (find-files "." ".*"))))
-	     #t)))))
+             #t)))))
     (inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-jopt-simple" ,java-jopt-simple)
@@ -1502,56 +1954,170 @@ from ORO, Inc.")
            (lambda _
              ;; Needed because tests look for data in src/... directly.
              (chdir "spring-beans")
-	     #t))
-	 (add-before 'build 'copy-resources
-	   (lambda _
-	     (copy-recursively "src/main/resources" "build/classes")
-	     #t))
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
          (add-before 'configure 'rename-dep
            (lambda _
              (substitute* "src/main/java/org/springframework/beans/factory/support/CglibSubclassingInstantiationStrategy.java"
                (("org.springframework.cglib") "net.sf.cglib")
                (("net.sf.cglib.core.SpringNamingPolicy") "org.springframework.cglib.core.SpringNamingPolicy"))
-	     #t))
-	 (add-before 'check 'copy-test-classes
-	   (lambda _
-	     (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
-			"src/test/java/org/springframework/tests/Assume.java")
-	     (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
-			"src/test/java/org/springframework/tests/TestGroup.java")
-	     (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
-			"src/test/java/org/springframework/tests/TestResourceUtils.java")
-	     (mkdir-p "src/test/java/org/springframework/stereotype")
-	     (mkdir-p "src/test/java/org/springframework/util")
-	     (copy-file "../spring-core/src/test/java/org/springframework/stereotype/Component.java"
-			"src/test/java/org/springframework/stereotype/Component.java")
-	     (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
-			"src/test/java/org/springframework/util/SerializationTestUtils.java")
-	     (substitute* "src/test/java/org/springframework/beans/factory/BeanFactoryUtilsTests.java"
-	       (("org.springframework.cglib") "net.sf.cglib"))
-	     #t))
-         ;(add-before 'configure 'add-import
-         ;  (lambda _
-         ;    (substitute* "src/main/java/org/springframework/cglib/core/SpringNamingPolicy.java"
-         ;      (("public class")
-         ;       "import net.sf.cglib.core.DefaultNamingPolicy;\npublic class"))
-	 ;    #t))
-         ;(add-before 'check 'remove-log4j-1-dep
-         ;  (lambda _
-         ;    ;; These tests require log4j-1 (log4j-1.2-api doesn't work)
-         ;    (delete-file "src/test/java/org/springframework/util/MockLog4jAppender.java")
-         ;    (delete-file "src/test/java/org/springframework/util/Log4jConfigurerTests.java")
-	 ;    #t))
+             #t))
+         (add-before 'check 'copy-test-classes
+           (lambda _
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
+                        "src/test/java/org/springframework/tests/Assume.java")
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
+                        "src/test/java/org/springframework/tests/TestGroup.java")
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
+                        "src/test/java/org/springframework/tests/TestResourceUtils.java")
+             (mkdir-p "src/test/java/org/springframework/stereotype")
+             (mkdir-p "src/test/java/org/springframework/util")
+             (copy-file "../spring-core/src/test/java/org/springframework/stereotype/Component.java"
+                        "src/test/java/org/springframework/stereotype/Component.java")
+             (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
+                        "src/test/java/org/springframework/util/SerializationTestUtils.java")
+             (substitute* "src/test/java/org/springframework/beans/factory/BeanFactoryUtilsTests.java"
+               (("org.springframework.cglib") "net.sf.cglib"))
+             #t))
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
-	     (copy-recursively "src/test/resources"
-			       "build/test-classes")
-	     #t)))))
+             (copy-recursively "src/test/resources"
+                               "build/test-classes")
+             #t)))))
     (inputs
      `(("java-cglib" ,java-cglib)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-javax-inject" ,java-javax-inject)
        ("java-snakeyaml" ,java-snakeyaml)
+       ("java-spring-framework-core" ,java-spring-framework-core)
+       ;; Note: for javax-el (el-api)
+       ("java-tomcat" ,java-tomcat)))
+    (description "")))
+
+(define-public java-spring-framework-aop
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-aop")
+    (arguments
+     `(#:jar-name "java-spring-framework-aop.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-aop")
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'configure 'rename-dep
+           (lambda _
+             (substitute*
+               '("src/main/java/org/springframework/aop/framework/CglibAopProxy.java"
+                 "src/main/java/org/springframework/aop/framework/ObjenesisCglibAopProxy.java")
+               (("org.springframework.cglib") "net.sf.cglib")
+               (("net.sf.cglib.core.SpringNamingPolicy") "org.springframework.cglib.core.SpringNamingPolicy"))
+             (substitute* "src/main/java/org/springframework/aop/framework/ObjenesisCglibAopProxy.java"
+               (("org.springframework.objenesis") "org.objenesis"))
+             #t))
+         ;(add-before 'check 'copy-test-classes
+         ;  (lambda _
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
+         ;               "src/test/java/org/springframework/tests/Assume.java")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
+         ;               "src/test/java/org/springframework/tests/TestGroup.java")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
+         ;               "src/test/java/org/springframework/tests/TestResourceUtils.java")
+         ;    (mkdir-p "src/test/java/org/springframework/stereotype")
+         ;    (mkdir-p "src/test/java/org/springframework/util")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/stereotype/Component.java"
+         ;               "src/test/java/org/springframework/stereotype/Component.java")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
+         ;               "src/test/java/org/springframework/util/SerializationTestUtils.java")
+         ;    (substitute* "src/test/java/org/springframework/beans/factory/BeanFactoryUtilsTests.java"
+         ;      (("org.springframework.cglib") "net.sf.cglib"))
+         ;    #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-recursively "src/test/resources"
+                               "build/test-classes")
+             #t)))))
+    (inputs
+     `(("java-aspectj-rt" ,java-aspectj-rt)
+       ("java-aspectj-weaver" ,java-aspectj-weaver)
+       ("java-cglib" ,java-cglib)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-commons-pool" ,java-commons-pool)
+       ("java-commons-pool2" ,java-commons-pool2)
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-snakeyaml" ,java-snakeyaml)
+       ("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-core" ,java-spring-framework-core)
+       ;; Note: for javax-el (el-api)
+       ("java-tomcat" ,java-tomcat)))
+    (description "")))
+
+(define-public java-spring-framework-context
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-context")
+    (arguments
+     `(#:jar-name "java-spring-framework-context.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-context")
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         ;(add-before 'configure 'rename-dep
+         ;  (lambda _
+         ;    (substitute* "src/main/java/org/springframework/beans/factory/support/CglibSubclassingInstantiationStrategy.java"
+         ;      (("org.springframework.cglib") "net.sf.cglib")
+         ;      (("net.sf.cglib.core.SpringNamingPolicy") "org.springframework.cglib.core.SpringNamingPolicy"))
+         ;    #t))
+         ;(add-before 'check 'copy-test-classes
+         ;  (lambda _
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
+         ;               "src/test/java/org/springframework/tests/Assume.java")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
+         ;               "src/test/java/org/springframework/tests/TestGroup.java")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
+         ;               "src/test/java/org/springframework/tests/TestResourceUtils.java")
+         ;    (mkdir-p "src/test/java/org/springframework/stereotype")
+         ;    (mkdir-p "src/test/java/org/springframework/util")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/stereotype/Component.java"
+         ;               "src/test/java/org/springframework/stereotype/Component.java")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
+         ;               "src/test/java/org/springframework/util/SerializationTestUtils.java")
+         ;    (substitute* "src/test/java/org/springframework/beans/factory/BeanFactoryUtilsTests.java"
+         ;      (("org.springframework.cglib") "net.sf.cglib"))
+         ;    #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-recursively "src/test/resources"
+                               "build/test-classes")
+             #t)))))
+    (inputs
+     `(("java-cglib" ,java-cglib)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-snakeyaml" ,java-snakeyaml)
+       ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-core" ,java-spring-framework-core)
        ;; Note: for javax-el (el-api)
        ("java-tomcat" ,java-tomcat)))
@@ -2052,9 +2618,9 @@ from ORO, Inc.")
                ((".*src/test/\\*\\*/\\*.java.*") "")
                (("<files>") "")
                (("</files>") ""))
-	     #t))
+             #t))
          (replace 'install
-	   (install-jars ".")))))
+           (install-jars ".")))))
     (inputs
      `(("java-jboss-javassist" ,java-jboss-javassist)))
     (native-inputs
@@ -2093,6 +2659,7 @@ from ORO, Inc.")
        ("java-classpathx-servletapi" ,java-classpathx-servletapi)
        ("java-ognl" ,java-ognl)
        ("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-context" ,java-spring-framework-context)
        ("java-spring-framework-core" ,java-spring-framework-core)
        ("java-velocity" ,java-velocity)
        ("java-testng" ,java-testng)))
@@ -2132,7 +2699,7 @@ from ORO, Inc.")
              (substitute* "build/build.xml"
                ((".*download.xml.*") ""))
              (chdir "build")
-	     #t))
+             #t))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
@@ -2140,7 +2707,7 @@ from ORO, Inc.")
                (mkdir-p dir)
                (copy-file "../bin/velocity-1.7.jar"
                           (string-append dir "/velocity-1.7.jar")))
-	     #t)))))
+             #t)))))
     (native-inputs
      `(("javacc" ,java-javacc)
        ("antlr" ,antlr2)))
@@ -2183,7 +2750,7 @@ from ORO, Inc.")
            (lambda _
              (copy-recursively "velocity-engine-core/src/main/resources"
                                "build/classes")
-	     #t))
+             #t))
          (add-before 'build 'generate-parser
            (lambda _
              (invoke "jjtree" "-STATIC=false" "-MULTI=true"
@@ -2196,11 +2763,11 @@ from ORO, Inc.")
                           "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/node/ParserTreeConstants.java")
              (rename-file "JJTParserState.java"
                           "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/node/JJTParserState.java")
-	     (invoke "javacc" "-STATIC=false" "-JDK_VERSION=1.8"
+             (invoke "javacc" "-STATIC=false" "-JDK_VERSION=1.8"
                      (string-append "-OUTPUT_DIRECTORY=velocity-engine-core/src"
                                     "/main/java/org/apache/velocity/runtime/parser")
                      "velocity-engine-core/src/main/java/org/apache/velocity/runtime/parser/Parser.jj")
-	     #t)))))
+             #t)))))
     (native-inputs
      `(("java-javacc-5" ,java-javacc-5)))
     (propagated-inputs '())
@@ -2247,7 +2814,7 @@ from ORO, Inc.")
                (mkdir-p dir)
                (copy-file "../bin/velocity-tools-2.0.jar"
                           (string-append dir "/velocity-tools-2.0.jar")))
-	     #t)))))
+             #t)))))
     (inputs
      `(("java-dom4j" ,java-dom4j)
        ("java-velocity" ,java-velocity)
@@ -2266,13 +2833,13 @@ from ORO, Inc.")
     (name "java-plexus-velocity-component")
     (version "1.2")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/codehaus-plexus/"
-				  "plexus-velocity/archive/plexus-velocity-"
-				  version ".tar.gz"))
-	      (sha256
-	       (base32
-		"04d34iny6364zcr1xy1xmg4grp6av8pcw3gsb1abrpxz4qhm84a6"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/codehaus-plexus/"
+                                  "plexus-velocity/archive/plexus-velocity-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "04d34iny6364zcr1xy1xmg4grp6av8pcw3gsb1abrpxz4qhm84a6"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-plexus-velocity-component.jar"
@@ -3110,27 +3677,77 @@ namespaces.")
     (description "")
     (license license:asl2.0)))
 
-;(define-public java-jflex
-;  (package
-;    (name "java-jflex")
-;    (version "1.6.1")
-;    (source (origin
-;              (method url-fetch)
-;              (uri (string-append "https://github.com/jflex-de/jflex/archive/"
-;                                  version ".tar.gz"))
-;              (sha256
-;               (base32
-;                "1wdfx4yl8cy2karbm4vpmk29xjlv6vn8y9b0sgfax26bl0bx7zxs"))))
-;    (build-system ant-build-system)
-;    (arguments
-;     `(#:jar-name "jflex.jar"
-;       #:jdk ,icedtea-8
-;       #:source-dir "jflex/src/main/java"
-;       #:test-dir "jflex/src/test"))
-;    (home-page "jflex.de")
-;    (synopsis "")
-;    (description "")
-;    (license license:bsd-3)))
+(define-public java-jlex
+  (package
+    (name "java-jlex")
+    (version "1.2.6")
+    (source (origin
+              (method url-fetch)
+	      (uri (string-append "https://www.cs.princeton.edu/~appel/modern/"
+				  "java/JLex/Archive/" version "/Main.java"))
+              (sha256
+               (base32
+                "1msblmsgzij3z9pwm7gff1q2cv1q802q23xsn0mrflrs7g7axsxf"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+	 (delete 'unpack)
+	 (delete 'configure)
+	 (replace 'build
+	   (lambda* (#:key inputs #:allow-other-keys)
+	     (mkdir "JLex")
+	     (copy-file (assoc-ref inputs "source") "Main.java")
+	     (invoke "javac" "Main.java" "-d" ".")
+	     (apply invoke "jar" "cf" "jlex.jar" (find-files "." ".*.class"));"JLex/Main.class")
+	     #t))
+	 (replace 'install
+	   (install-jars ".")))))
+    (home-page "https://jflex.de")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-jflex
+  (package
+    (name "java-jflex")
+    (version "1.6.1")
+    (source (origin
+              (method url-fetch)
+	      ; https://github.com/jflex-de/jflex/releases/download/v1.6.1/jflex-1.6.1.tar.gz
+	      (uri (string-append "https://github.com/jflex-de/jflex/releases/"
+				  "download/v" version "/jflex-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1h7q2vhb4s42g4pqz5xxxliagprray7i9krr6hyaz1mjlx7gnycq"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jflex.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+	 (add-before 'build 'generate-lex
+	   (lambda _
+	     (substitute* "src/main/jflex/LexScan.flex"
+	       (("^%final.*") "")
+	       (("^%column.*") "")
+	       (("^%inputstream.*") "")
+	       (("^//.*") "")
+	       (("^/\\*.*\\*/") "")
+	       (("^%eofclose.*") ""))
+	     (invoke "java" "JLex.Main" "src/main/jflex/LexScan.flex")
+	     (copy-file "src/main/jflex/LexScan.flex.java"
+			"src/main/java/jflex/LexScan.java")
+	     #t)))))
+    (native-inputs
+     `(("java-jlex" ,java-jlex)))
+    (home-page "https://jflex.de")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
 
 (define-public java-cup-runtime
   (package
@@ -3147,6 +3764,45 @@ namespaces.")
               (modules '((guix build utils)))
               (snippet
                 '(begin ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   (for-each delete-file (find-files "." ".*\\.tar.gz"))
+                   #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "cup-runtime.jar"
+       #:source-dir "src/java/java_cup/runtime"
+       #:tests? #f; no tests for runtime
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'remove-build-xml
+           (lambda _
+             (delete-file "build.xml"))))))
+    (home-page "http://www2.cs.tum.edu/projects/cup")
+    (synopsis "")
+    (description "")
+    (license license:expat))); http://www2.cs.tum.edu/projects/cup/licence.html
+
+(define-public java-cup
+  (package
+    (name "java-cup")
+    (version "11b")
+    (source (origin
+	      (method url-fetch)
+	      (uri "http://www2.cs.tum.edu/projects/cup/releases/java-cup-src-11b-20160615.tar.gz")
+              (sha256
+               (base32
+                "09xigxm7b44hz79xhqpfykvjrk4q90p33j2l07w69izx9sn0y42b"))
+              ;(method git-fetch)
+              ;(uri (git-reference
+              ;       (url "https://versioncontrolseidl.in.tum.de/parsergenerators/cup")
+              ;       (commit "fe729fe8c27441f046dab19135a38b9dde4c4e5e")))
+              ;(sha256
+              ; (base32
+              ;  "09xigxm7b44hz79xhqpfykvjrk4q90p33j2l07w69izx9sn0y42b"))
+              (modules '((guix build utils)))
+              (snippet
+                '(begin
+		   ;; Delete bundled archives.
                    (for-each delete-file (find-files "." ".*\\.jar"))
                    (for-each delete-file (find-files "." ".*\\.tar.gz"))
                    #t))))
@@ -4224,16 +4880,16 @@ be able to validate XML content.")))
        (list "**/ValidationMatcherTest.java")
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'copy-test-class
-	   (lambda _
-	     (copy-file "xmlunit-core/src/test/java/org/xmlunit/TestResources.java"
-			"xmlunit-matchers/src/test/java/org/xmlunit/TestResources.java")
-	     #t))
-	 (add-before 'build 'fix-test-resources-path
-	   (lambda _
-	     (substitute* (find-files "xmlunit-matchers/src/test" ".*.java")
-	       (("../test-resources") "test-resources"))
-	     #t))
+         (add-before 'build 'copy-test-class
+           (lambda _
+             (copy-file "xmlunit-core/src/test/java/org/xmlunit/TestResources.java"
+                        "xmlunit-matchers/src/test/java/org/xmlunit/TestResources.java")
+             #t))
+         (add-before 'build 'fix-test-resources-path
+           (lambda _
+             (substitute* (find-files "xmlunit-matchers/src/test" ".*.java")
+               (("../test-resources") "test-resources"))
+             #t))
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
              (copy-recursively (assoc-ref inputs "resources") "test-resources")
@@ -4247,8 +4903,8 @@ be able to validate XML content.")))
     (name "java-jtidy")
     (version "r938")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "mirror://sourceforge/jtidy/JTidy/r938/jtidy-r938-sources.zip"))
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/jtidy/JTidy/r938/jtidy-r938-sources.zip"))
               (sha256
                (base32
                 "19kszpqjihdfacxwk0bzv8ajwbs86k1qb9j67vzg8lwvxcxdkmsh"))))
@@ -4257,12 +4913,12 @@ be able to validate XML content.")))
      `(#:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'chdir
-	   (lambda _
-	     (chdir "..")
-	     #t))
-	 (replace 'install
-	   (install-jars ".")))))
+         (add-before 'build 'chdir
+           (lambda _
+             (chdir "..")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
     (native-inputs
      `(("unzip" ,unzip)))
     (home-page "")
