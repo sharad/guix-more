@@ -63,3 +63,68 @@
 takes geospatial data and slices it into vector tiles that can be efficiently
 delivered to any client.")
     (license license:expat)))
+
+(define-public imposm3
+  (package
+    (name "imposm3")
+    (version "0.6.0-alpha.4")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "https://github.com/omniscale/imposm3/archive/v"
+			    version ".tar.gz"))
+	(file-name (string-append name "-" version ".tar.gz"))
+        (sha256
+         (base32
+          "06f0kwmv52yd5m9jlckqxqmkf0cnqy3hamakrvg9lspplyqrds80"))))
+    (build-system go-build-system)
+    (arguments
+     `(#:import-path "github.com/omniscale/imposm3/cmd/imposm"
+       #:unpack-path "github.com/omniscale"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'rename-import
+           (lambda _
+             (rename-file (string-append "src/github.com/omniscale/imposm3-" ,version)
+                          "src/github.com/omniscale/imposm3")
+             #t)))))
+    (inputs
+     `(("geos" ,geos)
+       ("leveldb" ,leveldb)))
+    (home-page "http://imposm.org/")
+    (synopsis "OpenStreetMap importer for PostGIS.")
+    (description "OpenStreetMap importer for PostGIS.")
+    (license license:asl2.0)))
+
+(define-public osmconvert
+  (package
+    (name "osmconvert")
+    (version "0")
+    (source (origin
+	      (method url-fetch)
+	      (uri (string-append "http://m.m.i24.cc/osmconvert.c"))
+	      (sha256
+	       (base32
+		"19glwq8w5sl8579zxbpydj56lybs94nrf47f3i2xjwlkmzrlljfv"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+	 (delete 'unpack)
+	 (delete 'configure)
+	 (delete 'install)
+	 (replace 'build
+	   (lambda* (#:key inputs outputs #:allow-other-keys)
+	     (mkdir-p (string-append (assoc-ref outputs "out") "/bin"))
+	     (invoke "gcc" (assoc-ref inputs "source") "-lz" "-o"
+		     (string-append (assoc-ref outputs "out") "/bin/osmconvert"))
+	     (chmod (string-append (assoc-ref outputs "out") "/bin/osmconvert")
+		    #o755)
+	     #t)))))
+    (inputs
+     `(("zlib" ,zlib)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:agpl3+)))
