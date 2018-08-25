@@ -32,7 +32,8 @@
   #:use-module (gnu packages version-control)
   #:use-module (gnu packages xml)
   #:use-module (more packages java)
-  #:use-module (more packages maven))
+  #:use-module (more packages maven)
+  #:use-module (more packages scala))
 
 ;; Gradle requires guava@17.
 ;; TODO: patch gradle to support at least guava@20 and send it upstream.
@@ -63,7 +64,7 @@ that contain dependency information. This file is created using the
 @code{projects} and @code{runtime} parameters."
   (package
     (name (string-append "gradle-" subproject))
-    (version "4.8.1")
+    (version "4.9.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/gradle/gradle/archive/v"
@@ -71,7 +72,7 @@ that contain dependency information. This file is created using the
               (file-name (string-append "gradle-" version ".tar.gz"))
               (sha256
                (base32
-                "0khq8lvw5gp9nrwqhr9818xfmijz14z5lg9l6b2c4zrbsckqw940"))
+                "19x1sksin2nh277pvd1f7h6kphbbqv4fb6sax696kvn1ci5h2fvp"))
               (patches
                 (search-patches
                   "gradle-match-files-without-version-number.patch"))))
@@ -79,7 +80,7 @@ that contain dependency information. This file is created using the
     (arguments
      ;; The jar-name must be this exactly: gradle will not find its jar files
      ;; if they are named differently.
-     `(#:jar-name (string-append "gradle-" ,subproject "-4.8.jar")
+     `(#:jar-name (string-append "gradle-" ,subproject "-" ,version ".jar")
        #:source-dir (string-append "subprojects/" ,subproject "/src/main/java")
        #:jdk ,icedtea-8
        #:tests? #f;; Ignore tests for now
@@ -94,7 +95,7 @@ that contain dependency information. This file is created using the
                (("message=\"")
                 (string-append "message=\"Implementation-Title: Gradle"
                                "${line.separator}"
-                               "Implementation-Version: 4.8"
+                               "Implementation-Version: " ,version
                                "${line.separator}")))
              #t))
          (add-before 'build 'add-properties
@@ -346,12 +347,12 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))
                  (mkdir-p "build/classes/org/gradle")
                  (with-output-to-file "build/classes/org/gradle/build-receipt.properties"
                    (lambda _
-                     (format #t "baseVersion=4.8
+                     (format #t "baseVersion=~a
 commitId=cf7821a6f79f8e2a598df21780e3ff7ce8db2b82
 buildTimestamp=19710101000000+0000
 buildTimestampIso=1971-01-01 00\\:00\\:00 UTC
-versionNumber=4.8
-isSnapshot=false")))
+versionNumber=~a
+isSnapshot=false" ,(package-version base) ,(package-version base))))
                  #t))))))
       (inputs
        `(("java-guava-for-gradle" ,java-guava-for-gradle)
@@ -414,9 +415,11 @@ isSnapshot=false")))
               (add-before 'build 'fix-kryo
                 (lambda _
                   ;; gradle depends on kryo-2.20 from 2013, we packaged version 4.
-                  (substitute* "subprojects/messaging/src/main/java/org/gradle/internal/serialize/kryo/KryoBackedEncoder.java"
-                    (("public int getWritePosition")
-                     "public long getWritePosition"))
+                  (with-directory-excursion "subprojects/messaging/src/main/java"
+                    (substitute* '("org/gradle/internal/serialize/kryo/KryoBackedEncoder.java"
+                                   "org/gradle/internal/serialize/kryo/StringDeduplicatingKryoBackedEncoder.java")
+                      (("public int getWritePosition")
+                       "public long getWritePosition")))
                   #t))))))
       (inputs
        `(("gradle-base-services" ,gradle-base-services)
@@ -478,6 +481,35 @@ isSnapshot=false")))
        ("java-slf4j-api" ,java-slf4j-api)
        ("java-jul-to-slf4j" ,java-jul-to-slf4j)))))
 
+(define-public gradle-language-scala
+  (let ((base (gradle-subproject
+                "language-scala"
+                '("gradle-core" "gradle-platform-jvm" "gradle-language-java"
+                  "gradle-language-jvm")
+                '())))
+    (package
+      (inherit base)
+      (inputs
+       `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+         ("gradle-core" ,gradle-core)
+         ("gradle-core-api" ,gradle-core-api)
+         ("gradle-language-java" ,gradle-language-java)
+         ("gradle-language-jvm" ,gradle-language-jvm)
+         ("gradle-logging" ,gradle-logging)
+         ("gradle-model-core" ,gradle-model-core)
+         ("gradle-native" ,gradle-native)
+         ("gradle-persis tent-cache" ,gradle-persistent-cache)
+         ("gradle-platform-base" ,gradle-platform-base)
+         ("gradle-platform-jvm" ,gradle-platform-jvm)
+         ("gradle-process-services" ,gradle-process-services)
+         ("gradle-workers" ,gradle-workers)
+         ("groovy" ,groovy)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
+         ("java-javax-inject" ,java-javax-inject)
+         ("java-jsr305" ,java-jsr305)
+         ("scala-official" ,scala-official))))))
+
 (define-public gradle-scala
   (let ((base (gradle-subproject
                 "scala"
@@ -488,16 +520,19 @@ isSnapshot=false")))
       (inherit base)
       (inputs
        `(("gradle-base-services" ,gradle-base-services)
+         ("gradle-base-services-groovy" ,gradle-base-services-groovy)
          ("gradle-core" ,gradle-core)
          ("gradle-core-api" ,gradle-core-api)
          ("gradle-model-core" ,gradle-model-core)
          ("gradle-platform-base" ,gradle-platform-base)
+         ("gradle-platform-jvm" ,gradle-platform-jvm)
          ("gradle-plugins" ,gradle-plugins)
          ("gradle-reporting" ,gradle-reporting)
          ("groovy" ,groovy)
          ("java-guava-for-gradle" ,java-guava-for-gradle)
          ("java-javax-inject" ,java-javax-inject)
-         ("java-jsr305" ,java-jsr305))))))
+         ("java-jsr305" ,java-jsr305)
+         ("scala-official" ,scala-official))))))
 
 (define-public gradle-ide
   (let ((base (gradle-subproject
@@ -811,13 +846,14 @@ isSnapshot=false")))
              `(modify-phases ,phases
                 (add-before 'build 'add-classpath
                   (lambda _
-                   (substitute* "build.xml"
-                     (("message=\"")
-                      (string-append "message=\"Class-Path: "
-                                     "gradle-base-services-4.8.jar "
-                                     "gradle-core-api-4.8.jar "
-                                     "gradle-core-4.8.jar"
-                                     "${line.separator}")))
+                   (let ((version ,(package-version base)))
+                     (substitute* "build.xml"
+                       (("message=\"")
+                        (string-append "message=\"Class-Path: "
+                                       "gradle-base-services-" version ".jar "
+                                       "gradle-core-api-" version ".jar "
+                                       "gradle-core-" version ".jar"
+                                       "${line.separator}"))))
                    #t))
                 ;; This phase fails, because the jar files are not actually
                 ;; present in the output directory.  This is because gradle
@@ -1589,8 +1625,8 @@ org/objectweb/asm
 org/objenesis
 "))))
              (mkdir-p "build/jar")
-             (invoke "jar" "cf" "build/jar/gradle-runtime-api-info-4.8.jar"
-                             "-C" "build/classes" ".")
+             (invoke "jar" "cf" "build/jar/gradle-runtime-api-info-"
+                     (package-version base) ".jar" "-C" "build/classes" ".")
              #t)))))))))
 
 (define-public gradle-announce
@@ -3351,7 +3387,9 @@ export GRADLE_HOME=~a\n
                                  output
                                  (string-append (assoc-ref %build-inputs "icedtea-8")
                                                 "/bin/java")
-                                 (string-append libdir "/gradle-launcher-4.8.jar"))))
+                                 (string-append libdir "/gradle-launcher-"
+                                                (package-version gradle-base-services)
+                                                ".jar"))))
                      (chmod filename #o755)
                      ;; Create a symlink for every dependency listed above.
                      (for-each
@@ -3373,11 +3411,17 @@ export GRADLE_HOME=~a\n
                                          ".*.jar"))
                            plugins)))
                      ;; Using a symlink for gradle-launcher doesn't seem to work.
-                     (delete-file (string-append libdir "/gradle-launcher-4.8.jar"))
+                     (delete-file (string-append libdir "/gradle-launcher-"
+                                                 (package-version gradle-base-services)
+                                                 ".jar"))
                      (copy-file (string-append (assoc-ref %build-inputs "gradle-launcher")
-                                               "/share/java/gradle-launcher-4.8.jar")
+                                               "/share/java/gradle-launcher-"
+                                               (package-version gradle-base-services)
+                                               ".jar")
                                 (string-append libdir
-                                               "/gradle-launcher-4.8.jar"))))))
+                                               "/gradle-launcher-"
+                                               (package-version gradle-base-services)
+                                               ".jar"))))))
     (inputs
      `(("gradle-wrapper"               ,gradle-wrapper)
        ("gradle-workers"               ,gradle-workers)
