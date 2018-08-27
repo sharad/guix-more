@@ -45,6 +45,7 @@
   #:use-module (gnu packages linux)
   #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages version-control)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg)
@@ -1615,6 +1616,67 @@ from ORO, Inc.")
     (native-inputs
      `(("java-junit" ,java-junit)))))
 
+(define-public java-slf4j-jdk14
+  (package
+    (inherit java-slf4j-api)
+    (name "java-slf4j-jdk14")
+    (arguments
+     `(#:jar-name "slf4j-jdk14.jar"
+       #:source-dir "slf4j-jdk14/src/main"
+       #:test-dir "slf4j-jdk14/src/test"
+       ;; Require test files from slf4j-api
+       #:tests? #f))
+    (inputs
+     `(("java-slf4j-api" ,java-slf4j-api)))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest-core" ,java-hamcrest-core)))
+    (synopsis "")
+    (description "")))
+
+(define-public java-log4j-over-slf4j
+  (package
+    (inherit java-slf4j-api)
+    (name "java-log4j-over-slf4j")
+    (arguments
+     `(#:jar-name "log4j-over-slf4j.jar"
+       #:source-dir "log4j-over-slf4j/src/main"
+       #:test-dir "log4j-over-slf4j/src/test"))
+    (inputs
+     `(("java-slf4j-api" ,java-slf4j-api)))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-slf4j-jdk14" ,java-slf4j-jdk14)))
+    (synopsis "")
+    (description "")))
+
+(define-public java-jdom-for-freemarker
+  (package
+    (inherit java-jdom)
+    (version "1.0b8")
+    (source (origin
+              (method url-fetch)
+              (uri "http://jdom.org/dist/binary/archive/jdom-b8.tar.gz")
+              (sha256
+               (base32
+                "1y26baiamx67zl2lkqrjd19my3vz4xbjhv9l1iylirq0fcr9v7a1"))))
+    (arguments
+     `(#:build-target "package"
+       #:tests? #f; tests are part of the package target
+       #:phases
+       (modify-phases %standard-phases
+         ;(add-before 'build 'remove-collections
+         ;  (lambda _
+         ;    (delete-file "lib/collections.jar")
+         ;    #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((jar-dir (string-append (assoc-ref outputs "out") "/share/java")))
+               (mkdir-p jar-dir)
+               (install-file "build/jdom.jar" jar-dir)
+               #t))))))))
+
 (define-public java-apache-freemarker
   (package
     (name "java-apache-freemarker")
@@ -1631,19 +1693,48 @@ from ORO, Inc.")
      `(#:jar-name "java-apache-freemarker.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
+       #:tests? #f; TODO: require spring-framework-test.
        #:jdk ,icedtea-8
+       ;#:test-target "test"
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'remove-unpackaged-dependencies
 	   ;; TODO: package these dependencies
 	   (lambda _
 	     (delete-file-recursively "src/main/java/freemarker/ext/jython")
+         (delete-file "src/test/java/freemarker/core/ObjectBuilderSettingsTest.java")
 	     (delete-file-recursively "src/main/java/freemarker/ext/rhino")
 	     ;; This class depends on javareble, a non-free package
 	     (delete-file "src/main/java/freemarker/ext/beans/JRebelClassChangeNotifier.java")
 	     (delete-file "src/main/java/freemarker/ext/ant/UnlinkedJythonOperationsImpl.java")
 	     (delete-file "src/main/java/freemarker/template/utility/JythonRuntime.java")
 	     #t))
+     (add-before 'build 'update-jsp
+       (lambda _
+         (substitute* "src/main/java/freemarker/ext/jsp/FreeMarkerJspFactory.java"
+           (("^}$")
+            "@Override
+public JspApplicationContext getJspApplicationContext(ServletContext c) {
+  throw new UnsupportedOperationException();
+}
+}")
+           (("package freemarker.ext.jsp;")
+            "package freemarker.ext.jsp;
+
+import javax.servlet.ServletContext;
+import javax.servlet.jsp.JspApplicationContext;"))
+         (substitute* "src/main/java/freemarker/ext/jsp/_FreeMarkerPageContext2.java"
+           (("^}")
+            "@Override
+public ELContext getELContext() {
+  throw new UnsupportedOperationException();
+}
+}")
+           (("package freemarker.ext.jsp;")
+            "package freemarker.ext.jsp;
+
+import javax.el.ELContext;"))
+         #t))
 	 (add-before 'build 'run-javacc
 	   (lambda _
 	     (invoke "java" "-cp" (getenv "CLASSPATH") "javacc"
@@ -1656,14 +1747,22 @@ from ORO, Inc.")
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-dom4j" ,java-dom4j)
        ("java-jaxen" ,java-jaxen)
-       ("java-jdom" ,java-jdom)
-       ("java-log4j-api" ,java-log4j-api)
+       ("java-jdom" ,java-jdom-for-freemarker)
+       ("java-log4j-over-slf4j" ,java-log4j-over-slf4j)
        ("java-slf4j-api" ,java-slf4j-api)
        ("java-spotbugs-annotations" ,java-spotbugs-annotations)
        ("java-tomcat" ,java-tomcat)
        ("java-xalan" ,java-xalan)))
     (native-inputs
-     `(("javacc" ,javacc-6)))
+     `(("javacc" ,javacc-6)
+       ("java-commons-collections" ,java-commons-collections)
+       ("java-commons-io" ,java-commons-io)
+       ("java-commons-lang" ,java-commons-lang)
+       ("java-guava" ,java-guava)
+       ("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-eclipse-jetty-server" ,java-eclipse-jetty-server)
+       ("java-eclipse-jetty-webapp" ,java-eclipse-jetty-webapp)
+       ("java-junit" ,java-junit)))
     (home-page "https://github.com/ralfstx/minimal-json")
     (synopsis "")
     (description "")
@@ -1702,7 +1801,7 @@ from ORO, Inc.")
     (arguments
      `(#:jar-name "java-hazelcast-code-generator.jar"
        #:source-dir "hazelcast-code-generator/src/main/java"
-       #:test-dir "hazelcast-core-generator/src/test"
+       #:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
@@ -1710,6 +1809,8 @@ from ORO, Inc.")
              (copy-recursively "hazelcast-core-generator/src/main/resources"
                                "build/classes")
              #t)))))
+    (inputs
+     `(("java-apache-freemarker" ,java-apache-freemarker)))
     (home-page "https://hazelcast.org")
     (synopsis "")
     (description "")
@@ -1725,6 +1826,8 @@ from ORO, Inc.")
      `(#:jar-name "java-hazelcast-client-protocol.jar"
        #:source-dir "hazelcast/src/main/java"
        #:test-dir "hazelcast/src/test"))
+    (inputs
+     `(("java-hazelcast-code-generator" ,java-hazelcast-code-generator)))
     (home-page "https://hazelcast.org")
     (synopsis "")
     (description "")
@@ -1756,7 +1859,8 @@ from ORO, Inc.")
              (for-each delete-file (find-files "." "package-info.java"))
              #t)))))
     (inputs
-     `(("java-jsr107" ,java-jsr107)
+     `(("java-findbugs" ,java-findbugs)
+       ("java-jsr107" ,java-jsr107)
        ("java-jsr305" ,java-jsr305)
        ("java-minimal-json" ,java-minimal-json)
        ("java-hazelcast-client-protocol-source" ,java-hazelcast-client-protocol-source)))
@@ -2121,6 +2225,36 @@ from ORO, Inc.")
        ("java-spring-framework-core" ,java-spring-framework-core)
        ;; Note: for javax-el (el-api)
        ("java-tomcat" ,java-tomcat)))
+    (description "")))
+
+(define-public java-spring-framework-test
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-test")
+    (arguments
+     `(#:jar-name "java-spring-framework-test.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-test")
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-recursively "src/test/resources"
+                               "build/test-classes")
+             #t)))))
+    (inputs
+     `(("java-spring-framework-core" ,java-spring-framework-core)
+       ("java-spring-framework-web" ,java-spring-framework-web)))
     (description "")))
 
 (define-public java-lucene-core
@@ -3709,41 +3843,124 @@ namespaces.")
     (description "")
     (license license:bsd-3)))
 
+(define %java-jflex-bootstrap
+  (package
+    (name "java-jflex")
+    (version "1.6.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www.jflex.de/release/jflex-" version
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "1h7q2vhb4s42g4pqz5xxxliagprray7i9krr6hyaz1mjlx7gnycq"))))
+    (build-system trivial-build-system)
+    ;(arguments
+    ; `(#:tests? #f
+    ;   #:phases
+    ;   (modify-phases %standard-phases
+    ;     (delete 'build)
+    ;     (replace 'install
+    ;       (lambda* (#:key outputs #:allow-other-keys)
+    ;         (let ((java-dir (string-append (assoc-ref outputs "out") "/share/java")))
+    ;           (install-file (string-append "lib/jflex-" ,version ".jar")
+    ;                         java-dir)
+    ;           (install-file (string-append "lib/java-cup-11a.jar")
+    ;                         java-dir))
+    ;         #t)))))
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder (begin
+                   (use-modules (guix build utils))
+                   (let* ((source (assoc-ref %build-inputs "source"))
+                          (tar (string-append
+                                 (assoc-ref %build-inputs "tar")
+                                 "/bin/tar"))
+                          (gzip (assoc-ref %build-inputs "gzip"))
+                          (output (assoc-ref %outputs "out"))
+                          (java-dir (string-append output "/share/java")))
+                     (mkdir-p java-dir)
+                     (setenv "PATH" (string-append (getenv "PATH") ":" gzip "/bin"))
+                     (invoke tar "xf" source)
+                     (install-file "jflex-1.6.1/lib/jflex-1.6.1.jar" java-dir)
+                     (install-file "jflex-1.6.1/lib/java-cup-11a.jar" java-dir)
+                     #t))))
+    (native-inputs
+     `(("tar" ,tar)
+       ("gzip" ,gzip)))
+    (home-page "http://www.jflex.de")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define %java-cup-bootstrap
+  (package
+    (name "java-cup")
+    (version "11b-20160615")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://www2.cs.tum.edu/projects/cup/"
+                                  "releases/java-cup-bin-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1k6ycm5bpg7r2z2jprdp54s8bvaxggdxk4qmvkjw3013i1bxc09z"))))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder (begin
+                   (use-modules (guix build utils))
+                   (let* ((source (assoc-ref %build-inputs "source"))
+                          (tar (string-append
+                                 (assoc-ref %build-inputs "tar")
+                                 "/bin/tar"))
+                          (gzip (assoc-ref %build-inputs "gzip"))
+                          (output (assoc-ref %outputs "out"))
+                          (java-dir (string-append output "/share/java")))
+                     (mkdir-p java-dir)
+                     (chdir java-dir)
+                     (setenv "PATH" (string-append (getenv "PATH") ":" gzip "/bin"))
+                     (invoke tar "xf" source)))))
+    (native-inputs
+     `(("tar" ,tar)
+       ("gzip" ,gzip)))
+    (home-page "http://www2.cs.tum.edu/projects/cup/")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
 (define-public java-jflex
   (package
     (name "java-jflex")
     (version "1.6.1")
     (source (origin
               (method url-fetch)
-	      ; https://github.com/jflex-de/jflex/releases/download/v1.6.1/jflex-1.6.1.tar.gz
-	      (uri (string-append "https://github.com/jflex-de/jflex/releases/"
-				  "download/v" version "/jflex-" version ".tar.gz"))
+              (uri (string-append "http://www.jflex.de/release/jflex-" version
+                                  ".tar.gz"))
               (sha256
                (base32
-                "1h7q2vhb4s42g4pqz5xxxliagprray7i9krr6hyaz1mjlx7gnycq"))))
+                "1h7q2vhb4s42g4pqz5xxxliagprray7i9krr6hyaz1mjlx7gnycq"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   ;; The first entry is a symlink to jflex-version
+                   (delete-file "../jflex")
+                   ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   (chdir "..")
+                   (rename-file "jflex-1.6.1" "jflex")
+                   (chdir "jflex")
+                   #t))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "jflex.jar"
-       #:jdk ,icedtea-8
-       #:source-dir "src/main/java"
-       #:test-dir "src/test"
+     `(#:jdk ,icedtea-8
+       #:test-target "test"
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'generate-lex
-	   (lambda _
-	     (substitute* "src/main/jflex/LexScan.flex"
-	       (("^%final.*") "")
-	       (("^%column.*") "")
-	       (("^%inputstream.*") "")
-	       (("^//.*") "")
-	       (("^/\\*.*\\*/") "")
-	       (("^%eofclose.*") ""))
-	     (invoke "java" "JLex.Main" "src/main/jflex/LexScan.flex")
-	     (copy-file "src/main/jflex/LexScan.flex.java"
-			"src/main/java/jflex/LexScan.java")
-	     #t)))))
+         (replace 'install
+           (install-jars ".")))))
     (native-inputs
-     `(("java-jlex" ,java-jlex)))
+     `(("%java-jflex-bootstrap" ,%java-jflex-bootstrap)
+       ("java-junit" ,java-junit)))
     (home-page "https://jflex.de")
     (synopsis "")
     (description "")
@@ -3784,44 +4001,32 @@ namespaces.")
 
 (define-public java-cup
   (package
+    (inherit java-cup-runtime)
     (name "java-cup")
-    (version "11b")
-    (source (origin
-	      (method url-fetch)
-	      (uri "http://www2.cs.tum.edu/projects/cup/releases/java-cup-src-11b-20160615.tar.gz")
-              (sha256
-               (base32
-                "09xigxm7b44hz79xhqpfykvjrk4q90p33j2l07w69izx9sn0y42b"))
-              ;(method git-fetch)
-              ;(uri (git-reference
-              ;       (url "https://versioncontrolseidl.in.tum.de/parsergenerators/cup")
-              ;       (commit "fe729fe8c27441f046dab19135a38b9dde4c4e5e")))
-              ;(sha256
-              ; (base32
-              ;  "09xigxm7b44hz79xhqpfykvjrk4q90p33j2l07w69izx9sn0y42b"))
-              (modules '((guix build utils)))
-              (snippet
-                '(begin
-		   ;; Delete bundled archives.
-                   (for-each delete-file (find-files "." ".*\\.jar"))
-                   (for-each delete-file (find-files "." ".*\\.tar.gz"))
-                   #t))))
-    (build-system ant-build-system)
     (arguments
-     `(#:jar-name "cup-runtime.jar"
-       #:source-dir "src/java/java_cup/runtime"
-       #:tests? #f; no tests for runtime
+     `(#:jdk ,icedtea-8
+       #:build-target "dist"
+       #:tests? #f; no test target
        #:phases
        (modify-phases %standard-phases
-         (add-before 'configure 'remove-build-xml
+         (add-before 'build 'fix-jflex
            (lambda _
-             (delete-file "build.xml"))))))
+             (substitute* "build.xml"
+               (("JFlex.ant") "jflex.ant"))
+             #t))
+         (add-before 'build 'add-lib
+           (lambda _
+             (mkdir-p "lib")))
+         (replace 'install
+           (install-jars ".")))))
+    (native-inputs
+     `(("%java-jflex-bootstrap" ,%java-jflex-bootstrap)
+       ("git" ,git)))
     (home-page "http://www2.cs.tum.edu/projects/cup")
     (synopsis "")
     (description "")
     (license license:expat))); http://www2.cs.tum.edu/projects/cup/licence.html
 
-;; Requires java-cup, but it requires jflex which in turn requires java-cup.
 (define-public java-xalan
   (package
     (name "java-xalan")
@@ -3848,6 +4053,8 @@ namespaces.")
     (inputs
      `(("java-commons-bcel" ,java-commons-bcel)
        ("java-xerces" ,java-xerces)))
+    (native-inputs
+     `(("java-cup" ,java-cup)))
     (home-page "")
     (synopsis "")
     (description "")
