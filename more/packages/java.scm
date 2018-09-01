@@ -1651,6 +1651,12 @@ from ORO, Inc.")
     (synopsis "")
     (description "")))
 
+;; NOTE FOR JDOM:
+;;
+;; - remove lib/
+;; - add dependencies (cobertura, ...)
+;; - remove java 1.2 version
+;; - break dependency cycle with jaxen
 (define-public java-jdom-for-freemarker
   (package
     (inherit java-jdom)
