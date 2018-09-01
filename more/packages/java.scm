@@ -1260,7 +1260,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                     (revision (string->number version))))
               (sha256
                (base32
-                "0ki7fjd8xm2wrpjj8i0l0lgfn2g9h2lf77lyq115bgfcknxg8cmv"))
+                "1kf7cr80n2y9dwjabn8l9r5n64kjf8vk0ial1fzc870gg785s7cw"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
