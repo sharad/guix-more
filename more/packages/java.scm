@@ -4430,20 +4430,26 @@ namespaces.")
 (define-public java-batik
   (package
     (name "java-batik")
-    (version "1.9")
+    (version "1.10")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/xmlgraphics/batik/source/"
                                   "batik-src-" version ".tar.gz"))
               (sha256
                (base32
-                "18y60rfzbd0ljndaq7a5adjxqbgld4krmpx8fj94k6mcnk03dx5y"))))
+                "05nipxvm940m2dgzmrvflr2r72a5mmqbl25pvqr0xn73a5lygi6z"))))
     (build-system ant-build-system)
     (arguments
      `(#:test-target "regard"; FIXME: no test is actually run
        #:build-target "all-jar"
        #:phases
        (modify-phases %standard-phases
+         (add-before 'check 'remove-failing
+           (lambda _
+             ;; This file looks for w3c.dom.Window, but it has been moved to
+             ;; org.apache.batik.w3c.dom.Window.
+             (delete-file "samples/tests/resources/java/sources/com/untrusted/script/UntrustedScriptHandler.java")
+             #t))
          (replace 'install
            (lambda* (#:key outputs #:allow-other-keys)
              (let ((dir (string-append (assoc-ref outputs "out") "/share/java/")))
@@ -4452,6 +4458,8 @@ namespaces.")
                           (string-append dir "batik-all.jar"))))))))
     (inputs
      `(("java-xmlgraphics-commons" ,java-xmlgraphics-commons)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
     (home-page "https://xmlgraphics.apache.org/batik")
     (synopsis "")
     (description "")
@@ -4460,14 +4468,14 @@ namespaces.")
 (define-public java-xmlgraphics-commons
   (package
     (name "java-xmlgraphics-commons")
-    (version "2.2")
+    (version "2.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/xmlgraphics/commons/source/"
                                   "xmlgraphics-commons-" version "-src.tar.gz"))
               (sha256
                (base32
-                "0i128sj8g29hqc66kqckjr2n1n2amfgijadp5xq4y9fy45q5mrrb"))))
+                "0a432a4ca3vgnbada5cy9mlmfzmq6hi4i176drfxrp17q2d43w23"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "xmlgraphics-commons.jar"
@@ -4491,17 +4499,99 @@ namespaces.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-pdfbox-fontbox
+  (package
+    (name "java-pdfbox-fontbox")
+    (version "2.0.11")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/pdfbox/" version "/pdfbox-"
+                                  version "-src.zip"))
+              (sha256
+               (base32
+                "0cmg4kzwqh0fy3wgcn1yik920gx5ja3xjxnra6iq1qxrpdj57fzf"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "fontbox.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:test-exclude
+       (list
+         "**/Abstract*.java"
+         ;; Require downloading fonts
+         "**/CFFParserTest.java"
+         "**/TTFSubsetterTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "fontbox")
+             #t)))))
+    (inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)
+       ("unzip" ,unzip)))
+    (home-page "https://xmlgraphics.apache.org")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-pdfbox
+  (package
+    (inherit java-pdfbox-fontbox)
+    (name "java-pdfbox")
+    (arguments
+     `(#:jar-name "pdfbox.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:test-exclude
+       (list
+         "**/Abstract*.java"
+         ;; Require network
+         "**/MergeAcroFormsTest.java"
+         "**/MergeAnnotationsTest.java"
+         "**/PDButtonTest.java"
+         ;; Require downloaded resources
+         "**/PDFMergerUtilityTest.java"
+         "**/PDStructureElementTest.java"
+         "**/PDFontTest.java"
+         ;; Can't load image
+         "**/LosslessFactoryTest.java"
+         ;; Unknown failure
+         "**/CCITTFactoryTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'configure 'chdir
+           (lambda _
+             (chdir "pdfbox")
+             #t)))))
+    (inputs
+     `(("java-bouncycastle" ,java-bouncycastle)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-diff-utils" ,java-diff-utils)
+       ("java-pdfbox-fontbox" ,java-pdfbox-fontbox)))))
+
 (define-public java-fop
   (package
     (name "java-fop")
-    (version "2.2")
+    (version "2.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/xmlgraphics/fop/source/"
                                   "fop-" version "-src.tar.gz"))
               (sha256
                (base32
-                "0lk59ba2388yq69i7wi8nr1k97aw4lkgd6yj96yqif64gzwgwljh"))))
+                "19g4bwdn8h2h3f5ai6as22lav4qg7shr3irdm3v0bzjavflbkkg8"))))
     (build-system ant-build-system)
     (arguments
      `(#:build-target "jar-main"
@@ -4557,6 +4647,8 @@ namespaces.")
        ("java-commons-io" ,java-commons-io)
        ("java-xmlgraphics-commons" ,java-xmlgraphics-commons)
        ("java-tomcat" ,java-tomcat)
+       ("java-pdfbox-fontbox" ,java-pdfbox-fontbox)
+       ("java-pdfbox" ,java-pdfbox)
        ("java-batik" ,java-batik)
        ("java-avalon-framework-api" ,java-avalon-framework-api)
        ("java-avalon-logkit" ,java-avalon-logkit)))
