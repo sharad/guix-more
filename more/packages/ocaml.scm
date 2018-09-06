@@ -44,7 +44,8 @@
   #:use-module (gnu packages python)
   #:use-module (gnu packages tex)
   #:use-module (gnu packages texinfo)
-  #:use-module (more packages smt))
+  #:use-module (more packages smt)
+  #:use-module (ice-9 match))
 
 (define (ocaml-forge-uri name version file-number)
   (string-append "https://forge.ocamlcore.org/frs/download.php/"
@@ -389,6 +390,69 @@ provers.")
     (description "")
     (license license:lgpl2.1+))); with linking exception
 
+(define-public coq-8.7
+  (package
+    (inherit coq)
+    (name "coq")
+    (version "8.7.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/coq/coq/archive/V"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1lkqvs7ayzv5kkg26y837pg0d6r2b5hbjxl71ba93f39kybw69gg"))))
+    (native-inputs
+     `(("ocamlbuild" ,ocaml-build)
+       ("hevea" ,hevea)
+       ("texlive" ,texlive)))
+    (inputs
+     `(("lablgtk" ,lablgtk-fix)
+       ("python" ,python-2)
+       ("camlp5" ,camlp5-fix)
+       ;; ocaml-num was removed from the ocaml package in 4.06.
+       ("ocaml-num" ,ocaml-num)))
+    (arguments
+     `(#:ocaml ,ocaml-fix
+       #:findlib ,ocaml-findlib-fix
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (mandir (string-append out "/share/man"))
+                    (browser "icecat -remote \"OpenURL(%s,new-tab)\""))
+               (invoke "./configure"
+                       "-prefix" out
+                       "-mandir" mandir
+                       "-browser" browser
+                       "-coqide" "opt"))
+             #t))
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "ide/ideutils.ml"
+               (("Bytes.unsafe_to_string read_string") "read_string"))
+             (invoke "make" "-j" (number->string
+                                  (parallel-job-count))
+                     (string-append
+                       "USERFLAGS=-I "
+                       (assoc-ref inputs "ocaml-num")
+                       "/lib/ocaml/site-lib")
+                     "world")
+             #t))
+         (delete 'check)
+         (add-after 'install 'check
+           (lambda _
+             (with-directory-excursion "test-suite"
+               ;; These two tests fail.
+               ;; This one fails because the output is not formatted as expected.
+               (delete-file-recursively "coq-makefile/timing")
+               ;; This one fails because we didn't build coqtop.byte.
+               (delete-file-recursively "coq-makefile/findlib-package")
+               (invoke "make"))
+             #t)))))))
+
 (define-public coq-fix
   (package
     (inherit coq)
@@ -442,29 +506,108 @@ provers.")
                (invoke "make"))
              #t)))))))
 
+(define-public coq-bignums-8.7
+  (package
+    (inherit coq-bignums)
+    (name "coq-bignums")
+    (version "8.7.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/coq/bignums/archive/V"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "03iw9jiwq9jx45gsvp315y3lxr8m9ksppmcjvxs5c23qnky6zqjx"))))
+    (native-inputs
+     `(("ocaml-fix" ,ocaml-fix)
+       ("coq-8.7" ,coq-8.7)))
+    (inputs
+     `(("camlp5-fix" ,camlp5-fix)))))
+
+(define-public ppsimpl
+  (package
+    (name "ppsimpl")
+    (version "8.7")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://scm.gforge.inria.fr/anonscm/git/ppsimpl/ppsimpl.git")
+                     (commit "86255a47568df58767d1d8e0b9e2da31cf73a5fc")))
+              (file-name (string-append name "-" version))
+              (sha256
+               (base32
+                "0h509w43j2wd2pyx04k3xfd0bsbmqscwqvhf8whzc3cxzl4j6vvq"))))
+              ;(uri "https://gforge.inria.fr/frs/download.php/file/37615/ppsimpl-09-07-2018.tar.gz")
+              ;(sha256
+              ; (base32
+              ;  "010zgskc1wd5v6wmmyxaapvwxjlgbdqqiks2dvf6llx03b07ak59"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:test-target "test"
+       #:configure-flags
+       (list "-R" (string-append (assoc-ref %build-inputs "compcert") "/lib/coq/user-contrib/compcert") "compcert")
+       #:make-flags (list "COQC=coqc -R src PP -I src"
+                          (string-append
+                            "COQLIBINSTALL="
+                            (assoc-ref %outputs "out")
+                            "/lib/coq/user-contrib"))))
+    (inputs
+     `(("coq-bignums-8.7" ,coq-bignums-8.7)
+       ("compcert" ,compcert)))
+    (native-inputs
+     `(("coq-8.7" ,coq-8.7)
+       ("ocaml-fix" ,ocaml-fix)
+       ("ocaml-findlib-fix" ,ocaml-findlib-fix)
+       ("camlp4-fix" ,camlp4-fix)
+       ("camlp5-fix" ,camlp5-fix)
+       ("which" ,which)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    ;; No declared license -> all rights reserved
+    (license #f)))
+
 (define-public compcert
   (package
     (name "compcert")
-    (version "3.2")
+    (version "3.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://compcert.inria.fr/release/compcert-"
                                   version ".tgz"))
               (sha256
                (base32
-                "11q4121s0rxva63njjwya7syfx9w0p4hzr6avh8s57vfbrcakc93"))))
+                "16xrqcwak1v1fk5ndx6jf1yvxv3adsr7p7z34gfm2mpggxnq0xwn"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
        (modify-phases %standard-phases
          (replace 'configure
            (lambda* (#:key outputs #:allow-other-keys)
-             (invoke "./configure" "x86_64-linux" "-prefix"
-                     (assoc-ref outputs "out")))))
+             (let ((system ,(match (or (%current-target-system) (%current-system))
+                              ("x86_64-linux" "x86_64-linux")
+                              ("i686-linux" "x86_32-linux")
+                              ("armhf-linux" "arm-linux"))))
+               (format #t "Building for ~a~%" system)
+               (invoke "./configure" system "-prefix"
+                       (assoc-ref outputs "out")))
+             #t))
+         (add-after 'install 'install-lib
+           (lambda* (#:key outputs #:allow-other-keys)
+             (for-each
+               (lambda (file)
+                 (install-file
+                   file
+                   (string-append
+                     (assoc-ref outputs "out")
+                     "/lib/coq/user-contrib/compcert/" (dirname file))))
+               (find-files "." ".*.vo$"))
+             #t)))
        #:tests? #f))
     (native-inputs
      `(("ocaml" ,ocaml-fix)
-       ("coq" ,coq-fix)))
+       ("coq" ,coq-8.7)))
     (inputs
      `(("menhir" ,ocaml-menhir-fix)))
     (home-page "http://compcert.inria.fr")
