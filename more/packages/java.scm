@@ -1704,6 +1704,10 @@ from ORO, Inc.")
        ;#:test-target "test"
        #:phases
        (modify-phases %standard-phases
+         (add-before 'build 'copy-ressources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
          (add-before 'build 'remove-unpackaged-dependencies
 	   ;; TODO: package these dependencies
 	   (lambda _
@@ -1812,7 +1816,7 @@ import javax.el.ELContext;"))
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
            (lambda _
-             (copy-recursively "hazelcast-core-generator/src/main/resources"
+             (copy-recursively "hazelcast-code-generator/src/main/resources"
                                "build/classes")
              #t)))))
     (inputs
@@ -1854,6 +1858,24 @@ import javax.el.ELContext;"))
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
+         (add-before 'build 'use-annotation-processor
+           (lambda _
+             (substitute* "build.xml"
+               (("classpath=\"@refidclasspath\" />")
+                "classpath=\"@refidclasspath\">
+     <compilerarg line=\"-processor com.hazelcast.client.protocol.generator.CodecCodeGenerator\"/>
+     <compilerarg line=\"-s hazelcast/src/main/java\"/>
+</javac>")
+               (("<javac") "<javac source=\"1.6\""))
+             #t))
+         (add-before 'build 'fix-renamed-dependencies
+           (lambda _
+             (substitute* '("hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/AwsAddressProvider.java"
+                            "hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/discovery/HazelcastCloudDiscovery.java")
+               (("com.hazelcast.com.eclipsesource.json") "com.eclipsesource.json"))
+             (substitute* "hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/AwsAddressProvider.java"
+               (("com.hazelcast.aws.AWSClient") "aws.AWSClient"))
+             #t))
          (add-before 'build 'unpack-client-protocol
            (lambda* (#:key inputs #:allow-other-keys)
              (display (assoc-ref inputs "java-hazelcast-client-protocol-source"))
@@ -1865,11 +1887,18 @@ import javax.el.ELContext;"))
              (for-each delete-file (find-files "." "package-info.java"))
              #t)))))
     (inputs
-     `(("java-findbugs" ,java-findbugs)
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-apache-freemarker" ,java-apache-freemarker)
+       ("java-hazelcast-code-generator" ,java-hazelcast-code-generator)
+       ("java-hazelcast-client-protocol-source" ,java-hazelcast-client-protocol-source)
        ("java-jsr107" ,java-jsr107)
        ("java-jsr305" ,java-jsr305)
+       ("java-log4j-1.2-api" ,java-log4j-1.2-api)
+       ("java-log4j-api" ,java-log4j-api)
        ("java-minimal-json" ,java-minimal-json)
-       ("java-hazelcast-client-protocol-source" ,java-hazelcast-client-protocol-source)))
+       ("java-osgi-core" ,java-osgi-core)
+       ("java-slf4j-api" ,java-slf4j-api)
+       ("java-spotbugs-annotations" ,java-spotbugs-annotations)))
     (home-page "https://hazelcast.org")
     (synopsis "")
     (description "")
