@@ -1778,6 +1778,23 @@ import javax.el.ELContext;"))
     (description "")
     (license license:expat)))
 
+(define-public java-aws
+  (package
+    (name "java-aws")
+    (version "1.11.407")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/aws/aws-sdk-java/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0vn6mhblhnbfncz3a8wl1fmivjkzv7hf67a2xqlzb2wzjdhxr6r4"))))
+    (build-system ant-build-system)
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define java-hazelcast-client-protocol-version "1.7.0-3")
 (define java-hazelcast-version "3.10.4")
 
