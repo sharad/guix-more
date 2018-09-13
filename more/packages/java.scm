@@ -178,7 +178,8 @@
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
            (lambda _
-             (copy-recursively "src/main/resources" "build/classes")))
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
          (add-before 'build 'remove-failing-test
            (lambda _
              ;; This file fails to build
@@ -399,7 +400,8 @@ which generates man-page-like documentation driven by the Java annotations.")
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
            (lambda _
-             (copy-recursively "japicmp/src/main/resources" "build/classes"))))))
+             (copy-recursively "japicmp/src/main/resources" "build/classes")
+             #t)))))
     (inputs
      `(("java-airline" ,java-airline)
        ("java-jboss-javassist" ,java-jboss-javassist)
@@ -1778,25 +1780,11 @@ import javax.el.ELContext;"))
     (description "")
     (license license:expat)))
 
-(define-public java-aws
-  (package
-    (name "java-aws")
-    (version "1.11.407")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/aws/aws-sdk-java/archive/"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "0vn6mhblhnbfncz3a8wl1fmivjkzv7hf67a2xqlzb2wzjdhxr6r4"))))
-    (build-system ant-build-system)
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define java-hazelcast-client-protocol-version "1.7.0-3")
 (define java-hazelcast-version "3.10.4")
+;; Required versions are described in pom.xml and hazelcast-client/pom.xml in
+;; the hazelcast tarball.
+(define java-hazelcast-client-protocol-version "1.6.0")
+(define java-hazelcast-aws-version "2.0.0")
 
 (define java-hazelcast-client-protocol-source
   (origin
@@ -1807,7 +1795,7 @@ import javax.el.ELContext;"))
     (file-name (string-append "hazelcast-client-protocol-" java-hazelcast-client-protocol-version ".tar.gz"))
     (sha256
      (base32
-      "091j9as0zsm4rldj4x605hh0rmiwly39y0kg8zi6c2rkabzp2qpb"))))
+      "0snd5cyjgg007nfhhsv2w0n3jybblbcjmpf3qpy4x4m38729gly8"))))
 
 (define java-hazelcast-source
   (origin
@@ -1818,6 +1806,16 @@ import javax.el.ELContext;"))
     (sha256
      (base32
       "0bmhjh15xcqc4k77ncfw60b0gfnh6ndc3rr8am09ys8yga4w59hf"))))
+
+(define java-hazelcast-aws-source
+  (origin
+    (method url-fetch)
+    (uri (string-append "https://github.com/hazelcast/hazelcast-aws/"
+                        "archive/v" java-hazelcast-aws-version ".tar.gz"))
+    (file-name (string-append "java-hazelcast-aws-" java-hazelcast-aws-version ".tar.gz"))
+    (sha256
+     (base32
+      "0hdih6b4rvcflxn2c3wbn8a6aw13bb0nwmifyi118wr6cqrlv02p"))))
 
 (define-public java-hazelcast-code-generator
   (package
@@ -1871,7 +1869,8 @@ import javax.el.ELContext;"))
        #:source-dir
        (string-append "hazelcast-client/src/main/java:hazelcast/src/main/java:"
                       "hazelcast-client-protocol-" ,java-hazelcast-client-protocol-version
-                      "/hazelcast/src/main/java")
+                      "/hazelcast/src/main/java:hazelcast-aws-" ,java-hazelcast-aws-version
+                      "/src/main/java")
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
@@ -1885,19 +1884,32 @@ import javax.el.ELContext;"))
 </javac>")
                (("<javac") "<javac source=\"1.6\""))
              #t))
-         (add-before 'build 'fix-renamed-dependencies
-           (lambda _
-             (substitute* '("hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/AwsAddressProvider.java"
-                            "hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/discovery/HazelcastCloudDiscovery.java")
-               (("com.hazelcast.com.eclipsesource.json") "com.eclipsesource.json"))
-             (substitute* "hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/AwsAddressProvider.java"
-               (("com.hazelcast.aws.AWSClient") "aws.AWSClient"))
+         (add-before 'build 'unpack-aws
+           (lambda* (#:key inputs #:allow-other-keys)
+             (invoke "tar" "xzf" (assoc-ref inputs "java-hazelcast-aws-source"))
              #t))
          (add-before 'build 'unpack-client-protocol
            (lambda* (#:key inputs #:allow-other-keys)
-             (display (assoc-ref inputs "java-hazelcast-client-protocol-source"))
-             (newline)
              (invoke "tar" "xzf" (assoc-ref inputs "java-hazelcast-client-protocol-source"))
+             #t))
+         (add-before 'build 'fix-renamed-dependencies
+           (lambda _
+             (substitute* '("hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/AwsAddressProvider.java"
+                            "hazelcast-client/src/main/java/com/hazelcast/client/spi/impl/discovery/HazelcastCloudDiscovery.java"
+                            "hazelcast-aws-2.0.0/src/main/java/com/hazelcast/aws/impl/DescribeInstances.java")
+               (("com.hazelcast.com.eclipsesource.json") "com.eclipsesource.json"))
+             #t))
+         (add-before 'build 'copy-template
+           (lambda _
+             (with-directory-excursion "hazelcast/src/main"
+               (copy-file "template/com/hazelcast/instance/GeneratedBuildProperties.java"
+                            "java/com/hazelcast/instance/GeneratedBuildProperties.java")
+               (substitute* "java/com/hazelcast/instance/GeneratedBuildProperties.java"
+                 (("\\$\\{project.version\\}") ,version)
+                 (("\\$\\{timestamp\\}") "0")
+                 (("\\$\\{git.commit.id.abbrev\\}") "0f51fcf")
+                 (("\\$\\{hazelcast.distribution\\}") "Hazelcast")
+                 (("\\$\\{hazelcast.serialization.version\\}") "1")))
              #t))
          (add-before 'build 'remove-package-info
            (lambda _
@@ -1906,11 +1918,12 @@ import javax.el.ELContext;"))
     (inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-apache-freemarker" ,java-apache-freemarker)
+       ("java-hazelcast-aws-source" ,java-hazelcast-aws-source)
        ("java-hazelcast-code-generator" ,java-hazelcast-code-generator)
        ("java-hazelcast-client-protocol-source" ,java-hazelcast-client-protocol-source)
        ("java-jsr107" ,java-jsr107)
        ("java-jsr305" ,java-jsr305)
-       ("java-log4j-1.2-api" ,java-log4j-1.2-api)
+       ("java-log4j-1.2" ,java-log4j-1.2)
        ("java-log4j-api" ,java-log4j-api)
        ("java-minimal-json" ,java-minimal-json)
        ("java-osgi-core" ,java-osgi-core)
@@ -1968,12 +1981,24 @@ import javax.el.ELContext;"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0kh0p1h546k6myd268jlr681bx15q6ip15an56rmqdw4q87xk23v"))))
+                "0kh0p1h546k6myd268jlr681bx15q6ip15an56rmqdw4q87xk23v"))
+              (patches
+                (search-patches "java-jamonapi-jamon-update-dependencies.patch"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-jamonapi-jamon.jar"
        #:source-dir "jamon/src/main/java"
        #:test-dir "jamon/src/test"
+       #:test-exclude
+       (list
+         "**/Abstract*.java"
+         ;; Fail to parse hazelcast.xml
+         "**/DistributedJamonHazelcastTest.java"
+         "**/JamonDataPersisterFactoryTest.java"
+         ;; javax.management.InstanceAlreadyExistsException
+         "**/JmxUtilsTest.java"
+         ;; Missing hsqldb as a dependency
+         "**/MonProxyTest.java")
        #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
@@ -1982,28 +2007,27 @@ import javax.el.ELContext;"))
              ;; Classes in this directory depend on spring-framework-context,
              ;; which depends on spring-framework-aop which depends on jamonapi.
              (delete-file-recursively "jamon/src/main/java/com/jamonapi/aop")
-             #t))
-         (add-before 'build 'port-to-jetty9
-           (lambda _
-             (substitute* "jamon/src/main/java/com/jamonapi/http/JettyHttpMonItem.java"
-               (("org.mortbay.jetty.Request")
-                "org.eclipse.jetty.server.Request"))
-             (substitute* "jamon/src/main/java/com/jamonapi/http/JAMonJettyHandler.java"
-               (("org.mortbay.jetty.Request")
-                "org.eclipse.jetty.server.Request")
-               (("org.mortbay.jetty.Response")
-                "org.eclipse.jetty.server.Response")
-               (("org.mortbay.jetty.HttpConnection")
-                "org.eclipse.jetty.server.HttpConnection")
-               (("org.mortbay.jetty.handler.HandlerWrapper")
-                "org.eclipse.jetty.server.handler.HandlerWrapper"))
+             (delete-file-recursively "jamon/src/test/java/com/jamonapi/aop")
              #t)))))
     (inputs
      `(("java-aspectj-rt" ,java-aspectj-rt)
+       ("java-eclipse-jetty-io" ,java-eclipse-jetty-io)
        ("java-eclipse-jetty-server" ,java-eclipse-jetty-server)
+       ("java-eclipse-jetty-util" ,java-eclipse-jetty-util)
+       ("java-hazelcast-bootstrap" ,java-hazelcast-bootstrap)
        ;("java-javaee-servletapi" ,java-javaee-servletapi)
        ("java-tomcat" ,java-tomcat) ; for catalina and servletapi
-       ("java-log4j-api" ,java-log4j-api)))
+       ("java-log4j-api" ,java-log4j-api)
+       ("java-log4j-1.2" ,java-log4j-1.2)))
+    (native-inputs
+     `(("java-asm" ,java-asm)
+       ("java-assertj" ,java-assertj)
+       ("java-cglib" ,java-cglib)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-jboss-interceptors-api-spec" ,java-jboss-interceptors-api-spec)
+       ("java-junit" ,java-junit)
+       ("java-mockito-1" ,java-mockito-1)
+       ("java-objenesis" ,java-objenesis)))
     (home-page "")
     (synopsis "")
     (description "")
@@ -2216,6 +2240,7 @@ import javax.el.ELContext;"))
        ("java-snakeyaml" ,java-snakeyaml)
        ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-core" ,java-spring-framework-core)
+       ("java-jamonapi-jamon-bootstrap" ,java-jamonapi-jamon-bootstrap)
        ;; Note: for javax-el (el-api)
        ("java-tomcat" ,java-tomcat)))
     (description "")))
@@ -2273,6 +2298,7 @@ import javax.el.ELContext;"))
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-javax-inject" ,java-javax-inject)
        ("java-snakeyaml" ,java-snakeyaml)
+       ("java-spring-framework-aop" ,java-spring-framework-aop)
        ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-core" ,java-spring-framework-core)
        ;; Note: for javax-el (el-api)
@@ -4394,7 +4420,8 @@ namespaces.")
                (chmod (string-append bin "/antlr4") #o755))))
          (add-before 'build 'copy-resources
            (lambda _
-             (copy-recursively "tool/resources/" "build/classes")))
+             (copy-recursively "tool/resources/" "build/classes")
+             #t))
          (add-before 'build 'generate-unicode
            (lambda _
              (and
