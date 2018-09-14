@@ -1475,14 +1475,15 @@ from ORO, Inc.")
 (define-public java-aspectj-weaver
   (package
     (name "java-aspectj-weaver")
-    (version "1.8.10")
+    (version "1.9.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://eclipsemirror.itemis.de/eclipse/tools"
                                   "/aspectj/aspectj-" version "-src.jar"))
               (sha256
                (base32
-                "0r16lgzindqf4xhdmdyk9j6p15nak2fwhqlp42yg3axvn8fx6r23"))))
+                ;"0r16lgzindqf4xhdmdyk9j6p15nak2fwhqlp42yg3axvn8fx6r23"))))
+                "1g8g6ynwqg93x6842a0xhrgjcfnszd1wldsw3v3dp3xpc8makrfp"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-aspectj-weaver.jar"
@@ -1495,20 +1496,23 @@ from ORO, Inc.")
            (lambda _
              (mkdir-p "weaver-src")
              (chdir "weaver-src")
-             (zero? (system* "jar" "xf" "../src/aspectjweaver1.8.10-src.jar"))))
+             (zero? (system* "jar" "xf" "../src/aspectjweaver1.9.1-src.jar"))))
          (add-after 'unpack-jar 'remove-propriatory
            (lambda _
              ;; this file depends on JRockit, for which I can't find a free implementation
-             (delete-file "org/aspectj/weaver/loadtime/JRockitAgent.java")))
+             (delete-file "org/aspectj/weaver/loadtime/JRockitAgent.java")
+             #t))
          (add-after 'unpack-jar 'rename-lib-back
            (lambda _
              ;; aj.org.objectweb.asm is actually java-asm, renamed
              (substitute* "org/aspectj/weaver/bcel/asm/StackMapAdder.java"
-               (("aj.org.objectweb.asm") "org.objectweb.asm"))))
+               (("aj.org.objectweb.asm") "org.objectweb.asm"))
+             #t))
          (add-before 'build 'copy-ressource
            (lambda _
              (mkdir-p "build/classes")
-             (copy-file "aspectj_1_5_0.dtd" "build/classes/aspectj_1_5_0.dtd"))))))
+             (copy-file "aspectj_1_5_0.dtd" "build/classes/aspectj_1_5_0.dtd")
+             #t)))))
     (inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-asm" ,java-asm)))
@@ -1532,11 +1536,53 @@ from ORO, Inc.")
            (lambda _
              (mkdir-p "rt-src")
              (chdir "rt-src")
-             (zero? (system* "jar" "xf" "../src/aspectjrt1.8.10-src.jar")))))))
+             (zero? (system* "jar" "xf" "../src/aspectjrt1.9.1-src.jar")))))))
     (inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-asm" ,java-asm)))
     (description "")))
+
+;(define-public java-aspectj-tools
+;  (package
+;    (inherit java-aspectj-weaver)
+;    (name "java-aspectj-tools")
+;    (arguments
+;     `(#:jar-name "java-aspectj-tools.jar"
+;       #:source-dir "."
+;       #:jdk ,icedtea-8
+;       #:tests? #f; no tests
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'configure 'unpack-jar
+;           (lambda _
+;             (mkdir-p "tools-src")
+;             (chdir "tools-src")
+;             (invoke "jar" "xf" "../src/aspectjtools1.9.1-src.jar")
+;             (for-each delete-file (find-files ".." ".*.jar$"))
+;             #t))
+;         (add-before 'build 'copy-resources
+;           (lambda _
+;             (for-each delete-file (find-files "." ".*.class$"))
+;             (mkdir-p "build/classes")
+;             (for-each
+;               (lambda (file)
+;                 (mkdir-p (string-append "build/classes/" (dirname file)))
+;                 (copy-file file (string-append "build/classes/" file)))
+;               (append
+;                 (find-files "." ".*.gif$")
+;                 (find-files "." ".*.html$")
+;                 (find-files "." ".*.properties$")
+;                 (find-files "." ".*.rsc$")
+;                 (find-files "." ".*.xml$")))
+;             #t)))))
+;    (inputs
+;     `(("java-asm" ,java-asm)
+;       ("java-aspectj-weaver" ,java-aspectj-weaver)
+;       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+;       ("java-eclipse-core-resources" ,java-eclipse-core-resources)
+;       ("java-eclipse-core-runtime" ,java-eclipse-core-runtime)
+;       ("java-eclipse-text" ,java-eclipse-text)))
+;    (description "")))
 
 (define-public java-jsr107
   (package
@@ -2034,6 +2080,75 @@ import javax.el.ELContext;"))
     ;; A link to the license is present in pom.xml
     (license license:bsd-3)))
 
+(define-public java-javax-validation
+  (package
+    (name "java-javax-validation")
+    (version "2.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/beanvalidation/"
+                                  "beanvalidation-api/archive/" version
+                                  ".Final.tar.gz"))
+              (sha256
+               (base32
+                "0mmzwrgwfvi68jfjh8ijy8za3wmp5rmwsplyghwyf9lwb9p5x5qz"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-validation.jar"
+       #:tests? #f; require an implementation like Hibernate Validator
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+         ;(replace 'check
+         ;  (lambda _
+         ;    (mkdir-p "build/test-classes")
+         ;    (apply invoke "javac" "-cp"
+         ;           (string-append (getenv "CLASSPATH") ":build/classes")
+         ;           "-d" "build/test-classes" (find-files "src/test/java" ".*.java$"))
+         ;    (with-directory-excursion "build/test-classes"
+         ;      (invoke "java" "-cp"
+         ;              (string-append (getenv "CLASSPATH") ":../classes:.")
+         ;              "org.testng.TestNG" "-verbose" "5" "-testclass"
+         ;              "javax.validation.ValidationTest"))
+         ;    #t)))))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-testng" ,java-testng)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;; javax.enterprise.concurrency
+(define-public java-concurrency-api
+  (package
+    (name "java-concurrency-api")
+    (version "1.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/concurrency-ee-spec/"
+                                  "archive/javax.enterprise.concurrent-api-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "038rc3bvpq4y96g0bb7b0ac6ip8m4rr931r1mlfmcnbav1n8b7wp"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "concurrency-api.jar"
+       #:source-dir "api/src/main/java"
+       #:test-dir "api/src/test"))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "https://github.com/eclipse-ee4j/concurrency-api")
+    (synopsis "")
+    (description "")
+    (license license:cddl1.1)))
+
 (define-public java-spring-framework-core
   (package
     (name "java-spring-framework-core")
@@ -2045,7 +2160,8 @@ import javax.el.ELContext;"))
                                   ".RELEASE.tar.gz"))
               (sha256
                (base32
-                "036jcwh2g3qlv14lalhkpkjnwc1hjn4zdqf251231vywxyd838zm"))))
+                "036jcwh2g3qlv14lalhkpkjnwc1hjn4zdqf251231vywxyd838zm"))
+              (patches (search-patches "java-spring-framework-remove-non-free.patch"))))
     (arguments
      `(#:jar-name "java-spring-framework-core.jar"
        #:jdk ,icedtea-8
@@ -2124,7 +2240,7 @@ import javax.el.ELContext;"))
     (inherit java-spring-framework-core)
     (name "java-spring-framework-beans")
     (arguments
-     `(#:jar-name "java-spring-framework-core.jar"
+     `(#:jar-name "java-spring-framework-beans.jar"
        #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
@@ -2177,6 +2293,46 @@ import javax.el.ELContext;"))
        ("java-tomcat" ,java-tomcat)))
     (description "")))
 
+(define-public java-spring-framework-beans-groovy
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-beans-groovy")
+    (arguments
+     `(#:jar-name "java-spring-framework-beans-groovy.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-beans-groovy")
+             #t))
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (setenv "CLASSPATH" "")
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "groovyc" "-j" "-d" "build/classes"
+                    "-cp" (string-join
+                            (append
+                              (find-files (assoc-ref inputs "java-commons-logging-minimal") ".*.jar$")
+                              (find-files (assoc-ref inputs "java-spring-framework-core") ".*.jar$")
+                              (find-files (assoc-ref inputs "java-spring-framework-beans") ".*.jar$"))
+                            ":")
+                    (append
+                      (find-files "src/main/java" ".*.java$")
+                      (find-files "src/main/groovy" ".*.groovy$")))
+             (invoke "jar" "cf" "build/jar/java-spring-framework-beans-groovy.jar" "-C" "build/classes" ".")
+             #t)))))
+    (inputs
+     `(("groovy" ,groovy)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-core" ,java-spring-framework-core)))
+    (description "")))
+
 (define-public java-spring-framework-aop
   (package
     (inherit java-spring-framework-core)
@@ -2186,6 +2342,15 @@ import javax.el.ELContext;"))
        #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
+       #:test-exclude
+       (list
+         "**/AspectJExpressionPointcutTests.java"
+         "**/Abstract*.java"
+         ;; Required parameter names not available
+         "**/ArgumentBindingTests.java"
+         "**/ReflectiveAspectJAdvisorFactoryTests.java")
+       #:test-include
+       (list "**/*Tests.java")
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'chdir
@@ -2207,23 +2372,43 @@ import javax.el.ELContext;"))
              (substitute* "src/main/java/org/springframework/aop/framework/ObjenesisCglibAopProxy.java"
                (("org.springframework.objenesis") "org.objenesis"))
              #t))
-         ;(add-before 'check 'copy-test-classes
-         ;  (lambda _
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
-         ;               "src/test/java/org/springframework/tests/Assume.java")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
-         ;               "src/test/java/org/springframework/tests/TestGroup.java")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
-         ;               "src/test/java/org/springframework/tests/TestResourceUtils.java")
-         ;    (mkdir-p "src/test/java/org/springframework/stereotype")
-         ;    (mkdir-p "src/test/java/org/springframework/util")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/stereotype/Component.java"
-         ;               "src/test/java/org/springframework/stereotype/Component.java")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
-         ;               "src/test/java/org/springframework/util/SerializationTestUtils.java")
-         ;    (substitute* "src/test/java/org/springframework/beans/factory/BeanFactoryUtilsTests.java"
-         ;      (("org.springframework.cglib") "net.sf.cglib"))
-         ;    #t))
+         (add-before 'check 'copy-test-classes
+           (lambda _
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
+                        "src/test/java/org/springframework/tests/TestResourceUtils.java")
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/TimeStamped.java"
+                        "src/test/java/org/springframework/tests/TimeStamped.java")
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
+                        "src/test/java/org/springframework/tests/Assume.java")
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
+                        "src/test/java/org/springframework/tests/TestGroup.java")
+             (mkdir "src/test/java/org/springframework/util")
+             (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
+                        "src/test/java/org/springframework/util/SerializationTestUtils.java")
+             (mkdir "src/test/java/org/springframework/tests/beans")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/beans/CollectingReaderEventListener.java"
+                        "src/test/java/org/springframework/tests/beans/CollectingReaderEventListener.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/DerivedTestBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/DerivedTestBean.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/INestedTestBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/INestedTestBean.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/NestedTestBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/NestedTestBean.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/IndexedTestBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/IndexedTestBean.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/Colour.java"
+                        "src/test/java/org/springframework/tests/sample/beans/Colour.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/TestBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/TestBean.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/ITestBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/ITestBean.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/IOther.java"
+                        "src/test/java/org/springframework/tests/sample/beans/IOther.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/CountingTestBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/CountingTestBean.java")
+             (copy-file "../spring-beans/src/test/java/org/springframework/tests/sample/beans/SideEffectBean.java"
+                        "src/test/java/org/springframework/tests/sample/beans/SideEffectBean.java")
+             #t))
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
              (copy-recursively "src/test/resources"
@@ -2236,11 +2421,12 @@ import javax.el.ELContext;"))
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-commons-pool" ,java-commons-pool)
        ("java-commons-pool2" ,java-commons-pool2)
+       ("java-jamonapi-jamon-bootstrap" ,java-jamonapi-jamon-bootstrap)
        ("java-javax-inject" ,java-javax-inject)
        ("java-snakeyaml" ,java-snakeyaml)
        ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-core" ,java-spring-framework-core)
-       ("java-jamonapi-jamon-bootstrap" ,java-jamonapi-jamon-bootstrap)
+       ("java-objenesis" ,java-objenesis)
        ;; Note: for javax-el (el-api)
        ("java-tomcat" ,java-tomcat)))
     (description "")))
@@ -2261,46 +2447,35 @@ import javax.el.ELContext;"))
              ;; Needed because tests look for data in src/... directly.
              (chdir "spring-context")
              #t))
+         (add-before 'build 'remove-jruby
+           (lambda _
+             (delete-file-recursively
+               "src/main/java/org/springframework/scripting/jruby")
+             #t))
          (add-before 'build 'copy-resources
            (lambda _
              (copy-recursively "src/main/resources" "build/classes")
              #t))
-         ;(add-before 'configure 'rename-dep
-         ;  (lambda _
-         ;    (substitute* "src/main/java/org/springframework/beans/factory/support/CglibSubclassingInstantiationStrategy.java"
-         ;      (("org.springframework.cglib") "net.sf.cglib")
-         ;      (("net.sf.cglib.core.SpringNamingPolicy") "org.springframework.cglib.core.SpringNamingPolicy"))
-         ;    #t))
-         ;(add-before 'check 'copy-test-classes
-         ;  (lambda _
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
-         ;               "src/test/java/org/springframework/tests/Assume.java")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
-         ;               "src/test/java/org/springframework/tests/TestGroup.java")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestResourceUtils.java"
-         ;               "src/test/java/org/springframework/tests/TestResourceUtils.java")
-         ;    (mkdir-p "src/test/java/org/springframework/stereotype")
-         ;    (mkdir-p "src/test/java/org/springframework/util")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/stereotype/Component.java"
-         ;               "src/test/java/org/springframework/stereotype/Component.java")
-         ;    (copy-file "../spring-core/src/test/java/org/springframework/util/SerializationTestUtils.java"
-         ;               "src/test/java/org/springframework/util/SerializationTestUtils.java")
-         ;    (substitute* "src/test/java/org/springframework/beans/factory/BeanFactoryUtilsTests.java"
-         ;      (("org.springframework.cglib") "net.sf.cglib"))
-         ;    #t))
          (add-before 'check 'copy-test-resources
            (lambda* (#:key inputs #:allow-other-keys)
              (copy-recursively "src/test/resources"
                                "build/test-classes")
              #t)))))
     (inputs
-     `(("java-cglib" ,java-cglib)
+     `(("groovy" ,groovy)
+       ("java-bsh" ,java-bsh)
+       ("java-cglib" ,java-cglib)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-concurrency-api" ,java-concurrency-api)
        ("java-javax-inject" ,java-javax-inject)
+       ("java-javax-validation" ,java-javax-validation)
+       ("java-joda-time" ,java-joda-time)
        ("java-snakeyaml" ,java-snakeyaml)
        ("java-spring-framework-aop" ,java-spring-framework-aop)
        ("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-beans-groovy" ,java-spring-framework-beans-groovy)
        ("java-spring-framework-core" ,java-spring-framework-core)
+       ("java-spring-framework-expression" ,java-spring-framework-expression)
        ;; Note: for javax-el (el-api)
        ("java-tomcat" ,java-tomcat)))
     (description "")))
@@ -2333,6 +2508,44 @@ import javax.el.ELContext;"))
     (inputs
      `(("java-spring-framework-core" ,java-spring-framework-core)
        ("java-spring-framework-web" ,java-spring-framework-web)))
+    (description "")))
+
+(define-public java-spring-framework-expression
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-expression")
+    (arguments
+     `(#:jar-name "java-spring-framework-expression.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-expression")
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'check 'copy-test-classes
+           (lambda _
+             (mkdir-p "src/test/java/org/springframework/tests")
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
+                        "src/test/java/org/springframework/tests/TestGroup.java")
+             (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
+                        "src/test/java/org/springframework/tests/Assume.java")
+             #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-recursively "src/test/resources"
+                               "build/test-classes")
+             #t)))))
+    (inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-spring-framework-core" ,java-spring-framework-core)))
     (description "")))
 
 (define-public java-lucene-core

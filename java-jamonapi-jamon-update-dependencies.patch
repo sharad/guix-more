@@ -1,0 +1,89 @@
+From fe2edb527a0b74341720c7c17ce77133415e84ce Mon Sep 17 00:00:00 2001
+From: Julien Lepiller <julien@lepiller.eu>
+Date: Thu, 13 Sep 2018 20:11:07 +0200
+Subject: [PATCH] Update jamon dependencies.
+
+---
+ .../java/com/jamonapi/http/JAMonJettyHandler.java | 15 +++++++--------
+ .../java/com/jamonapi/http/JAMonTomcatValve.java  |  1 -
+ .../java/com/jamonapi/http/JettyHttpMonItem.java  |  2 +-
+ .../java/com/jamontomcat/JAMonTomcat55Valve.java  |  1 -
+ 4 files changed, 8 insertions(+), 11 deletions(-)
+
+diff --git a/jamon/src/main/java/com/jamonapi/http/JAMonJettyHandler.java b/jamon/src/main/java/com/jamonapi/http/JAMonJettyHandler.java
+index c117afa..3f94fc8 100644
+--- a/jamon/src/main/java/com/jamonapi/http/JAMonJettyHandler.java
++++ b/jamon/src/main/java/com/jamonapi/http/JAMonJettyHandler.java
+@@ -1,10 +1,10 @@
+ package com.jamonapi.http;
+ 
+ 
+-import org.mortbay.jetty.HttpConnection;
+-import org.mortbay.jetty.Request;
+-import org.mortbay.jetty.Response;
+-import org.mortbay.jetty.handler.HandlerWrapper;
++import org.eclipse.jetty.server.HttpConnection;
++import org.eclipse.jetty.server.Request;
++import org.eclipse.jetty.server.Response;
++import org.eclipse.jetty.server.handler.HandlerWrapper;
+ 
+ import javax.servlet.ServletException;
+ import javax.servlet.http.HttpServletRequest;
+@@ -28,14 +28,13 @@ public class JAMonJettyHandler extends HandlerWrapper implements HttpMonManage {
+ 
+     /** Monitor the request and call any other requests in the decorator chain */
+     @Override
+-    public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException, ServletException  {
+-        final Request baseRequest = (request instanceof Request) ? ((Request)request) : HttpConnection.getCurrentConnection().getRequest();
+-        final Response baseResponse = (response instanceof Response) ? ((Response)response) : HttpConnection.getCurrentConnection().getResponse();
++    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException  {
++        final Response baseResponse = (response instanceof Response) ? ((Response)response) : HttpConnection.getCurrentConnection().getHttpChannel().getResponse();
+ 
+         HttpMon httpMon=null;
+         try {
+             httpMon=httpMonFactory.start(baseRequest, baseResponse);
+-            super.handle(target, request, response, dispatch);
++            super.handle(target, baseRequest, request, response);
+         } catch (Throwable e) {
+             httpMon.throwException(e);
+         } finally {
+diff --git a/jamon/src/main/java/com/jamonapi/http/JAMonTomcatValve.java b/jamon/src/main/java/com/jamonapi/http/JAMonTomcatValve.java
+index 6a3fe96..7d0bd0b 100644
+--- a/jamon/src/main/java/com/jamonapi/http/JAMonTomcatValve.java
++++ b/jamon/src/main/java/com/jamonapi/http/JAMonTomcatValve.java
+@@ -116,7 +116,6 @@ public class JAMonTomcatValve extends org.apache.catalina.valves.ValveBase imple
+ 
+     }
+ 
+-    @Override
+     public String getInfo() {
+         return PREFIX;
+     }
+diff --git a/jamon/src/main/java/com/jamonapi/http/JettyHttpMonItem.java b/jamon/src/main/java/com/jamonapi/http/JettyHttpMonItem.java
+index 3507d93..79b8481 100644
+--- a/jamon/src/main/java/com/jamonapi/http/JettyHttpMonItem.java
++++ b/jamon/src/main/java/com/jamonapi/http/JettyHttpMonItem.java
+@@ -3,7 +3,7 @@ package com.jamonapi.http;
+ 
+ import com.jamonapi.Monitor;
+ import com.jamonapi.MonitorFactory;
+-import org.mortbay.jetty.Request;
++import org.eclipse.jetty.server.Request;
+ 
+ /**
+  *  Used to monitor jetty requests via the JAMonJettyHandler.
+diff --git a/jamon/src/main/java/com/jamontomcat/JAMonTomcat55Valve.java b/jamon/src/main/java/com/jamontomcat/JAMonTomcat55Valve.java
+index 7be804c..af1c2f8 100644
+--- a/jamon/src/main/java/com/jamontomcat/JAMonTomcat55Valve.java
++++ b/jamon/src/main/java/com/jamontomcat/JAMonTomcat55Valve.java
+@@ -113,7 +113,6 @@ public class JAMonTomcat55Valve extends org.apache.catalina.valves.ValveBase {
+ 
+     }
+ 
+-    @Override
+     public String getInfo() {
+         return PREFIX;
+     }
+-- 
+2.18.0
+
