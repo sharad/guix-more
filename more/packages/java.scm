@@ -2173,6 +2173,154 @@ import javax.el.ELContext;"))
     (description "")
     (license (list license:cddl1.1))))
 
+;; also called jaxb-api
+(define-public java-javax-xml-bind
+  (package
+    (name "java-javax-xml-bind")
+    (version "2.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/jaxb-spec/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0qd352ph8zfqiy7lzp6cczznz6j6vpd2877kqp72wi4w3zz88ydw"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-xml-bind.jar"
+       #:tests? #f; no tests
+       #:source-dir "jaxb-api/src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-java8
+           (lambda _
+             ;; This file is for java9+
+             (for-each delete-file (find-files "." "module-info.java"))
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "jaxb-api/src/main/resources" "build/classes")
+             #t)))))
+    (home-page "https://github.com/javaee/jaxb-spec")
+    (synopsis "")
+    (description "")
+    (license license:cddl1.1)))
+
+(define-public java-jaxb-txw-runtime
+  (package
+    (name "java-jaxb-txw-runtime")
+    (version "2.3.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/jaxb-v2/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "10jp3fcdib34i31ykd8xjp6i6lf7rylj0w0n2xkqs1rzirs1sjr2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jaxb-txw-runtime.jar"
+       #:source-dir "jaxb-ri/txw/runtime/src/main/java"
+       #:test-dir "jaxb-ri/txw/runtime/src/test"
+       #:tests? #f; no runnable test
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-java8
+           (lambda _
+             ;; This file is for java9+
+             (for-each delete-file (find-files "." "module-info.java"))
+             #t)))))
+    (home-page "https://github.com/javaee/jaxb-spec")
+    (synopsis "")
+    (description "")
+    (license license:cddl1.1)))
+
+(define-public java-jaxb-runtime
+  (package
+    (inherit java-jaxb-txw-runtime)
+    (name "java-jaxb-runtime")
+    (arguments
+     `(#:jar-name "jaxb-runtime.jar"
+       #:tests? #f; no tests
+       #:source-dir "jaxb-ri/runtime/impl/src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-java8
+           (lambda _
+             ;; This file is for java9+
+             (for-each delete-file (find-files "." "module-info.java"))
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "jaxb-ri/jxc/src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-jaxb-txw-runtime" ,java-jaxb-txw-runtime)
+       ("java-javax-xml-bind" ,java-javax-xml-bind)))
+    (synopsis "")
+    (description "")))
+
+(define-public java-jaxb-xjc
+  (package
+    (name "java-jaxb-xjc")
+    (version "2.3.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/jaxb-v2/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "10jp3fcdib34i31ykd8xjp6i6lf7rylj0w0n2xkqs1rzirs1sjr2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jaxb-ri.jar"
+       #:tests? #f; no tests
+       #:source-dir "jaxb-ri/xjc/src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-java8
+           (lambda _
+             ;; This file is for java9+
+             (for-each delete-file (find-files "." "module-info.java"))
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "jaxb-ri/jxc/src/main/resources" "build/classes")
+             #t)))))
+    (home-page "https://github.com/javaee/jaxb-spec")
+    (synopsis "")
+    (description "")
+    (license license:cddl1.1)))
+
+;; also called jpa-api
+(define-public java-javax-persistence
+  (package
+    (name "java-javax-persistence")
+    (version "2.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/jpa-spec/archive/"
+                                  "javax.persistence-api-" version ".tar.gz"))
+              (sha256
+               (base32
+                "14kn70i1g0ij14gm6qbhgmfqprp6qvw3nkw8yd6a09806c70x576"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-persistence.jar"
+       #:tests? #f; no tests
+       #:source-dir "javax.persistence-api/src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "javax.persistence-api/src/main/resources"
+                               "build/classes")
+             #t)))))
+    (home-page "https://github.com/eclipse-ee4j/jpa-api")
+    (synopsis "")
+    (description "")
+    (license (list license:epl1.0 license:edl1.0))))
+
 (define-public java-javax-ejb
   (package
     (name "java-javax-ejb")
@@ -2315,13 +2463,133 @@ import javax.el.ELContext;"))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "wildfly-common.jar"
+       ;; Most tests fail because of Invalid bundle interface org.wildfly.common._private.CommonMessages (implementation not found)
+       #:tests? #f
        #:source-dir "src/main/java"))
     (inputs
-     `(("java-jboss-logging-bootstrap" ,java-jboss-logging-bootstrap)))
+     `(("java-jboss-logging" ,java-jboss-logging)
+       ("java-jboss-logging-annotations" ,java-jboss-logging-annotations)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
     (home-page "")
     (synopsis "")
     (description "")
     (license license:lgpl2.1)))
+
+(define java-jboss-logmanager-bootstrap
+  (package
+    (name "java-jboss-logmanager")
+    (version "2.1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss-logging/"
+                                  "jboss-logmanager/archive/" version ".Final.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "09qj82wa612bfmwdpgpskg7qvi3n7q6v1arbhs7zbbrzlfgb7wnx"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jboss-logmanager.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'stub-wildfly
+           (lambda _
+             ;; Wildfly is a cyclic dependency. By stubbing it out, we break
+             ;; two cycles at once!
+             (substitute* "src/main/java/org/jboss/logmanager/ExtLogRecord.java"
+               (("import org.wildfly.common.*") "")
+               (("HostName.getQualifiedHostName\\(\\)") "\"example.com\"")
+               (("Process.getProcessId\\(\\)") "1515")
+               (("Process.getProcessName\\(\\)") "\"java\""))
+             (substitute* "src/main/java/org/jboss/logmanager/handlers/SyslogHandler.java"
+               (("import org.wildfly.common.*") "")
+               (("Process.getProcessName\\(\\)") "\"java\"")
+               (("Process.getProcessId\\(\\)") "1515"))
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-jboss-modules" ,java-jboss-modules)
+       ("java-jsonp" ,java-jsonp)))
+       ;("java-wildfly-common" ,java-wildfly-common)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jboss-logmanager
+  (package
+    (inherit java-jboss-logmanager-bootstrap)
+    (arguments
+     `(#:jar-name "jboss-logmanager.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-jboss-modules" ,java-jboss-modules)
+       ("java-jsonp" ,java-jsonp)
+       ("java-wildfly-common" ,java-wildfly-common)))))
+
+(define-public java-jboss-logging
+  (package
+    (name "java-jboss-logging")
+    (version "3.3.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss-logging/"
+                                  "jboss-logging/archive/" version ".Final.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1kcibwahdja95zdm8yh2zlqlq6xj42pddjby1845jam2xg7q9pqh"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jboss-logging.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-conversion-error
+           (lambda _
+             ;; Prevent an error that "cannot convert Map<String, String> to
+             ;; Map<String, Object>.
+             (substitute* "src/main/java/org/jboss/logging/Slf4jLoggerProvider.java"
+               (("import java.util.Map")
+                "import java.util.HashMap;
+import java.util.Map")
+               (("Map<String, Object> map = MDC.getCopyOfContextMap\\(\\);")
+                "Map<String, String> map_mdc = MDC.getCopyOfContextMap();
+Map<String, Object> map2 = new HashMap<String, Object>();
+for (Map.Entry<String, String> entry : map_mdc.entrySet()) {
+  map2.put(entry.getKey(), entry.getValue());
+}
+if (map_mdc == null) map2 = null;
+final Map<String, Object> map = map2;"))
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-jboss-logmanager-bootstrap" ,java-jboss-logmanager-bootstrap)
+       ("java-log4j-1.2-api" ,java-log4j-1.2-api)
+       ("java-log4j-api" ,java-log4j-api)
+       ("java-slf4j-api" ,java-slf4j-api)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
 
 (define-public java-jboss-logging-annotations
   (package
@@ -2346,102 +2614,18 @@ import javax.el.ELContext;"))
            (lambda _
              (copy-recursively "annotations/src/main/resources" "build/classes")
              #t)))))
+    (inputs
+     `(("java-jboss-logging" ,java-jboss-logging)))
     (home-page "")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
 
-(define-public java-jboss-logmanager
-  (package
-    (name "java-jboss-logmanager")
-    (version "2.1.4")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/jboss-logging/"
-                                  "jboss-logmanager/archive/" version ".Final.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "09qj82wa612bfmwdpgpskg7qvi3n7q6v1arbhs7zbbrzlfgb7wnx"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "jboss-logmanager.jar"
-       #:source-dir "src/main/java"
-       #:tests? #f; no tests
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'copy-resources
-           (lambda _
-             (copy-recursively "src/main/resources" "build/classes")
-             #t)))))
-    (inputs
-     `(("java-jboss-modules" ,java-jboss-modules)
-       ("java-jsonp" ,java-jsonp)
-       ("java-wildfly-common" ,java-wildfly-common)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public java-jboss-logging
-  (package
-    (name "java-jboss-logging")
-    (version "3.3.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/jboss-logging/"
-                                  "jboss-logging/archive/" version ".Final.tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1kcibwahdja95zdm8yh2zlqlq6xj42pddjby1845jam2xg7q9pqh"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "jboss-logging.jar"
-       #:source-dir "src/main/java"
-       #:tests? #f; no tests
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'copy-resources
-           (lambda _
-             (copy-recursively "src/main/resources" "build/classes")
-             #t)))))
-    (inputs
-     `(("java-jboss-logmanager" ,java-jboss-logmanager)
-       ("java-log4j-api" ,java-log4j-api)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public java-jboss-logging-bootstrap
-  (package
-    (inherit java-jboss-logging)
-    (name "java-jboss-logging-bootstrap")
-    (arguments
-     `(#:jar-name "jboss-logging-bootstrap.jar"
-       #:tests? #f; no tests
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'build
-           (lambda _
-             (mkdir-p "build/classes")
-             (mkdir-p "build/jar")
-             (apply invoke "javac" "-d" "build/classes"
-                    (map (lambda (file) (string-append
-                                          "src/main/java/org/jboss/logging/"
-                                          file))
-                         '("Messages.java" "LoggingLocale.java")))
-             (invoke "jar" "cf" "build/jar/jboss-logging-bootstrap.jar"
-                     "-C" "build/classes" ".")
-             #t)))))
-    (inputs
-     `(("java-log4j-api" ,java-log4j-api)))))
-
 (define-public java-hibernate-validator-engine
   (package
     (name "java-hibernate-validator-engine")
-    (version "6.0.13")
+    ;(version "6.0.13")
+    (version "4.3.3")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/hibernate/"
@@ -2449,7 +2633,7 @@ import javax.el.ELContext;"))
                                   ".Final.tar.gz"))
               (sha256
                (base32
-                "107220ydll2fgvqzmzrby7b65vi4hsvrnmbb6idrxfmckm05grn4"))))
+                "1ifyqgvlzv9fxgw9ssd6slpv0ky9cgxc1xg2rwqiw1nmwgndjnkb"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "hibernate-validator-engine.jar"
@@ -2462,8 +2646,10 @@ import javax.el.ELContext;"))
              #t)))))
     (inputs
      `(("java-fasterxml-classmate" ,java-fasterxml-classmate)
+       ("java-javax-persistence" ,java-javax-persistence)
        ("java-javax-validation" ,java-javax-validation)
        ("java-jboss-logging" ,java-jboss-logging)
+       ("java-jboss-logging-annotations" ,java-jboss-logging-annotations)
        ("java-joda-time" ,java-joda-time)
        ("java-jsoup" ,java-jsoup)
        ;; For javax-el (el-api)
