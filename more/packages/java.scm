@@ -2080,6 +2080,131 @@ import javax.el.ELContext;"))
     ;; A link to the license is present in pom.xml
     (license license:bsd-3)))
 
+(define license:epl2.0 license:epl1.0)
+(define-public java-javax-interceptor
+  (package
+    (name "java-javax-interceptor")
+    (version "1.2.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/javax.interceptor/"
+                                  "archive/" version ".tar.gz"))
+              (sha256
+               (base32
+                "1c93q8x7rxml747vzmw13s1gkjhwi0xs8ra27254cvyl0q8fh1kv"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-interceptor.jar"
+       #:tests? #f; no tests
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (home-page "https://github.com/eclipse-ee4j/interceptor-api")
+    (synopsis "")
+    (description "")
+    ;; Either EPL2.0 or GPL2.0 with classpath exception
+    (license (list license:epl2.0 license:gpl2+))))
+
+;; JTA or JSR907
+;; Same as java-jboss-transaction-api-spec?
+(define-public java-javax-transaction
+  (package
+    (name "java-javax-transaction")
+    (version "1.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/javax.transaction/"
+                                  "archive/javax.transaction-api-" version
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "13c04282r59pyp784ppnihdi4krksmg8w4ksy2crgw9c9a7wfdh5"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-transaction.jar"
+       #:tests? #f; no tests
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-cdi-api" ,java-cdi-api)
+       ("java-javax-interceptor" ,java-javax-interceptor)))
+    (home-page "https://github.com/eclipse-ee4j/jta-api")
+    (synopsis "")
+    (description "")
+    (license (list license:cddl1.1))))
+
+;; jax-rpc
+(define-public java-javax-xml-rpc
+  (package
+    (name "java-javax-xml-rpc")
+    (version "1.1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/javax.xml.rpc/"
+                                  "archive/javax.xml.rpc-api-" version
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "1x4ldqr25s8knadmvwd33nbhyigqi471d62mz09vciy8j5waqys9"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-xml-rpc.jar"
+       #:tests? #f; no tests
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-javaee-servletapi" ,java-javaee-servletapi)))
+    (home-page "https://github.com/eclipse-ee4j/jax-rpc-api")
+    (synopsis "")
+    (description "")
+    (license (list license:cddl1.1))))
+
+(define-public java-javax-ejb
+  (package
+    (name "java-javax-ejb")
+    (version "3.2.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/javaee/javax.ejb/archive/"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "15ipffv3dkbg6psa5knp4bq1bkp0qy21mzsgs94k6xw714igsij5"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-ejb.jar"
+       #:tests? #f; no tests
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-javax-transaction" ,java-javax-transaction)
+       ("java-javax-xml-rpc" ,java-javax-xml-rpc)))
+    (home-page "https://github.com/eclipse-ee4j/ejb-api")
+    (synopsis "")
+    (description "")
+    ;; Either EPL2.0 or GPL2.0 with classpath exception
+    (license (list license:epl2.0 license:gpl2+))))
+
+;; JSR380 jsr380
 (define-public java-javax-validation
   (package
     (name "java-javax-validation")
@@ -2103,22 +2228,247 @@ import javax.el.ELContext;"))
            (lambda _
              (copy-recursively "src/main/resources" "build/classes")
              #t)))))
-         ;(replace 'check
-         ;  (lambda _
-         ;    (mkdir-p "build/test-classes")
-         ;    (apply invoke "javac" "-cp"
-         ;           (string-append (getenv "CLASSPATH") ":build/classes")
-         ;           "-d" "build/test-classes" (find-files "src/test/java" ".*.java$"))
-         ;    (with-directory-excursion "build/test-classes"
-         ;      (invoke "java" "-cp"
-         ;              (string-append (getenv "CLASSPATH") ":../classes:.")
-         ;              "org.testng.TestNG" "-verbose" "5" "-testclass"
-         ;              "javax.validation.ValidationTest"))
-         ;    #t)))))
     (native-inputs
      `(("java-hamcrest-core" ,java-hamcrest-core)
        ("java-testng" ,java-testng)))
     (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-fasterxml-classmate
+  (package
+    (name "java-fasterxml-classmate")
+    (version "1.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/FasterXML/java-classmate/"
+                                  "archive/classmate-" version ".tar.gz"))
+              (sha256
+               (base32
+                "143gsrgsf7dzqbmd2pw4ky2cd1lhlgmh7daygda03vka73ns6qr3"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "fasterxml-classmate.jar"
+       #:source-dir "src/main/java"
+       #:test-exclude
+       (list
+         "**/Abstract*.java"
+         ;; Base class with no tests
+         "**/BaseTest.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "engine/src/main/resources" "build/classes")
+             #t)))))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "https://fasterxml.com")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jboss-modules
+  (package
+    (name "java-jboss-modules")
+    (version "1.8.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss-modules/"
+                                  "jboss-modules/archive/" version ".Final.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0cm8z4kc1lq4jg3866dzhjaaz5kglsn9bymp4ra7jimyij84xxv2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jboss-modules.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; require jboss.shrinkwrap
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-wildfly-common
+  (package
+    (name "java-wildfly-common")
+    (version "1.4.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/wildfly/wildfly-common/"
+                                  "archive/" version ".Final.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1qgp5b77wj0g3c8wzx2k8qslzk4ran1kbk5scjzj955ljpwvygah"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "wildfly-common.jar"
+       #:source-dir "src/main/java"))
+    (inputs
+     `(("java-jboss-logging-bootstrap" ,java-jboss-logging-bootstrap)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1)))
+
+(define-public java-jboss-logging-annotations
+  (package
+    (name "java-jboss-logging-annotations")
+    (version "2.1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss-logging/"
+                                  "jboss-logging-tools/archive/" version ".Final.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1azi76q31qhmyq3v9cx0aq1gvddymj080bpc3lvacg45kh7vx9zm"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jboss-logging-annotations.jar"
+       #:source-dir "annotations/src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "annotations/src/main/resources" "build/classes")
+             #t)))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
+
+(define-public java-jboss-logmanager
+  (package
+    (name "java-jboss-logmanager")
+    (version "2.1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss-logging/"
+                                  "jboss-logmanager/archive/" version ".Final.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "09qj82wa612bfmwdpgpskg7qvi3n7q6v1arbhs7zbbrzlfgb7wnx"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jboss-logmanager.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-jboss-modules" ,java-jboss-modules)
+       ("java-jsonp" ,java-jsonp)
+       ("java-wildfly-common" ,java-wildfly-common)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jboss-logging
+  (package
+    (name "java-jboss-logging")
+    (version "3.3.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/jboss-logging/"
+                                  "jboss-logging/archive/" version ".Final.tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1kcibwahdja95zdm8yh2zlqlq6xj42pddjby1845jam2xg7q9pqh"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jboss-logging.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-jboss-logmanager" ,java-jboss-logmanager)
+       ("java-log4j-api" ,java-log4j-api)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jboss-logging-bootstrap
+  (package
+    (inherit java-jboss-logging)
+    (name "java-jboss-logging-bootstrap")
+    (arguments
+     `(#:jar-name "jboss-logging-bootstrap.jar"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "javac" "-d" "build/classes"
+                    (map (lambda (file) (string-append
+                                          "src/main/java/org/jboss/logging/"
+                                          file))
+                         '("Messages.java" "LoggingLocale.java")))
+             (invoke "jar" "cf" "build/jar/jboss-logging-bootstrap.jar"
+                     "-C" "build/classes" ".")
+             #t)))))
+    (inputs
+     `(("java-log4j-api" ,java-log4j-api)))))
+
+(define-public java-hibernate-validator-engine
+  (package
+    (name "java-hibernate-validator-engine")
+    (version "6.0.13")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/hibernate/"
+                                  "hibernate-validator/archive/" version
+                                  ".Final.tar.gz"))
+              (sha256
+               (base32
+                "107220ydll2fgvqzmzrby7b65vi4hsvrnmbb6idrxfmckm05grn4"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "hibernate-validator-engine.jar"
+       #:source-dir "engine/src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "engine/src/main/resources" "build/classes")
+             #t)))))
+    (inputs
+     `(("java-fasterxml-classmate" ,java-fasterxml-classmate)
+       ("java-javax-validation" ,java-javax-validation)
+       ("java-jboss-logging" ,java-jboss-logging)
+       ("java-joda-time" ,java-joda-time)
+       ("java-jsoup" ,java-jsoup)
+       ;; For javax-el (el-api)
+       ("java-tomcat" ,java-tomcat)))
+    (home-page "https://hibernate.org/validator/")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
@@ -2152,7 +2502,7 @@ import javax.el.ELContext;"))
 (define-public java-spring-framework-core
   (package
     (name "java-spring-framework-core")
-    (version "4.3.10")
+    (version "4.3.19")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/spring-projects/"
@@ -2160,7 +2510,7 @@ import javax.el.ELContext;"))
                                   ".RELEASE.tar.gz"))
               (sha256
                (base32
-                "036jcwh2g3qlv14lalhkpkjnwc1hjn4zdqf251231vywxyd838zm"))
+                "1796ch4ahhx8jq9v3v16dr0xcdx9fqf8waf75cjh52fxvi6ipnqj"))
               (patches (search-patches "java-spring-framework-remove-non-free.patch"))))
     (arguments
      `(#:jar-name "java-spring-framework-core.jar"
@@ -2447,6 +2797,17 @@ import javax.el.ELContext;"))
              ;; Needed because tests look for data in src/... directly.
              (chdir "spring-context")
              #t))
+         (add-before 'build 'fix-cglib
+           (lambda _
+             (with-directory-excursion "src/main/java/org/springframework"
+               (substitute*
+                 (list
+                   "context/annotation/ConfigurationClassEnhancer.java"
+                   "scripting/support/ScriptFactoryPostProcessor.java")
+                 (("org.springframework.cglib") "net.sf.cglib")
+                 (("net.sf.cglib.core.SpringNamingPolicy")
+                  "org.springframework.cglib.core.SpringNamingPolicy")))
+             #t))
          (add-before 'build 'remove-jruby
            (lambda _
              (delete-file-recursively
@@ -2463,11 +2824,15 @@ import javax.el.ELContext;"))
              #t)))))
     (inputs
      `(("groovy" ,groovy)
+       ("java-aspectj-weaver" ,java-aspectj-weaver)
        ("java-bsh" ,java-bsh)
        ("java-cglib" ,java-cglib)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-concurrency-api" ,java-concurrency-api)
+       ("java-hibernate-validator-engine" ,java-hibernate-validator-engine)
+       ("java-javax-ejb" ,java-javax-ejb)
        ("java-javax-inject" ,java-javax-inject)
+       ("java-javax-interceptor" ,java-javax-interceptor)
        ("java-javax-validation" ,java-javax-validation)
        ("java-joda-time" ,java-joda-time)
        ("java-snakeyaml" ,java-snakeyaml)
@@ -4351,30 +4716,29 @@ namespaces.")
     (description "")
     (license license:bsd-2)))
 
-;; vanished from the face of the earth :/
 (define-public java-jsonp
   (package
     (name "java-jsonp")
-    (version "1.0.4")
+    (version "1.1.3")
     (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "git://java.net/jsonp~git")
-                     (commit "a586e706aea82dc80fb05bdf59f2a25150ee1801")))
+              (method url-fetch)
+              (uri (string-append "https://github.com/eclipse-ee4j/jsonp/archive/"
+                                  version "-RELEASE.tar.gz"))
               (file-name (string-append name "-" version))
               (sha256
                (base32
-                "01r4syivcywpvxkr1hn0az9316pr7qpnx154zzzw0nijfmdlbw7n"))))
+                "15d7rp4xb482h8r0j3j83wa34bmz84q89s9n8ydfgz6l492syfhc"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
+     `(#:jar-name "jsonp.jar"
        #:tests? #f
-       #:source-dir "api/src"))
-    (home-page "https://jsonp.java.net")
+       #:source-dir "api/src/main/java"
+       #:test-dir "api/src/test"))
+    (home-page "https://javaee.github.io/jsonp/")
     (synopsis "")
     (description "")
     (license (list license:gpl2
-                   license:cddl1.1))))
+                   license:epl2.0))))
 
 (define-public ant-junit
   (package
