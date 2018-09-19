@@ -442,8 +442,10 @@ provers.")
                                "/lib/ocaml/site-lib")))
              #t)))))
     (home-page "https://github.com/ocaml/num")
-    (synopsis "")
-    (description "")
+    (synopsis "Arbitrary-precision integer and rational arithmetic")
+    (description "OCaml-Num contains the legacy Num library for
+arbitrary-precision integer and rational arithmetic that used to be part of
+the OCaml core distribution.")
     (license license:lgpl2.1+))); with linking exception
 
 (define-public coq-8.7
