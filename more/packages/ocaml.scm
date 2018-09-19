@@ -52,6 +52,62 @@
                  (number->string file-number) "/" name "-" version
                  ".tar.gz"))
 
+(define-public ocaml-4.07
+  (package
+    (inherit ocaml)
+    (version "4.07.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append
+                    "http://caml.inria.fr/pub/distrib/ocaml-"
+                    (version-major+minor version)
+                    "/ocaml-" version ".tar.xz"))
+              (sha256
+               (base32
+                "03wzkzv6w4rdiiva20g5amz0n4x75swpjl8d80468p6zm8hgfnzl"))))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'patch-/bin/sh-references
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let* ((sh (string-append (assoc-ref inputs "bash")
+                                       "/bin/sh"))
+                    (quoted-sh (string-append "\"" sh "\"")))
+               (with-fluids ((%default-port-encoding #f))
+                 (for-each
+                  (lambda (file)
+                    (substitute* file
+                      (("\"/bin/sh\"")
+                       (begin
+                         (format (current-error-port) "\
+patch-/bin/sh-references: ~a: changing `\"/bin/sh\"' to `~a'~%"
+                                 file quoted-sh)
+                         quoted-sh))))
+                  (find-files "." "\\.ml$"))
+                 #t))))
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (mandir (string-append out "/share/man")))
+               ;; Custom configure script doesn't recognize
+               ;; --prefix=<PREFIX> syntax (with equals sign).
+               (invoke "./configure"
+                       "--prefix" out
+                       "--mandir" mandir))
+             #t))
+         (replace 'build
+           (lambda _
+             (invoke "make" "-j" (number->string
+                                  (parallel-job-count))
+                     "world.opt")
+             #t))
+         (delete 'check)
+         (add-after 'install 'check
+           (lambda _
+             (with-directory-excursion "testsuite"
+               (invoke "make" "all"))
+             #t)))))))
+
 (define-public ocaml-fix
   (package
     (inherit ocaml)
