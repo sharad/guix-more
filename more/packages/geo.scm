@@ -40,7 +40,7 @@
 (define-public tegola
   (package
     (name "tegola")
-    (version "0.6.3")
+    (version "0.7.0")
     (source (origin
               (method url-fetch)
               (uri (string-append
@@ -48,7 +48,7 @@
                      version ".tar.gz"))
               (sha256
                (base32
-                "0172ikggayprxmhhm9yfk1gc4i8m48llc8zzgqklbijkdpvp1zh0"))))
+                "09vnzxfn0r70kmd776kcdfqxhzdj11syxa0b27z4ci1k367v7viw"))))
     (build-system go-build-system)
     (arguments
      `(#:import-path "github.com/go-spatial/tegola/cmd/tegola"
