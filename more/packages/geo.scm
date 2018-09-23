@@ -20,14 +20,17 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
+  #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system go)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
+  #:use-module (gnu packages boost)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages geo)
   #:use-module (gnu packages image)
+  #:use-module (gnu packages lua)
   #:use-module (gnu packages pcre)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages pkg-config)
@@ -128,3 +131,61 @@ delivered to any client.")
     (synopsis "")
     (description "")
     (license license:agpl3+)))
+
+(define-public osm2pgsql
+  (package
+    (name "osm2pgsql")
+    (version "0.96.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/openstreetmap/osm2pgsql/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "08y7776r4l9v9177a4q6cfdri0lpirky96m6g699hwl7v1vhw0mn"))))
+    (build-system cmake-build-system)
+    (arguments
+      ;; failure :/
+     `(#:tests? #f))
+    (inputs
+     `(("boost" ,boost)
+       ("expat" ,expat)
+       ("lua" ,lua)
+       ("postgresql" ,postgresql)
+       ("proj.4" ,proj.4)
+       ("zlib" ,zlib)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl2)))
+
+(define-public tippecanoe
+  (package
+    (name "tippecanoe")
+    (version "1.31.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/mapbox/tippecanoe/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1057na1dkgjaryr7jr15lqkxpam111d3l5zdpdkqzzzpxmdjxqcf"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases (delete 'configure))
+       #:test-target "test"
+       #:make-flags
+       (list "CC=gcc"
+             (string-append "PREFIX=" (assoc-ref %outputs "out")))))
+    (inputs
+     `(("sqlite" ,sqlite)
+       ("zlib" ,zlib)))
+    (native-inputs
+     `(("perl" ,perl)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-2)))
