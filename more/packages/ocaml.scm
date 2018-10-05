@@ -448,6 +448,56 @@ arbitrary-precision integer and rational arithmetic that used to be part of
 the OCaml core distribution.")
     (license license:lgpl2.1+))); with linking exception
 
+(define-public coq-8.6
+  (package
+    (inherit coq)
+    (name "coq")
+    (version "8.6.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/coq/coq/archive/V"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "02nm5sn79hrb9fdmkhyclk80jydadf4jcafmr3idwr5h4z56qbms"))))
+    ;(native-inputs
+    ; `(("ocamlbuild" ,ocaml-build)
+    ;   ("hevea" ,hevea)
+    ;   ("texlive" ,texlive)))
+    ;(inputs
+    ; `(("lablgtk" ,lablgtk)
+    ;   ("python" ,python-2)
+    ;   ("camlp5" ,camlp5)))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (mandir (string-append out "/share/man"))
+                    (browser "icecat -remote \"OpenURL(%s,new-tab)\""))
+               (invoke "./configure"
+                       "-prefix" out
+                       "-mandir" mandir
+                       "-browser" browser
+                       "-coqide" "opt"))
+             #t))
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "ide/ideutils.ml"
+               (("Bytes.unsafe_to_string read_string") "read_string"))
+             (invoke "make" "-j" (number->string
+                                  (parallel-job-count))
+                     "world")
+             #t))
+         (delete 'check)
+         (add-after 'install 'check
+           (lambda _
+             (with-directory-excursion "test-suite"
+               (invoke "make"))
+             #t)))))))
+
 (define-public coq-8.7
   (package
     (inherit coq)
@@ -881,3 +931,20 @@ algorithms are typical examples of such systems.")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
+
+(define-public opam2
+  (package
+    (inherit opam)
+    (version "2.0.0")
+    (source (origin
+              (method url-fetch)
+              ;; Use the '-full' version, which includes all the dependencies.
+              (uri (string-append
+                    "https://github.com/ocaml/opam/releases/download/"
+                    version "/opam-full-" version ".tar.gz")
+               ;; (string-append "https://github.com/ocaml/opam/archive/"
+               ;;                    version ".tar.gz")
+               )
+              (sha256
+               (base32
+                "09gdpxiqmyr6z78l85d7pwhiwrycdi2xi1b2mafqr1sk9z5lzbcx"))))))
