@@ -716,7 +716,7 @@ navigated in, similar to a file or stream.")
                (("/opt/local/lib/libenchant.dylib\"")
                 (string-append "/opt/local/lib/libenchant.dylib\"\n"
                                "    yield \"" (assoc-ref inputs "enchant")
-                               "/lib/libenchant.so\""))))))))
+                               "/lib/libenchant-2.so\""))))))))
              ;(setenv "PYENCHANT_LIBRARY_PATH"
              ;        (string-append (assoc-ref inputs "enchant") "/lib/libenchant.so")))))))
     (propagated-inputs
@@ -736,20 +736,20 @@ navigated in, similar to a file or stream.")
     (source (origin
               (method git-fetch)
               (uri (git-reference
-                     (url "https://framagit.org/tyreunom/offlate")
-                     (commit "52edc87f21e89eaea8eef21e376ef02b0a8d1cbb")))
+                     (url "https://framagit.org/tyreunom/offlate.git")
+                     (commit "28fa87a163aa40d6770390792ce17e583618fb80")))
               (sha256
                (base32
-                "0rdg2vv16wld4zsf8jnk1ghc08wi05ydny6z9z0jj4f7ra64zbw0"))))
+                "0hcg7fiwa51jfm8jgz65vjakid38kfsrrc805f4imldmv9j9gf3a"))))
     (build-system python-build-system)
     (arguments
-     `(#:tests? #f
+     `(#:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-translations
-         (lambda _
-           (invoke "make" "update-langs")
-           #t)))))
+           (lambda _
+             (invoke "make" "update-langs")
+             #t)))))
     (propagated-inputs
      `(("python-android-stringslib" ,python-android-stringslib)
        ("python-dateutil" ,python-dateutil)
@@ -759,6 +759,8 @@ navigated in, similar to a file or stream.")
        ("python-polib" ,python-polib)
        ("python-pyqt" ,python-pyqt)
        ("python-requests" ,python-requests)))
+    (native-inputs
+     `(("qt" ,qt)))
     (home-page "https://framagit.org/tyreunom/offlate")
     (synopsis "")
     (description "")
