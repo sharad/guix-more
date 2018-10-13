@@ -28,6 +28,8 @@
   #:use-module (gnu packages boost)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
+  #:use-module (gnu packages datastructures)
+  #:use-module (gnu packages documentation)
   #:use-module (gnu packages geo)
   #:use-module (gnu packages image)
   #:use-module (gnu packages lua)
@@ -66,6 +68,60 @@
 takes geospatial data and slices it into vector tiles that can be efficiently
 delivered to any client.")
     (license license:expat)))
+
+(define-public protozero
+  (package
+    (name "protozero")
+    (version "1.6.3")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "https://github.com/mapbox/protozero/archive/v"
+			    version ".tar.gz"))
+	(file-name (string-append name "-" version ".tar.gz"))
+        (sha256
+         (base32
+          "1xaj4phz1r7xn0vgdfvfkz8b0bizgb6mavjky1zqcvdmbwgwgly5"))))
+    (build-system cmake-build-system)
+    (home-page "https://github.com/mapbox/protozero")
+    (synopsis "Minimalistic protocol buffer decoder and encoder in C++")
+    (description "Protozero is a minimalistic protocol buffer decored and
+encoder in C++.  The developer using protozero has to manually translate the
+@file{.proto} description into code.")
+    (license (list
+	       license:asl2.0; for folly
+	       license:bsd-2))))
+
+(define-public libosmium
+  (package
+    (name "libosmium")
+    (version "2.14.2")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "https://github.com/osmcode/libosmium/archive/v"
+			    version ".tar.gz"))
+	(file-name (string-append name "-" version ".tar.gz"))
+        (sha256
+         (base32
+          "0d9b46qiw7zkw1h9lygjdwqxnbhm3c7v8kydzw9f9f778cyagc94"))))
+    (build-system cmake-build-system)
+    (inputs
+     `(("boost" ,boost)
+       ("expat" ,expat)
+       ("gdal" ,gdal)
+       ("geos" ,geos)
+       ("proj.4" ,proj.4)
+       ("protozero" ,protozero)
+       ("sparsehash" ,sparsehash)
+       ("zlib" ,zlib)))
+    (native-inputs
+     `(("doxygen" ,doxygen)))
+    (home-page "https://osmcode.org/libosmium")
+    (synopsis "C++ library for working with OpenStreetMap data")
+    (description "Libosmium is a fast and flexible C++ library for working with
+OpenStreetMap data.")
+    (license license:boost1.0)))
 
 (define-public imposm3
   (package
@@ -146,7 +202,7 @@ delivered to any client.")
                 "08y7776r4l9v9177a4q6cfdri0lpirky96m6g699hwl7v1vhw0mn"))))
     (build-system cmake-build-system)
     (arguments
-      ;; failure :/
+      ;; failure
      `(#:tests? #f))
     (inputs
      `(("boost" ,boost)

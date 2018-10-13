@@ -1254,7 +1254,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "14066")
+    (version "14178")
     (source (origin
               (method svn-fetch)
               (uri (svn-reference
@@ -1262,7 +1262,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                     (revision (string->number version))))
               (sha256
                (base32
-                "1kf7cr80n2y9dwjabn8l9r5n64kjf8vk0ial1fzc870gg785s7cw"))
+                "1k03g6kxzs8gwswc48cgx6m689sssg73m1yfjdqc8zsky75fmz2d"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
@@ -5820,7 +5820,6 @@ import java.util.Collection;")
     (native-inputs
      `(("icedtea-8" ,icedtea-8)
        ("icedtea-8:jdk" ,icedtea-8 "jdk")
-       ("gcc" ,gcc)
        ("unzip" ,unzip)
        ("which" ,which)
        ("zip" ,zip)))
