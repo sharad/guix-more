@@ -1478,7 +1478,7 @@ from ORO, Inc.")
     (version "1.9.1")
     (source (origin
               (method url-fetch)
-              (uri (string-append "http://eclipsemirror.itemis.de/eclipse/tools"
+              (uri (string-append "https://eclipsemirror.itemis.de/eclipse/tools"
                                   "/aspectj/aspectj-" version "-src.jar"))
               (sha256
                (base32
@@ -2353,8 +2353,35 @@ import javax.el.ELContext;"))
     (license (list license:epl2.0 license:gpl2+))))
 
 ;; JSR380 jsr380
+(define-public java-javax-validation-1
+  (package
+    (name "java-javax-validation-1")
+    (version "1.0.0.GA")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/beanvalidation/"
+                                  "beanvalidation-api/archive/" version
+                                  ".tar.gz"))
+              (sha256
+               (base32
+                "03i6p5snm6chpsj62lrvnwq9qr120iv9a6bhkkbqr1j48d2bp8iv"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "javax-validation.jar"
+       #:tests? #f; require an implementation like Hibernate Validator
+       #:source-dir "src/main/java"))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-testng" ,java-testng)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+;; JSR380 jsr380
 (define-public java-javax-validation
   (package
+    (inherit java-javax-validation-1)
     (name "java-javax-validation")
     (version "2.0.1")
     (source (origin
@@ -2365,24 +2392,14 @@ import javax.el.ELContext;"))
               (sha256
                (base32
                 "0mmzwrgwfvi68jfjh8ijy8za3wmp5rmwsplyghwyf9lwb9p5x5qz"))))
-    (build-system ant-build-system)
     (arguments
-     `(#:jar-name "javax-validation.jar"
-       #:tests? #f; require an implementation like Hibernate Validator
-       #:source-dir "src/main/java"
-       #:phases
+     `(#:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
            (lambda _
              (copy-recursively "src/main/resources" "build/classes")
-             #t)))))
-    (native-inputs
-     `(("java-hamcrest-core" ,java-hamcrest-core)
-       ("java-testng" ,java-testng)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
+             #t)))
+       ,@(package-arguments java-javax-validation-1)))))
 
 (define-public java-fasterxml-classmate
   (package
@@ -2634,12 +2651,31 @@ final Map<String, Object> map = map2;"))
               (sha256
                (base32
                 "1ifyqgvlzv9fxgw9ssd6slpv0ky9cgxc1xg2rwqiw1nmwgndjnkb"))))
+                ;"107220ydll2fgvqzmzrby7b65vi4hsvrnmbb6idrxfmckm05grn4"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "hibernate-validator-engine.jar"
        #:source-dir "engine/src/main/java"
+       #:test-dir "engine/src/test"
+       #:tests? #f; Require more parts of hibernate?
        #:phases
        (modify-phases %standard-phases
+         (add-before 'build 'generate-sources
+           (lambda _
+             (invoke "xjc" "-d" "engine/src/main/java"
+                     "-p" "org.hibernate.validator.internal.xml" "-extension"
+                     "engine/src/main/xsd/validation-configuration-1.0.xsd")
+             (invoke "xjc" "-d" "engine/src/main/java"
+                     "-p" "org.hibernate.validator.internal.xml" "-extension"
+                     "-b" "engine/src/main/xjb/binding-customization.xjb"
+                     "engine/src/main/xsd/validation-mapping-1.0.xsd")
+             #t))
+         (add-before 'build 'fix-getters
+           (lambda _
+             (substitute* (find-files "." ".*.java")
+               (("getIgnoreAnnotations") "isIgnoreAnnotations")
+               (("getIncludeExistingValidators") "isIncludeExistingValidators"))
+             #t))
          (add-before 'build 'copy-resources
            (lambda _
              (copy-recursively "engine/src/main/resources" "build/classes")
@@ -2647,13 +2683,16 @@ final Map<String, Object> map = map2;"))
     (inputs
      `(("java-fasterxml-classmate" ,java-fasterxml-classmate)
        ("java-javax-persistence" ,java-javax-persistence)
-       ("java-javax-validation" ,java-javax-validation)
+       ("java-javax-validation-1" ,java-javax-validation-1)
        ("java-jboss-logging" ,java-jboss-logging)
        ("java-jboss-logging-annotations" ,java-jboss-logging-annotations)
        ("java-joda-time" ,java-joda-time)
        ("java-jsoup" ,java-jsoup)
        ;; For javax-el (el-api)
        ("java-tomcat" ,java-tomcat)))
+    (native-inputs
+     `(("java-easymock" ,java-easymock)
+       ("java-testng" ,java-testng)))
     (home-page "https://hibernate.org/validator/")
     (synopsis "")
     (description "")
