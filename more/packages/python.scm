@@ -25,6 +25,7 @@
   #:use-module (gnu packages compression)
   #:use-module (gnu packages databases)
   #:use-module (gnu packages enchant)
+  #:use-module (gnu packages libffi)
   #:use-module (gnu packages libreoffice)
   #:use-module (gnu packages maths)
   #:use-module (gnu packages networking)
@@ -35,6 +36,7 @@
   #:use-module (gnu packages serialization)
   #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
+  #:use-module (gnu packages web)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
@@ -765,3 +767,375 @@ navigated in, similar to a file or stream.")
     (synopsis "")
     (description "")
     (license license:gpl3+)))
+
+(define-public python-zope.interface
+  (package
+    (name "python-zope.interface")
+    (version "4.5.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "zope.interface" version))
+        (sha256
+          (base32
+            "0k67m60ij06wkg82n15qgyn96waf4pmrkhv0njpkfzpmv5q89hsp"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f))
+    (home-page
+      "https://github.com/zopefoundation/zope.interface")
+    (synopsis "Interfaces for Python")
+    (description "Interfaces for Python")
+    (license #f)))
+
+(define-public python-hkdf
+  (package
+    (name "python-hkdf")
+    (version "0.0.3")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "hkdf" version))
+              (sha256
+               (base32
+                "1jhxk5vhxmxxjp3zj526ry521v9inzzl8jqaaf0ma65w6k332ak2"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("python-nose" ,python-nose)))
+    (home-page
+      "https://github.com/casebeer/python-hkdf")
+    (synopsis
+      "HMAC-based Extract-and-Expand Key Derivation Function (HKDF)")
+    (description
+      "HMAC-based Extract-and-Expand Key Derivation Function (HKDF)")
+    (license #f)))
+
+(define-public python-geoip
+  (package
+    (name "python-geoip")
+    (version "1.3.2")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "geoip" version))
+              (sha256
+               (base32
+                "1rphxf3vrn8wywjgr397f49s0s22m83lpwcq45lm0h2p45mdm458"))))
+    (build-system python-build-system)
+    (home-page "http://www.maxmind.com/")
+    (synopsis
+      "MaxMind GeoIP Legacy Database - Python API")
+    (description
+      "MaxMind GeoIP Legacy Database - Python API")
+    (license #f)))
+
+(define-public python-hyperlink
+  (package
+    (name "python-hyperlink")
+    (version "18.0.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "hyperlink" version))
+        (sha256
+          (base32
+            "01m3y19arfqljksngy8grc966zdb4larysralb8cajzi8kvly6zh"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(("python-idna" ,python-idna)))
+    (home-page
+      "https://github.com/python-hyper/hyperlink")
+    (synopsis
+      "A featureful, immutable, and correct URL for Python.")
+    (description
+      "A featureful, immutable, and correct URL for Python.")
+    (license license:expat)))
+
+(define-public python-twisted-for-wormhole
+  (package
+    (inherit python-twisted)
+    (name "python-twisted")
+    (version "18.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "Twisted" version ".tar.bz2"))
+              (sha256
+               (base32
+                "15d3gmkrg8g27hyd6ihawv2y2dv5gnpyg67wy9npgbl4pz3f4jr9"))))
+    (propagated-inputs
+     `(("python-pyhamcrest" ,python-pyhamcrest)
+       ("python-service-identity" ,python-service-identity)
+       ("python-hyperlink" ,python-hyperlink)
+       ,@(package-propagated-inputs python-twisted)))))
+
+(define-public python-txaio
+  (package
+    (name "python-txaio")
+    (version "18.8.1")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "txaio" version))
+        (sha256
+          (base32
+            "1zmpdph6zddgrnkkcykh6qk5s46l7s5mzfqrh82m4b5iffn61qv7"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(;("python-[all]" ,#{python-\x5b;all\x5d;}#)
+        ;("python-[asyncio]"
+        ; ,#{python-\x5b;asyncio\x5d;}#)
+        ;("python-[dev]" ,#{python-\x5b;dev\x5d;}#)
+        ;("python-[twisted]"
+        ; ,#{python-\x5b;twisted\x5d;}#)
+        ("python-mock" ,python-mock)
+        ("python-pep8" ,python-pep8)
+        ("python-pyenchant" ,python-pyenchant)
+        ("python-pytest" ,python-pytest)
+        ("python-pytest-cov" ,python-pytest-cov)
+        ("python-six" ,python-six)
+        ("python-sphinx" ,python-sphinx)
+        ;("python-sphinx-rtd-theme"
+        ; ,python-sphinx-rtd-theme)
+        ;("python-sphinxcontrib-spelling"
+        ; ,python-sphinxcontrib-spelling)
+        ("python-tox" ,python-tox)
+        ("python-twine" ,python-twine)
+        ("python-twisted" ,python-twisted)
+        ("python-wheel" ,python-wheel)
+        ("python-zope.interface" ,python-zope.interface)))
+    (home-page "https://github.com/crossbario/txaio")
+    (synopsis
+      "Compatibility API between asyncio/Twisted/Trollius")
+    (description
+      "Compatibility API between asyncio/Twisted/Trollius")
+    (license #f)))
+
+(define-public python-txtorcon
+  (package
+    (name "python-txtorcon")
+    (version "18.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "txtorcon" version))
+              (sha256
+               (base32
+                "1c7qfpr1zz34whz66lk4xpwdn7d5jqk6ccgas5n54li479mra0an"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f))
+    (propagated-inputs
+     `(;("python-codecov" ,python-codecov)
+       ;("python-coverage" ,python-coverage)
+       ;("python-coveralls" ,python-coveralls)
+       ;("python-cuvner" ,python-cuvner)
+       ;("python-geoip" ,python-geoip)
+       ("python-ipaddress" ,python-ipaddress)
+       ("python-mock" ,python-mock)
+       ("python-pycodestyle" ,python-pycodestyle)
+       ("python-pyflakes" ,python-pyflakes)
+       ;("python-readme-renderer" ,python-readme-renderer)
+       ;("python-repoze.sphinx.autointerface" ,python-repoze.sphinx.autointerface)
+       ("python-setuptools" ,python-setuptools)
+       ("python-sphinx" ,python-sphinx)
+       ("python-tox" ,python-tox)
+       ("python-twine" ,python-twine)
+       ("python-wheel" ,python-wheel)))
+    (home-page "")
+    (synopsis
+      "Twisted-based Tor controller client, with state-tracking and configuration abstractions. https://txtorcon.readthedocs.org https://github.com/meejah/txtorcon")
+    (description
+      "Twisted-based Tor controller client, with state-tracking and configuration abstractions. https://txtorcon.readthedocs.org https://github.com/meejah/txtorcon")
+    (license #f)))
+
+(define-public python-spake2
+  (package
+    (name "python-spake2")
+    (version "0.8")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "spake2" version))
+              (sha256
+               (base32
+                "1x16r7lrbklvfzbacb66qv9iiih6liq1y612dqh2chgf555n2yn1"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-hkdf" ,python-hkdf)))
+    (home-page
+      "https://github.com/warner/python-spake2")
+    (synopsis
+      "SPAKE2 password-authenticated key exchange (pure python)")
+    (description
+      "SPAKE2 password-authenticated key exchange (pure python)")
+    (license license:expat)))
+
+(define-public python-humanize
+  (package
+    (name "python-humanize")
+    (version "0.5.1")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "humanize" version))
+              (sha256
+               (base32
+                "06dvhm3k8lf2rayn1gxbd46y0fy1db26m3h9vrq7rb1ib08mfgx4"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f))
+    (home-page "http://github.com/jmoiron/humanize")
+    (synopsis "python humanize utilities")
+    (description "python humanize utilities")
+    (license license:expat)))
+
+(define-public python-service-identity
+  (package
+    (name "python-service-identity")
+    (version "17.0.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "service_identity" version))
+        (sha256
+          (base32
+            "1aq24cn3nnsjr9g797dayhx4g653h6bd41ksqhidzq0rvarzn0a0"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(("python-attrs" ,python-attrs)
+        ("python-pyasn1" ,python-pyasn1)
+        ("python-pyasn1-modules" ,python-pyasn1-modules)
+        ("python-pyopenssl" ,python-pyopenssl)))
+    (home-page
+      "https://service-identity.readthedocs.io/")
+    (synopsis
+      "Service identity verification for pyOpenSSL.")
+    (description
+      "Service identity verification for pyOpenSSL.")
+    (license license:expat)))
+
+(define-public python-pyhamcrest
+  (package
+    (name "python-pyhamcrest")
+    (version "1.9.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "pyhamcrest" version))
+        (sha256
+          (base32
+            "1kan3nyxs1dz333s7mfvjj47l8j6qxd1imyf2kg8jzm57njs1ylg"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f))
+    (propagated-inputs
+      `(("python-setuptools" ,python-setuptools)
+        ("python-six" ,python-six)))
+    (home-page
+      "https://github.com/hamcrest/PyHamcrest")
+    (synopsis
+      "Hamcrest framework for matcher objects")
+    (description
+      "Hamcrest framework for matcher objects")
+    (license #f)))
+
+(define-public python-autobahn
+  (package
+    (name "python-autobahn")
+    (version "18.9.2")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "autobahn" version))
+              (sha256
+               (base32
+                "1mhj64rsnbi6rc0hskmllw280rvd99z045p6dq8h0mw60r7r52yr"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f))
+    (propagated-inputs
+     `(;("python-[accelerate]"
+     ;,#{python-\x5b;accelerate\x5d;}#)
+     ;("python-[all]" ,#{python-\x5b;all\x5d;}#)
+     ;("python-[asyncio]"
+     ;,#{python-\x5b;asyncio\x5d;}#)
+     ;("python-[compress]"
+     ;,#{python-\x5b;compress\x5d;}#)
+     ;("python-[dev]" ,#{python-\x5b;dev\x5d;}#)
+     ;("python-[encryption]"
+     ;,#{python-\x5b;encryption\x5d;}#)
+     ;("python-[nvx]" ,#{python-\x5b;nvx\x5d;}#)
+     ;("python-[scram]" ,#{python-\x5b;scram\x5d;}#)
+     ;("python-[serialization]"
+     ;,#{python-\x5b;serialization\x5d;}#)
+     ;("python-[twisted]"
+     ;,#{python-\x5b;twisted\x5d;}#)
+     ;("python-argon2-cffi" ,python-argon2-cffi)
+     ;("python-awscli" ,python-awscli)
+     ("python-cbor" ,python-cbor)
+     ("python-cffi" ,python-cffi)
+     ("python-flake8" ,python-flake8)
+     ("python-lz4" ,python-lz4)
+     ("python-mock" ,python-mock)
+     ("python-passlib" ,python-passlib)
+     ;("python-pep8-naming" ,python-pep8-naming)
+     ("python-py-ubjson" ,python-py-ubjson)
+     ("python-pyenchant" ,python-pyenchant)
+     ("python-pyflakes" ,python-pyflakes)
+     ("python-pynacl" ,python-pynacl)
+     ("python-pyopenssl" ,python-pyopenssl)
+     ("python-pyqrcode" ,python-pyqrcode)
+     ;("python-pytest" ,python-pytest)
+     ;("python-pytest-aiohttp" ,python-pytest-aiohttp)
+     ;("python-pytest-asyncio" ,python-pytest-asyncio)
+     ;("python-pytrie" ,python-pytrie)
+     ;("python-qualname" ,python-qualname)
+     ("python-service-identity" ,python-service-identity)
+     ("python-six" ,python-six)
+     ;("python-snappy" ,python-snappy)
+     ("python-sphinx" ,python-sphinx)
+     ("python-sphinx-rtd-theme" ,python-sphinx-rtd-theme)
+     ;("python-sphinxcontrib-spelling" ,python-sphinxcontrib-spelling)
+     ("python-twine" ,python-twine)
+     ("python-twisted" ,python-twisted-for-wormhole)
+     ("python-txaio" ,python-txaio)
+     ;("python-u-msgpack-python" ,python-u-msgpack-python)
+     ("python-wheel" ,python-wheel)
+     ;("python-wsaccel" ,python-wsaccel)
+     ("python-zope.interface" ,python-zope.interface)))
+    (home-page "http://crossbar.io/autobahn")
+    (synopsis
+      "WebSocket client & server library, WAMP real-time framework")
+    (description
+      "WebSocket client & server library, WAMP real-time framework")
+    (license #f)))
+
+(define-public magic-wormhole
+  (package
+    (name "magic-wormhole")
+    (version "0.10.5")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "magic-wormhole" version))
+        (sha256
+          (base32
+            "1vhp97pdnqb8nd08pk9fn7mk5jwihdfcsqilxkg3brai6lgyln4m"))))
+    (build-system python-build-system)
+    (arguments
+     `(#:tests? #f))
+    (propagated-inputs
+      `(("python-attrs" ,python-attrs)
+        ("python-autobahn" ,python-autobahn)
+        ("python-automat" ,python-automat)
+        ("python-click" ,python-click)
+        ("python-hkdf" ,python-hkdf)
+        ("python-humanize" ,python-humanize)
+        ("python-ipaddress" ,python-ipaddress)
+        ("python-pynacl" ,python-pynacl)
+        ("python-six" ,python-six)
+        ("python-spake2" ,python-spake2)
+        ("python-tqdm" ,python-tqdm)
+        ("python-twisted" ,python-twisted-for-wormhole)
+        ("python-txtorcon" ,python-txtorcon)))
+    (home-page
+      "https://github.com/warner/magic-wormhole")
+    (synopsis
+      "Securely transfer data between computers")
+    (description
+      "Securely transfer data between computers")
+    (license license:expat)))
