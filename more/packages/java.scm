@@ -52,6 +52,45 @@
   #:use-module (more packages maven)
   #:use-module (more packages python))
 
+(define-public java-httpcomponents-httpasyncclient
+  (package
+    (name "java-httpcomponents-httpasyncclient")
+    (version "4.1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/httpcomponents/httpasyncclient/"
+                                  "source/httpcomponents-asyncclient-"
+                                  version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0xfc20zrwdym6g00sz5y38mdmcn4y2jikkmfgqyh9zm4nkyj7ci5"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "httpcomponents-httpasyncclient.jar"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _ (chdir "httpasyncclient") #t)))))
+    (inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-commons-codec" ,java-commons-codec)
+       ("java-commons-io" ,java-commons-io)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
+       ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
+       ("java-httpcomponents-httpcore-nio" ,java-httpcomponents-httpcore-nio)
+       ("java-mockito" ,java-mockito-1)
+       ("java-junit" ,java-junit)))
+    (home-page "https://hc.apache.org/httpcomponents-asyncclient-ga/")
+    (synopsis "HTTP client library for Java")
+    (description "Although the @code{java.net} package provides basic
+functionality for accessing resources via HTTP, it doesn't provide the full
+flexibility or functionality needed by many applications.  @code{HttpAsyncClient}
+seeks to fill this void by providing an efficient, up-to-date, and
+feature-rich package implementing the client side of the most recent HTTP
+standards and recommendations.")
+    (license license:asl2.0)))
+
 (define-public java-fastutil
   (package
     (name "java-fastutil")
@@ -2762,10 +2801,30 @@ final Map<String, Object> map = map2;"))
              ;; Needed because tests look for data in src/... directly.
              (chdir "spring-core")
              #t))
+         (add-before 'configure 'unbundle-asm
+           (lambda _
+             (with-directory-excursion "src/main/java/org/springframework/asm"
+               (for-each delete-file
+                         (filter (lambda (file) (not (string=? file "./SpringAsmInfo.java")))
+                           (find-files "." ".*.java")))
+               (substitute* "SpringAsmInfo.java"
+                 (("package org.springframework.asm;")
+                  "package org.springframework.asm;
+
+import org.objectweb.asm.Opcodes;")))
+             #t))
          (add-before 'configure 'rename-dep
            (lambda _
              (substitute* "src/main/java/org/springframework/objenesis/SpringObjenesis.java"
-               (("org.springframework.objenesis") "org.objenesis"))
+               (("org.springframework.objenesis\\.") "org.objenesis.")
+               (("import org.springframework.util.ConcurrentReferenceHashMap;")
+                "import org.springframework.util.ConcurrentReferenceHashMap;
+import org.objenesis.Objenesis;
+import org.objenesis.ObjenesisException;"))
+             (substitute* (find-files "." ".*.java")
+               (("org.springframework.asm\\.") "org.objectweb.asm.")
+               (("org.objectweb.asm.SpringAsmInfo")
+                "org.springframework.asm.SpringAsmInfo"))
              #t))
          (add-before 'configure 'add-import
            (lambda _
@@ -2789,17 +2848,17 @@ final Map<String, Object> map = map2;"))
                    (find-files "." ".*"))))
              #t)))))
     (inputs
-     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ("java-jopt-simple" ,java-jopt-simple)
-       ("java-commons-codec" ,java-commons-codec)
-       ("java-log4j-1.2-api" ,java-log4j-1.2-api)
-       ("java-objenesis" ,java-objenesis)
+     `(("java-asm" ,java-asm)
+       ("java-aspectj-weaver" ,java-aspectj-weaver)
        ("java-cglib" ,java-cglib)
-       ("java-aspectj-weaver" ,java-aspectj-weaver)))
+       ("java-commons-codec" ,java-commons-codec)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-jopt-simple" ,java-jopt-simple)
+       ("java-log4j-1.2-api" ,java-log4j-1.2-api)
+       ("java-objenesis" ,java-objenesis)))
     (native-inputs
      `(("java-junit" ,java-junit)
        ("java-hamcrest-all" ,java-hamcrest-all)
-       ("java-asm" ,java-asm)
        ("java-jboss-annotations-api-spec" ,java-jboss-annotations-api-spec)
        ("java-xmlunit-legacy" ,java-xmlunit-legacy)
        ("java-xmlunit" ,java-xmlunit)
@@ -2945,7 +3004,9 @@ final Map<String, Object> map = map2;"))
                (("org.springframework.cglib") "net.sf.cglib")
                (("net.sf.cglib.core.SpringNamingPolicy") "org.springframework.cglib.core.SpringNamingPolicy"))
              (substitute* "src/main/java/org/springframework/aop/framework/ObjenesisCglibAopProxy.java"
-               (("org.springframework.objenesis") "org.objenesis"))
+               (("org.springframework.objenesis") "org.objenesis")
+               (("org.objenesis.SpringObjenesis")
+                "org.springframework.objenesis.SpringObjenesis"))
              #t))
          (add-before 'check 'copy-test-classes
            (lambda _
@@ -3004,14 +3065,17 @@ final Map<String, Object> map = map2;"))
        ("java-objenesis" ,java-objenesis)
        ;; Note: for javax-el (el-api)
        ("java-tomcat" ,java-tomcat)))
+    (native-inputs
+     `(("java-asm" ,java-asm)
+       ,@(package-native-inputs java-spring-framework-core)))
     (description "")))
 
-(define-public java-spring-framework-context
+(define-public java-spring-framework-instrument
   (package
     (inherit java-spring-framework-core)
-    (name "java-spring-framework-context")
+    (name "java-spring-framework-instrument")
     (arguments
-     `(#:jar-name "java-spring-framework-context.jar"
+     `(#:jar-name "java-spring-framework-instrument.jar"
        #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
@@ -3020,23 +3084,7 @@ final Map<String, Object> map = map2;"))
          (add-before 'configure 'chdir
            (lambda _
              ;; Needed because tests look for data in src/... directly.
-             (chdir "spring-context")
-             #t))
-         (add-before 'build 'fix-cglib
-           (lambda _
-             (with-directory-excursion "src/main/java/org/springframework"
-               (substitute*
-                 (list
-                   "context/annotation/ConfigurationClassEnhancer.java"
-                   "scripting/support/ScriptFactoryPostProcessor.java")
-                 (("org.springframework.cglib") "net.sf.cglib")
-                 (("net.sf.cglib.core.SpringNamingPolicy")
-                  "org.springframework.cglib.core.SpringNamingPolicy")))
-             #t))
-         (add-before 'build 'remove-jruby
-           (lambda _
-             (delete-file-recursively
-               "src/main/java/org/springframework/scripting/jruby")
+             (chdir "spring-instrument")
              #t))
          (add-before 'build 'copy-resources
            (lambda _
@@ -3047,27 +3095,7 @@ final Map<String, Object> map = map2;"))
              (copy-recursively "src/test/resources"
                                "build/test-classes")
              #t)))))
-    (inputs
-     `(("groovy" ,groovy)
-       ("java-aspectj-weaver" ,java-aspectj-weaver)
-       ("java-bsh" ,java-bsh)
-       ("java-cglib" ,java-cglib)
-       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ("java-concurrency-api" ,java-concurrency-api)
-       ("java-hibernate-validator-engine" ,java-hibernate-validator-engine)
-       ("java-javax-ejb" ,java-javax-ejb)
-       ("java-javax-inject" ,java-javax-inject)
-       ("java-javax-interceptor" ,java-javax-interceptor)
-       ("java-javax-validation" ,java-javax-validation)
-       ("java-joda-time" ,java-joda-time)
-       ("java-snakeyaml" ,java-snakeyaml)
-       ("java-spring-framework-aop" ,java-spring-framework-aop)
-       ("java-spring-framework-beans" ,java-spring-framework-beans)
-       ("java-spring-framework-beans-groovy" ,java-spring-framework-beans-groovy)
-       ("java-spring-framework-core" ,java-spring-framework-core)
-       ("java-spring-framework-expression" ,java-spring-framework-expression)
-       ;; Note: for javax-el (el-api)
-       ("java-tomcat" ,java-tomcat)))
+    (inputs '())
     (description "")))
 
 (define-public java-spring-framework-test
@@ -3100,6 +3128,122 @@ final Map<String, Object> map = map2;"))
        ("java-spring-framework-web" ,java-spring-framework-web)))
     (description "")))
 
+(define-public java-spring-framework-context
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-context")
+    (arguments
+     `(#:jar-name "java-spring-framework-context.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:tests? #f; TODO: require spring-framework-test
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-context")
+             #t))
+         (add-before 'build 'fix-cglib
+           (lambda _
+             (with-directory-excursion "src/main/java/org/springframework"
+               (substitute*
+                 (list
+                   "context/expression/MapAccessor.java"
+                   "context/annotation/ConfigurationClassEnhancer.java"
+                   "scripting/support/ScriptFactoryPostProcessor.java")
+                 (("org.springframework.objenesis.ObjenesisException")
+                  "org.objenesis.ObjenesisException")
+                 (("org.springframework.asm") "org.objectweb.asm")
+                 (("org.springframework.cglib") "net.sf.cglib")
+                 (("net.sf.cglib.core.SpringNamingPolicy")
+                  "org.springframework.cglib.core.SpringNamingPolicy")))
+             #t))
+         (add-before 'build 'remove-jruby
+           (lambda _
+             (delete-file-recursively
+               "src/main/java/org/springframework/scripting/jruby")
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-recursively "src/test/resources"
+                               "build/test-classes")
+             #t)))))
+    (inputs
+     `(("groovy" ,groovy)
+       ("java-asm" ,java-asm)
+       ("java-aspectj-weaver" ,java-aspectj-weaver)
+       ("java-bsh" ,java-bsh)
+       ("java-cglib" ,java-cglib)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-concurrency-api" ,java-concurrency-api)
+       ("java-hibernate-validator-engine" ,java-hibernate-validator-engine)
+       ("java-javax-ejb" ,java-javax-ejb)
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-javax-interceptor" ,java-javax-interceptor)
+       ("java-javax-validation-1" ,java-javax-validation-1)
+       ("java-joda-time" ,java-joda-time)
+       ("java-objenesis" ,java-objenesis)
+       ("java-snakeyaml" ,java-snakeyaml)
+       ("java-spring-framework-aop" ,java-spring-framework-aop)
+       ("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-beans-groovy" ,java-spring-framework-beans-groovy)
+       ("java-spring-framework-core" ,java-spring-framework-core)
+       ("java-spring-framework-expression" ,java-spring-framework-expression)
+       ("java-spring-framework-instrument" ,java-spring-framework-instrument)
+       ;; Note: for javax-el (el-api)
+       ("java-tomcat" ,java-tomcat)))
+    ;(native-inputs
+    ; `(("java-spring-framework-test" ,java-spring-framework-test)
+    ;   ,@(package-native-inputs java-spring-framework-core)))
+    (description "")))
+
+(define-public java-spring-framework-web
+  (package
+    (inherit java-spring-framework-core)
+    (name "java-spring-framework-web")
+    (arguments
+     `(#:jar-name "java-spring-framework-web.jar"
+       #:jdk ,icedtea-8
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'chdir
+           (lambda _
+             ;; Needed because tests look for data in src/... directly.
+             (chdir "spring-web")
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         ;(add-before 'check 'copy-test-classes
+         ;  (lambda _
+         ;    (mkdir-p "src/test/java/org/springframework/tests")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/TestGroup.java"
+         ;               "src/test/java/org/springframework/tests/TestGroup.java")
+         ;    (copy-file "../spring-core/src/test/java/org/springframework/tests/Assume.java"
+         ;               "src/test/java/org/springframework/tests/Assume.java")
+         ;    #t))
+         (add-before 'check 'copy-test-resources
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-recursively "src/test/resources" "build/test-classes")
+             #t)))))
+    (inputs
+     `(("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-core" ,java-spring-framework-core)
+       ("java-httpcomponents-httpasyncclient" ,java-httpcomponents-httpasyncclient)
+       ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
+       ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
+       ("java-httpcomponents-httpcore-nio" ,java-httpcomponents-httpcore-nio)))
+    (description "")))
+
 (define-public java-spring-framework-expression
   (package
     (inherit java-spring-framework-core)
@@ -3115,6 +3259,13 @@ final Map<String, Object> map = map2;"))
            (lambda _
              ;; Needed because tests look for data in src/... directly.
              (chdir "spring-expression")
+             #t))
+         (add-before 'build 'fix-asm
+           (lambda _
+             (substitute* (find-files "." ".*.java")
+               (("org.springframework.asm") "org.objectweb.asm"))
+             (substitute* "src/main/java/org/springframework/expression/spel/standard/SpelCompiler.java"
+               (("@Override") ""))
              #t))
          (add-before 'build 'copy-resources
            (lambda _
@@ -3134,7 +3285,8 @@ final Map<String, Object> map = map2;"))
                                "build/test-classes")
              #t)))))
     (inputs
-     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+     `(("java-asm" ,java-asm)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-spring-framework-core" ,java-spring-framework-core)))
     (description "")))
 
@@ -3667,7 +3819,8 @@ final Map<String, Object> map = map2;"))
        #:test-dir "src/core/src/test"
        #:jdk ,icedtea-8))
     (inputs
-     `(("java-log4j-api" ,java-log4j-api)
+     `(("java-apache-freemarker" ,java-apache-freemarker)
+       ("java-log4j-api" ,java-log4j-api)
        ("java-commons-lang3" ,java-commons-lang3)
        ("java-commons-io" ,java-commons-io)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
@@ -3676,6 +3829,7 @@ final Map<String, Object> map = map2;"))
        ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-context" ,java-spring-framework-context)
        ("java-spring-framework-core" ,java-spring-framework-core)
+       ("java-spring-framework-web" ,java-spring-framework-web)
        ("java-velocity" ,java-velocity)
        ("java-testng" ,java-testng)))
     (native-inputs
