@@ -52,120 +52,6 @@
                  (number->string file-number) "/" name "-" version
                  ".tar.gz"))
 
-(define-public ocaml-4.07
-  (package
-    (inherit ocaml)
-    (version "4.07.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append
-                    "http://caml.inria.fr/pub/distrib/ocaml-"
-                    (version-major+minor version)
-                    "/ocaml-" version ".tar.xz"))
-              (sha256
-               (base32
-                "03wzkzv6w4rdiiva20g5amz0n4x75swpjl8d80468p6zm8hgfnzl"))))
-    (arguments
-     `(#:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'patch-/bin/sh-references
-           (lambda* (#:key inputs #:allow-other-keys)
-             (let* ((sh (string-append (assoc-ref inputs "bash")
-                                       "/bin/sh"))
-                    (quoted-sh (string-append "\"" sh "\"")))
-               (with-fluids ((%default-port-encoding #f))
-                 (for-each
-                  (lambda (file)
-                    (substitute* file
-                      (("\"/bin/sh\"")
-                       (begin
-                         (format (current-error-port) "\
-patch-/bin/sh-references: ~a: changing `\"/bin/sh\"' to `~a'~%"
-                                 file quoted-sh)
-                         quoted-sh))))
-                  (find-files "." "\\.ml$"))
-                 #t))))
-         (replace 'configure
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (mandir (string-append out "/share/man")))
-               ;; Custom configure script doesn't recognize
-               ;; --prefix=<PREFIX> syntax (with equals sign).
-               (invoke "./configure"
-                       "--prefix" out
-                       "--mandir" mandir))
-             #t))
-         (replace 'build
-           (lambda _
-             (invoke "make" "-j" (number->string
-                                  (parallel-job-count))
-                     "world.opt")
-             #t))
-         (delete 'check)
-         (add-after 'install 'check
-           (lambda _
-             (with-directory-excursion "testsuite"
-               (invoke "make" "all"))
-             #t)))))))
-
-(define-public ocaml-fix
-  (package
-    (inherit ocaml)
-    (version "4.06.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append
-                    "http://caml.inria.fr/pub/distrib/ocaml-"
-                    (version-major+minor version)
-                    "/ocaml-" version ".tar.xz"))
-              (sha256
-               (base32
-                "1dy542yfnnw10zvh5s9qzswliq11mg7l0bcyss3501qw3vwvadhj"))))
-    (arguments
-     `(#:modules ((guix build gnu-build-system)
-                  (guix build utils)
-                  (web server))
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'patch-/bin/sh-references
-           (lambda* (#:key inputs #:allow-other-keys)
-             (let* ((sh (string-append (assoc-ref inputs "bash")
-                                       "/bin/sh"))
-                    (quoted-sh (string-append "\"" sh "\"")))
-               (with-fluids ((%default-port-encoding #f))
-                 (for-each
-                  (lambda (file)
-                    (substitute* file
-                      (("\"/bin/sh\"")
-                       (begin
-                         (format (current-error-port) "\
-patch-/bin/sh-references: ~a: changing `\"/bin/sh\"' to `~a'~%"
-                                 file quoted-sh)
-                         quoted-sh))))
-                  (find-files "." "\\.ml$"))
-                 #t))))
-         (replace 'configure
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (mandir (string-append out "/share/man")))
-               ;; Custom configure script doesn't recognize
-               ;; --prefix=<PREFIX> syntax (with equals sign).
-               (invoke "./configure"
-                       "--prefix" out
-                       "--mandir" mandir))
-             #t))
-         (replace 'build
-           (lambda _
-             (invoke "make" "-j1" ;; fails to build otherwise
-                     "world.opt")
-             #t))
-         (delete 'check)
-         (add-after 'install 'check
-           (lambda _
-             (with-directory-excursion "testsuite"
-               (invoke "make" "all"))
-             #t)))))))
-
 (define-public proof-general2
   (package
     (name "proof-general2")
@@ -248,206 +134,6 @@ assistant to write formal mathematical proofs using a variety of theorem
 provers.")
     (license license:gpl2+)))
 
-(define-public ocaml-build
-  (package
-    (name "ocaml-build")
-    (version "0.11.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/ocaml/ocamlbuild/archive/"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1vh30731gv1brr4ljfzd6m5lni44ifyb1w8hwir81ff9874fs5qp"))))
-    (build-system gnu-build-system)
-    (arguments
-     `(#:test-target "test"
-       #:tests? #f; FIXME: tests fail to find Findlib
-       #:make-flags
-       (list (string-append "OCAMLBUILD_PREFIX=" (assoc-ref %outputs "out"))
-             (string-append "OCAMLBUILD_BINDIR=" (assoc-ref %outputs "out") "/bin")
-             (string-append "OCAMLBUILD_LIBDIR=" (assoc-ref %outputs "out") "/lib")
-             (string-append "OCAMLBUILD_MANDIR=" (assoc-ref %outputs "out") "/share/man"))
-       #:phases
-       (modify-phases %standard-phases
-         (delete 'bootstrap)
-         (delete 'configure)
-         ;(replace 'configure
-         ;  (lambda* (#:key outputs #:allow-other-keys)
-         ;    (let ((out (assoc-ref %outputs "out")))
-         ;      (zero? (system* "make" "-f" "configure.make" "all")))))
-         (add-before 'build 'findlib-environment
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out")))
-               (setenv "OCAMLFIND_DESTDIR" (string-append out "/lib/ocaml/site-lib"))
-               (setenv "OCAMLFIND_LDCONF" "ignore")
-               #t))))))
-    (native-inputs
-     `(("ocaml" ,ocaml-fix)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:lgpl2.1+)))
-
-(define-public camlp4-fix
-  (package
-    (inherit camlp4)
-    (name "camlp4")
-    (version "4.06+1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/ocaml/camlp4/archive/"
-								  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-			    "08mrp8jjaayv0s50kmhjkafxqykff5dq3073hrl7ylx0km253k5i"))))
-    (inputs `(("ocaml" ,ocaml-fix)))
-    (native-inputs
-     `(("ocaml" ,ocaml-fix)
-       ("which" ,which)
-       ("build" ,ocaml-build)))))
-
-(define-public ocaml-findlib-fix
-  (package
-    (inherit ocaml-findlib)
-    (version "1.7.3")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "http://download.camlcity.org/download/findlib-"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "12xx8si1qv3xz90qsrpazjjk4lc1989fzm97rsmc4diwla7n15ni"))))
-    (arguments
-      (substitute-keyword-arguments (package-arguments ocaml-findlib)
-        ((#:phases phases)
-          `(modify-phases ,phases
-            (add-before 'build 'fix-findlib-makefile
-              (lambda* (#:key outputs #:allow-other-keys)
-                (substitute* "src/findlib/Makefile"
-                  (("\\$\\(prefix\\)\\$\\(OCAML_CORE_STDLIB\\)")
-                   (string-append (assoc-ref outputs "out") "/lib/ocaml/site-lib")))
-                #t))))))
-    (native-inputs
-     `(("camlp4" ,camlp4-fix)
-       ("ocaml" ,ocaml-fix)
-       ("m4" ,m4)))))
-
-(define-public camlp5-fix
-  (package
-    (inherit camlp5)
-    (name "camlp5")
-    (version "7.03")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/camlp5/camlp5/archive/rel"
-                                  (string-delete #\. version) ".tar.gz"))
-              (sha256
-               (base32
-                "06pj7l75r586gngam7nspd1a13ay7cj2bjh035z64w4fgaahlgf1"))))
-    (inputs
-     `(("ocaml" ,ocaml-fix)))))
-
-(define-public lablgtk-fix
-  (package
-    (inherit lablgtk)
-    (version "2.18.6")
-    (source (origin
-              (method url-fetch)
-              (uri (ocaml-forge-uri "lablgtk" version 1726))
-              (sha256
-               (base32
-                "1y38fdvswy6hmppm65qvgdk4pb3ghhnvz7n4ialf46340r1s5p2d"))))
-    (arguments
-     `(#:tests? #f ; no check target
-
-       ;; opt: also install cmxa files
-       #:make-flags (list "all" "opt"
-                          "OCAMLFIND=ocamlfind"
-                          "OCAMLLDCONF=ld.conf"
-                          (string-append "FINDLIBDIR="
-                                         (assoc-ref %outputs "out")
-                                         "/lib/ocaml"))
-       ;; Occasionally we would get "Error: Unbound module GtkThread" when
-       ;; compiling 'gtkThInit.ml', with 'make -j'.  So build sequentially.
-       #:parallel-build? #f
-
-       #:phases
-         (modify-phases %standard-phases
-           (add-before 'install 'prepare-install
-             (lambda* (#:key inputs outputs #:allow-other-keys)
-               (let ((out (assoc-ref outputs "out"))
-                     (ocaml (assoc-ref inputs "ocaml")))
-                 ;; Install into the output and not the ocaml directory.
-                 (mkdir-p (string-append out "/lib/ocaml"))
-                 (substitute* "config.make"
-                   ((ocaml) out))
-                 #t))))))
-    (home-page "http://lablgtk.forge.ocamlcore.org/")
-    (native-inputs
-     `(("ocaml" ,ocaml-fix)
-       ("build" ,ocaml-build)
-       ("camlp4" ,camlp4-fix)
-       ("findlib" ,ocaml-findlib-fix)
-       ("pkg-config" ,pkg-config)))))
-
-(define-public ocaml-menhir-fix
-  (package
-    (inherit ocaml-menhir)
-    (version "20170607")
-    (name "ocaml-menhir-fix")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append
-                    "http://gallium.inria.fr/~fpottier/menhir/"
-                    "menhir-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0qffci9qxgfabzyalx851q994yykl4n9ylr4vbplsm6is1padjh0"))))
-    (inputs
-     `(("ocaml" ,ocaml-fix)
-       ("ocamlbuild" ,ocaml-build)))))
-
-(define-public ocaml-num
-  (package
-    (name "ocaml-num")
-    (version "1.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/ocaml/num/archive/v"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1xlkd0svc0mgq5s7nrm2rjrsvg15i9wxqkc1kvwjp6sv8vv8bb04"))))
-    (build-system ocaml-build-system)
-    (arguments
-     `(#:ocaml ,ocaml-fix
-       #:findlib ,ocaml-findlib-fix
-       #:phases
-       (modify-phases %standard-phases
-         (delete 'configure)
-         (add-before 'build 'fix-makefile
-           (lambda* (#:key outputs #:allow-other-keys)
-             ;; This package supposes we install to the same directory as
-             ;; the ocaml package.
-             (substitute* "src/META"
-               (("\"\\^\"") (string-append "\"" (assoc-ref outputs "out")
-                                           "/lib/ocaml/site-lib\"")))
-             (substitute* "src/Makefile"
-               (("\\) \\$\\(STDLIBDIR\\)")
-                (string-append ") " (assoc-ref outputs "out")
-                               "/lib/ocaml/site-lib")))
-             #t)))))
-    (home-page "https://github.com/ocaml/num")
-    (synopsis "Arbitrary-precision integer and rational arithmetic")
-    (description "OCaml-Num contains the legacy Num library for
-arbitrary-precision integer and rational arithmetic that used to be part of
-the OCaml core distribution.")
-    (license license:lgpl2.1+))); with linking exception
-
 (define-public coq-8.6
   (package
     (inherit coq)
@@ -461,14 +147,6 @@ the OCaml core distribution.")
               (sha256
                (base32
                 "02nm5sn79hrb9fdmkhyclk80jydadf4jcafmr3idwr5h4z56qbms"))))
-    ;(native-inputs
-    ; `(("ocamlbuild" ,ocaml-build)
-    ;   ("hevea" ,hevea)
-    ;   ("texlive" ,texlive)))
-    ;(inputs
-    ; `(("lablgtk" ,lablgtk)
-    ;   ("python" ,python-2)
-    ;   ("camlp5" ,camlp5)))
     (arguments
      `(#:phases
        (modify-phases %standard-phases
@@ -511,73 +189,8 @@ the OCaml core distribution.")
               (sha256
                (base32
                 "1lkqvs7ayzv5kkg26y837pg0d6r2b5hbjxl71ba93f39kybw69gg"))))
-    (native-inputs
-     `(("ocamlbuild" ,ocaml-build)
-       ("hevea" ,hevea)
-       ("texlive" ,texlive)))
-    (inputs
-     `(("lablgtk" ,lablgtk-fix)
-       ("python" ,python-2)
-       ("camlp5" ,camlp5-fix)
-       ;; ocaml-num was removed from the ocaml package in 4.06.
-       ("ocaml-num" ,ocaml-num)))
     (arguments
-     `(#:ocaml ,ocaml-fix
-       #:findlib ,ocaml-findlib-fix
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'configure
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (mandir (string-append out "/share/man"))
-                    (browser "icecat -remote \"OpenURL(%s,new-tab)\""))
-               (invoke "./configure"
-                       "-prefix" out
-                       "-mandir" mandir
-                       "-browser" browser
-                       "-coqide" "opt"))
-             #t))
-         (replace 'build
-           (lambda* (#:key inputs #:allow-other-keys)
-             (substitute* "ide/ideutils.ml"
-               (("Bytes.unsafe_to_string read_string") "read_string"))
-             (invoke "make" "-j" (number->string
-                                  (parallel-job-count))
-                     (string-append
-                       "USERFLAGS=-I "
-                       (assoc-ref inputs "ocaml-num")
-                       "/lib/ocaml/site-lib")
-                     "world")
-             #t))
-         (delete 'check)
-         (add-after 'install 'check
-           (lambda _
-             (with-directory-excursion "test-suite"
-               ;; These two tests fail.
-               ;; This one fails because the output is not formatted as expected.
-               (delete-file-recursively "coq-makefile/timing")
-               ;; This one fails because we didn't build coqtop.byte.
-               (delete-file-recursively "coq-makefile/findlib-package")
-               (invoke "make"))
-             #t)))))))
-
-(define-public coq-fix
-  (package
-    (inherit coq)
-    (native-inputs
-     `(("ocamlbuild" ,ocaml-build)
-       ("hevea" ,hevea)
-       ("texlive" ,texlive)))
-    (inputs
-     `(("lablgtk" ,lablgtk-fix)
-       ("python" ,python-2)
-       ("camlp5" ,camlp5-fix)
-       ;; ocaml-num was removed from the ocaml package in 4.06.
-       ("ocaml-num" ,ocaml-num)))
-    (arguments
-     `(#:ocaml ,ocaml-fix
-       #:findlib ,ocaml-findlib-fix
-       #:phases
+     `(#:phases
        (modify-phases %standard-phases
          (replace 'configure
            (lambda* (#:key outputs #:allow-other-keys)
@@ -628,10 +241,10 @@ the OCaml core distribution.")
                (base32
                 "03iw9jiwq9jx45gsvp315y3lxr8m9ksppmcjvxs5c23qnky6zqjx"))))
     (native-inputs
-     `(("ocaml-fix" ,ocaml-fix)
+     `(("ocaml" ,ocaml)
        ("coq-8.7" ,coq-8.7)))
     (inputs
-     `(("camlp5-fix" ,camlp5-fix)))))
+     `(("camlp5" ,camlp5)))))
 
 (define-public ppsimpl
   (package
@@ -665,10 +278,10 @@ the OCaml core distribution.")
        ("compcert" ,compcert)))
     (native-inputs
      `(("coq-8.7" ,coq-8.7)
-       ("ocaml-fix" ,ocaml-fix)
-       ("ocaml-findlib-fix" ,ocaml-findlib-fix)
-       ("camlp4-fix" ,camlp4-fix)
-       ("camlp5-fix" ,camlp5-fix)
+       ("ocaml" ,ocaml)
+       ("ocaml-findlib" ,ocaml-findlib)
+       ("camlp4" ,camlp4)
+       ("camlp5" ,camlp5)
        ("which" ,which)))
     (home-page "")
     (synopsis "")
@@ -714,7 +327,7 @@ the OCaml core distribution.")
              #t)))
        #:tests? #f))
     (native-inputs
-     `(("ocaml" ,ocaml-fix)
+     `(("ocaml" ,ocaml)
        ("coq" ,coq-8.7)))
     (inputs
      `(("menhir" ,ocaml-menhir-fix)))
@@ -725,49 +338,6 @@ package is not free software!")
     ;; actually the "INRIA Non-Commercial License Agreement"
     ;; a non-free license.
     (license (license:non-copyleft "file:///LICENSE"))))
-
-(define-public cubicle
-  (package
-    (name "cubicle")
-    (version "1.1.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "http://cubicle.lri.fr/cubicle-"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "1sny9c4fm14k014pk62ibpwbrjjirkx8xmhs9jg7q1hk7y7x3q2h"))))
-    (build-system gnu-build-system)
-    (native-inputs
-     `(("ocaml" ,ocaml)
-       ("which" ,which)))
-    (propagated-inputs
-     `(("z3" ,z3)))
-    (arguments
-     `(#:configure-flags (list "--with-z3")
-       #:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'configure 'configure-for-release
-           (lambda _
-             (substitute* "Makefile.in"
-               (("SVNREV=") "#SVNREV="))))
-         (add-before 'configure 'fix-/bin/sh
-           (lambda _
-             (substitute* "configure"
-               (("/bin/sh") (which "sh")))))
-         (add-before 'configure 'fix-smt-z3wrapper.ml
-           (lambda _
-             (substitute* "Makefile.in"
-               (("\\\\n") "")))))))
-    (home-page "http://cubicle.lri.fr/")
-    (synopsis "Model checker for array-based systems")
-    (description "Cubicle is an open source model checker for verifying safety
-properties of array-based systems.  This is a syntactically restricted class of
-parametrized transition systems with states represented as arrays indexed by an
-arbitrary number of processes.  Cache coherence protocols and mutual exclusion
-algorithms are typical examples of such systems.")
-    (license license:asl2.0)))
 
 (define-public ocaml-c2newspeak
   (package
@@ -931,20 +501,3 @@ algorithms are typical examples of such systems.")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
-
-(define-public opam2
-  (package
-    (inherit opam)
-    (version "2.0.0")
-    (source (origin
-              (method url-fetch)
-              ;; Use the '-full' version, which includes all the dependencies.
-              (uri (string-append
-                    "https://github.com/ocaml/opam/releases/download/"
-                    version "/opam-full-" version ".tar.gz")
-               ;; (string-append "https://github.com/ocaml/opam/archive/"
-               ;;                    version ".tar.gz")
-               )
-              (sha256
-               (base32
-                "09gdpxiqmyr6z78l85d7pwhiwrycdi2xi1b2mafqr1sk9z5lzbcx"))))))
