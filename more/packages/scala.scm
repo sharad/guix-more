@@ -325,6 +325,10 @@ lambdas (type projections) easier to write.")
   (package
     (inherit java-log4j-api)
     (version "2.8.1")
+    ;(version "2.11.1")
+    (arguments
+     (ensure-keyword-arguments (package-arguments java-log4j-api)
+       `(#:jdk ,icedtea-7)))
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/logging/log4j/" version
@@ -332,6 +336,7 @@ lambdas (type projections) easier to write.")
               (sha256
                (base32
                 "0x5gksgh0jkvd7k70rqrs2hy3glms0pkj6lhl26m6f83x1b6kvdm"))))))
+                ;"1dhxnd0348is21w93m1rv2sbfwyx83rv63adnbd0bgjq01gzbvic"))))))
 
 ;; More dependencies needed
 (define-public java-log4j-core-for-sbt
@@ -343,6 +348,7 @@ lambdas (type projections) easier to write.")
        ("java-hamcrest-core" ,java-hamcrest-core)
        ("java-log4j-api" ,java-log4j-api-for-sbt)
        ("java-mail" ,java-mail)
+       ("java-jansi" ,java-jansi)
        ("java-jboss-jms-api-spec" ,java-jboss-jms-api-spec)
        ("java-lmax-disruptor" ,java-lmax-disruptor)
        ("java-kafka" ,java-kafka-clients)
@@ -410,8 +416,9 @@ logging framework for Java.")))
            (install-jars ".")))))
     (inputs
      `(("java-log4j-api" ,java-log4j-api-for-sbt)
-       ;("java-log4j-core" ,java-log4j-core)
-       ("sbt-util-interface" ,sbt-util-interface)))
+       ("java-log4j-core" ,java-log4j-core-for-sbt)
+       ("sbt-util-interface" ,sbt-util-interface)
+       ("scala-sjsonnew" ,scala-sjsonnew)))
     (native-inputs
      `(("scala-official" ,scala-official)))))
 
