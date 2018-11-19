@@ -255,9 +255,28 @@
              (substitute* "servo/components/style/build_gecko.rs"
                (("builder = builder.include")
                 (string-append
-                  "builder = builder.clang_arg(\"-I" (assoc-ref inputs "clang")
-                  "/lib/clang/6.0.1/include\");
+                  "builder = builder.clang_arg(\"-cxx-isystem\");
+                  builder = builder.clang_arg(\""
+                  (assoc-ref inputs "gcc") "/include/c++\");
+                  builder = builder.clang_arg(\"-cxx-isystem\");
+                  builder = builder.clang_arg(\""
+                  (car (find-files (string-append
+                                     (assoc-ref inputs "gcc")
+                                     "/include/c++")
+                                   "-gnu$" #:directories? #t)) "\");
 builder = builder.include")))
+             #t))
+         (add-after 'unpack 'fix-isnan
+           (lambda _
+             ;; There is a bug preventing SymbolTable_autogen.cpp from finding
+             ;; isnan and isinf, although they are defined in that same file.
+             ;; The reason seems to be that they are already defined in math.h
+             (substitute* "gfx/angle/checkout/src/compiler/translator/SymbolTable_autogen.cpp"
+			   (("^namespace sh")
+				"#undef isnan
+#undef isinf
+
+namespace sh"))
              #t))
          (add-before 'build 'fix-cpath
            (lambda _
@@ -287,7 +306,17 @@ builder = builder.include")))
               (format #t "configure flags: ~s~%" flags)
               (apply invoke bash
                      (string-append srcdir "/configure")
-                     flags))))))))
+                     flags))))
+         ;; This fixes the file chooser crash that happens with GTK 3.
+         (replace 'wrap-program
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (lib (string-append out "/lib"))
+                    (gtk (assoc-ref inputs "gtk+"))
+                    (gtk-share (string-append gtk "/share")))
+               (wrap-program (car (find-files lib "^firefox$"))
+                 `("XDG_DATA_DIRS" ":" prefix (,gtk-share)))
+               #t)))))))
     (inputs
      `(("nspr" ,nspr)
        ("nss" ,nss)
