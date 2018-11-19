@@ -411,8 +411,7 @@ logging framework for Java.")))
     (inputs
      `(("java-log4j-api" ,java-log4j-api-for-sbt)
        ;("java-log4j-core" ,java-log4j-core)
-       ("sbt-util-interface" ,sbt-util-interface)
-       ("scala-")))
+       ("sbt-util-interface" ,sbt-util-interface)))
     (native-inputs
      `(("scala-official" ,scala-official)))))
 
