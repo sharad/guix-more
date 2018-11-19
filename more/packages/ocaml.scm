@@ -330,7 +330,7 @@ provers.")
      `(("ocaml" ,ocaml)
        ("coq" ,coq-8.7)))
     (inputs
-     `(("menhir" ,ocaml-menhir-fix)))
+     `(("menhir" ,ocaml-menhir)))
     (home-page "http://compcert.inria.fr")
     (synopsis "Certified C compiler")
     (description "CompCert is a certified (with coq) C compiler.  Warning: this
