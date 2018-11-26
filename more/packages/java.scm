@@ -994,17 +994,31 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
     (inputs
      `(("java-aqute-bndlib" ,java-aqute-bndlib)))))
 
+(define-public java-asm-7
+  (package
+    (inherit java-asm)
+    (version "7.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://gitlab.ow2.org/asm/asm")
+                     (commit "1f6020a3f17d9d88dfd54a31370e91e3361c216b")))
+              (sha256
+               (base32
+                "1cpg9j86ckp5cmxlisfr4xr4i4v983xj2mkk0pkbygk3qarjfb88"))))))
+              
+
 (define-public java-byte-buddy-dep
   (package
     (name "java-byte-buddy-dep")
-    (version "1.7.9")
+    (version "1.9.5")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/raphw/byte-buddy/archive/"
                                   "byte-buddy-" version ".tar.gz"))
               (sha256
                (base32
-                "1dyx3hp1fnw30ndk341bscr8x9sy75f8sfy4hrrwcwg4hrdg4i36"))))
+                "1ywnsp2qbs06sc830xli4fqv0rb2fi6w60bh3ly295h8bv2w9yws"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "byte-buddy-dep.jar"
@@ -1018,8 +1032,7 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
              (with-directory-excursion "byte-buddy-dep/src/main/java/net/bytebuddy"
                (substitute* (find-files "." ".*.java")
                  (("@EqualsAndHashCode.*") "")
-                 (("import lombok.EqualsAndHashCode;") ""))
-               (substitute* (find-files "." ".*.java")
+                 (("import lombok.EqualsAndHashCode;") "")
                  (("@SuppressFBWarnings.*") "")
                  (("import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;") "")))
              #t)))))
@@ -3236,7 +3249,8 @@ import org.objenesis.ObjenesisException;"))
              (copy-recursively "src/test/resources" "build/test-classes")
              #t)))))
     (inputs
-     `(("java-spring-framework-beans" ,java-spring-framework-beans)
+     `(;("java-netty" ,java-netty)
+       ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-core" ,java-spring-framework-core)
        ("java-httpcomponents-httpasyncclient" ,java-httpcomponents-httpasyncclient)
        ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
@@ -6255,6 +6269,157 @@ be able to validate XML content.")))
     (native-inputs
      `(("unzip" ,unzip)))
     (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-jctools-core
+  (package
+    (name "java-jctools-core")
+    (version "2.1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/JCTools/JCTools/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "16vqznf6ikzvii72r13h02vcbqfp5kl0fcw2cfhp52fzk3pmpsi2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jctools-core.jar"
+       #:source-dir "jctools-core/src/main/java"
+       #:test-dir "jctools-core/src/test"
+       ;; Require com.google.common.collect.testing (guava?)
+       #:tests? #f))
+    (native-inputs
+     `(("java-guava" ,java-guava)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "https://jctools.github.io/JCTools")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-log4j-api-for-netty
+  (package
+    (inherit java-log4j-api)
+    (version "2.6.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/logging/log4j/" version
+                                  "/apache-log4j-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "1ri58x5l451ngz3p8shn4r7kb69vg0pkr9jb817952s9jbskwws9"))))))
+
+(define-public java-log4j-core-for-netty
+  (package
+    (inherit java-log4j-api-for-netty)
+    (name "java-log4j-core")
+    (inputs
+     `(("java-osgi-core" ,java-osgi-core)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-log4j-api" ,java-log4j-api-for-netty)
+       ("java-mail" ,java-mail)
+       ("java-jboss-jms-api-spec" ,java-jboss-jms-api-spec)
+       ("java-lmax-disruptor" ,java-lmax-disruptor)
+       ("java-kafka" ,java-kafka-clients)
+       ("java-datanucleus-javax-persistence" ,java-datanucleus-javax-persistence)
+       ("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
+       ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
+       ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
+       ("java-fasterxml-jackson-dataformat-xml" ,java-fasterxml-jackson-dataformat-xml)
+       ("java-fasterxml-jackson-dataformat-yaml" ,java-fasterxml-jackson-dataformat-yaml)
+       ("java-commons-compress" ,java-commons-compress)
+       ("java-commons-csv" ,java-commons-csv)
+       ("java-stax2-api" ,java-stax2-api)
+       ("java-jeromq" ,java-jeromq)))
+    (native-inputs
+     `(("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-commons-io" ,java-commons-io)
+       ("java-commons-lang3" ,java-commons-lang3)
+       ("java-junit" ,java-junit)
+       ("java-slf4j-api" ,java-slf4j-api)))
+    (arguments
+     `(#:tests? #f ; tests require more dependencies
+       #:test-dir "src/test"
+       #:source-dir "src/main/java"
+       #:jar-name "log4j-core.jar"
+       #:jdk ,icedtea-8
+       #:make-flags
+       (list (string-append "-Ddist.dir=" (assoc-ref %outputs "out")
+                            "/share/java"))
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'enter-dir
+           (lambda _ (chdir "log4j-core") #t)))))
+    (synopsis "Core component of the Log4j framework")
+    (description "This package provides the core component of the Log4j
+logging framework for Java.")))
+
+(define-public java-mockito
+  (package
+    (name "java-mockito")
+    (version "2.23.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/mockito/mockito/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "08vw3fqymgpjww06q4zvc6247dj2a7y3hgxsfghxny5lklh12qml"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "mockito.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'use-system-asm
+           (lambda _
+             (substitute* "src/main/java/org/mockito/internal/creation/bytebuddy/InlineBytecodeGenerator.java"
+               (("net.bytebuddy.jar.asm") "org.objectweb.asm"))
+             #t)))))
+    (inputs
+     `(("java-asm" ,java-asm)
+       ("java-byte-buddy-dep" ,java-byte-buddy-dep)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)
+       ("java-objenesis" ,java-objenesis)))
+    (home-page "https://mockito.org/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-netty-common
+  (package
+    (name "java-netty-common")
+    (version "4.1.31")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/netty/netty/archive/netty-"
+                                  version ".Final.tar.gz"))
+              (sha256
+               (base32
+                "0dchrbwrhsxycs8kgwqcp81xybyx6p13k86d5pjsqni1hrc4sn2i"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "netty-common.jar"
+       #:source-dir "common/src/main/java"
+       #:test-dir "common/src/test"))
+    (inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-jctools-core" ,java-jctools-core)
+       ("java-log4j-api" ,java-log4j-api-for-netty)
+       ("java-log4j-core" ,java-log4j-core-for-netty)
+       ("java-log4j-1.2-api" ,java-log4j-1.2-api)
+       ("java-slf4j-api" ,java-slf4j-api)))
+    (native-inputs
+     `(("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-junit" ,java-junit)
+       ("java-mockito" ,java-mockito)))
+    (home-page "https://netty.io/")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
