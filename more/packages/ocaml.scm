@@ -167,6 +167,10 @@ provers.")
                (("Bytes.unsafe_to_string read_string") "read_string"))
              (invoke "make" "-j" (number->string
                                   (parallel-job-count))
+                     (string-append
+                       "USERFLAGS=-I "
+                       (assoc-ref inputs "ocaml-num")
+                       "/lib/ocaml/site-lib")
                      "world")
              #t))
          (delete 'check)
