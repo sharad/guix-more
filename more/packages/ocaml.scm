@@ -134,6 +134,12 @@ assistant to write formal mathematical proofs using a variety of theorem
 provers.")
     (license license:gpl2+)))
 
+(define-public ocaml4.02-camlp5
+  (package
+    (inherit camlp5)
+    (inputs
+     `(("ocaml" ,ocaml-4.02)))))
+
 (define-public coq-8.6
   (package
     (inherit coq)
@@ -148,7 +154,9 @@ provers.")
                (base32
                 "02nm5sn79hrb9fdmkhyclk80jydadf4jcafmr3idwr5h4z56qbms"))))
     (arguments
-     `(#:phases
+     `(#:ocaml ,ocaml-4.02
+       #:findlib ,ocaml4.02-findlib
+       #:phases
        (modify-phases %standard-phases
          (replace 'configure
            (lambda* (#:key outputs #:allow-other-keys)
@@ -163,14 +171,8 @@ provers.")
              #t))
          (replace 'build
            (lambda* (#:key inputs #:allow-other-keys)
-             (substitute* "ide/ideutils.ml"
-               (("Bytes.unsafe_to_string read_string") "read_string"))
              (invoke "make" "-j" (number->string
                                   (parallel-job-count))
-                     (string-append
-                       "USERFLAGS=-I "
-                       (assoc-ref inputs "ocaml-num")
-                       "/lib/ocaml/site-lib")
                      "world")
              #t))
          (delete 'check)
@@ -178,7 +180,12 @@ provers.")
            (lambda _
              (with-directory-excursion "test-suite"
                (invoke "make"))
-             #t)))))))
+             #t)))))
+    (native-inputs '())
+    (inputs
+     `(("lablgtk" ,ocaml4.02-lablgtk)
+       ("python" ,python-2)
+       ("camlp5" ,ocaml4.02-camlp5)))))
 
 (define-public coq-8.7
   (package
