@@ -1249,14 +1249,14 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-jmapviewer
   (package
     (name "java-jmapviewer")
-    (version "2.7")
+    (version "2.8")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://svn.openstreetmap.org/applications/viewer/jmapviewer/releases/"
                                   version "/JMapViewer-" version "-Source.zip"))
               (sha256
                (base32
-                "1s8agib0pncbmavgzb372qdwvgwc9jr77p13hqzak6xjlbnxldar"))))
+                "1y4sgk9d7ii89w1vdjj9128fnzn81l6gm7wgc9r5j9f34iq871y7"))))
     (build-system ant-build-system)
     (native-inputs
      `(("unzip" ,unzip)))
@@ -1306,7 +1306,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "14382")
+    (version "14460")
     (source (origin
               (method svn-fetch)
               (uri (svn-reference
@@ -1314,7 +1314,7 @@ methods.  It is similar in speed with deflate but offers more dense compression.
                     (revision (string->number version))))
               (sha256
                (base32
-                "1lrlqgw2b520cwhyhcg7wwvh2mi54znwlzrwm09v7bw89c12flqy"))
+                "123jb1xq18gmgfvxnsmja6zban969fa53jir4rjfwinbsx7aw6ss"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
