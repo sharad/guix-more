@@ -731,21 +731,21 @@ persisted, whether to a file, database, or over the network.")
                (with-fluids ((%default-port-encoding "ISO-8859-1"))
                  (substitute* '("visitclass/PreorderVisitor.java"
                                 "StackMapAnalyzer.java"
-				"classfile/engine/ClassParserUsingASM.java")
+                                "classfile/engine/ClassParserUsingASM.java")
                    ;; The two classes were merged in the latter
                    (("StackMapTable") "StackMap")
-		   (("Constants") "Const")
-		   (("Const2") "Constants2")
-		   (("getByteCodeOffsetDelta") "getByteCodeOffset"))
-		 (substitute* "detect/DumbMethods.java"
-		   (("import org.apache.bcel.classfile.Attribute;")
-		    "import org.apache.bcel.classfile.Attribute;
+                   (("Constants") "Const")
+                   (("Const2") "Constants2")
+                   (("getByteCodeOffsetDelta") "getByteCodeOffset"))
+                 (substitute* "detect/DumbMethods.java"
+                   (("import org.apache.bcel.classfile.Attribute;")
+                    "import org.apache.bcel.classfile.Attribute;
 import org.apache.bcel.Const;")
-		   (("MAJOR_1") "Const.MAJOR_1"))
+                   (("MAJOR_1") "Const.MAJOR_1"))
                  (substitute* "ba/AbstractFrameModelingVisitor.java"
                    (("VisitorSupportsInvokeDynamic") "Visitor"))
-		 (substitute* "xml/XMLUtil.java"
-		   (("<T> List<T>") "List<Node>"))
+                 (substitute* "xml/XMLUtil.java"
+                   (("<T> List<T>") "List<Node>"))
                  (substitute* "visitclass/PreorderVisitor.java"
                    (("import org.apache.bcel.classfile.Attribute;")
                     "import org.apache.bcel.classfile.Attribute;
@@ -843,8 +843,8 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
     (version "3.1.6")
     (source (origin
               (method url-fetch)
-	      (uri (string-append "https://github.com/spotbugs/spotbugs/archive/"
-				  version ".tar.gz"))
+              (uri (string-append "https://github.com/spotbugs/spotbugs/archive/"
+                                  version ".tar.gz"))
               (sha256
                (base32
                 "198gzk2vs4id90fxgpida51ygwpb31xwkv6lf91kgmvqcsknf6y4"))
@@ -877,11 +877,11 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
        #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'remove-osx
-	   (lambda _
-	     ;; Requires AppleJavaExtensions.jar (com.apple.eawt.*)
-	     (delete-file "spotbugs/src/gui/edu/umd/cs/findbugs/gui2/OSXAdapter.java")
-	     #t)))))
+         (add-before 'build 'remove-osx
+           (lambda _
+             ;; Requires AppleJavaExtensions.jar (com.apple.eawt.*)
+             (delete-file "spotbugs/src/gui/edu/umd/cs/findbugs/gui2/OSXAdapter.java")
+             #t)))))
     (inputs
      `(("java-asm" ,java-asm)
        ("java-commons-bcel" ,java-commons-bcel)
@@ -1005,8 +1005,39 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
                      (commit "1f6020a3f17d9d88dfd54a31370e91e3361c216b")))
               (sha256
                (base32
-                "1cpg9j86ckp5cmxlisfr4xr4i4v983xj2mkk0pkbygk3qarjfb88"))))))
-              
+                "1cpg9j86ckp5cmxlisfr4xr4i4v983xj2mkk0pkbygk3qarjfb88"))))
+    (arguments
+     `(#:jar-name "asm.jar"
+       #:source-dir "asm/src/main/java"
+       #:test-dir "asm/src/test"
+       ;; Tests require org.junit.jupiter
+       #:tests? #f))))
+
+(define-public java-asm-tree-7
+  (package
+    (inherit java-asm-7)
+    (name "java-asm-tree")
+    (arguments
+     `(#:jar-name "asm-tree.jar"
+       #:source-dir "asm-tree/src/main/java"
+       #:test-dir "asm-tree/src/test"
+       ;; Tests require org.junit.jupiter
+       #:tests? #f))
+    (propagated-inputs
+     `(("java-asm-7" ,java-asm-7)))))
+
+(define-public java-asm-commons-7
+  (package
+    (inherit java-asm-7)
+    (name "java-asm-commons")
+    (arguments
+     `(#:jar-name "asm-commons.jar"
+       #:source-dir "asm-commons/src/main/java"
+       #:test-dir "asm-commons/src/test"
+       ;; Tests require org.junit.jupiter
+       #:tests? #f))
+    (propagated-inputs
+     `(("java-asm-tree-7" ,java-asm-tree-7)))))
 
 (define-public java-byte-buddy-dep
   (package
@@ -1037,8 +1068,58 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
                  (("import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;") "")))
              #t)))))
     (inputs
-     `(("java-asm-6" ,java-asm-6)))
+     `(("java-asm-commons-7" ,java-asm-commons-7)))
     (home-page "http://bytebuddy.net/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-byte-buddy-agent
+  (package
+    (inherit java-byte-buddy-dep)
+    (name "java-byte-buddy-agent")
+    (arguments
+     `(#:jar-name "byte-buddy-agent.jar"
+       #:source-dir "byte-buddy-agent/src/main/java"
+       #:test-dir "byte-buddy-agent/src/test"
+       #:test-exclude (list "**/VirtualMachineForHotSpotTest.*")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-annotations
+           (lambda _
+             (with-directory-excursion "byte-buddy-agent/src/main/java/net/bytebuddy"
+               (substitute* (find-files "." ".*.java")
+                 (("@SuppressFBWarnings.*") "")
+                 (("import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;") "")))
+             #t)))))
+    (inputs
+     `(("java-junixsocket-common" ,java-junixsocket-common)
+       ,@(package-inputs java-byte-buddy-dep)))
+    (native-inputs
+     `(("java-byte-buddy-dep" ,java-byte-buddy-dep)
+       ("java-cglib" ,java-cglib)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)
+       ("java-mockito-1" ,java-mockito-1)
+       ("java-objenesis" ,java-objenesis)))))
+
+(define-public java-junixsocket-common
+  (package
+    (name "java-junixsocket-common")
+    (version "2.0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/kohlschutter/junixsocket/archive/"
+                                  "junixsocket-parent-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0c31qgry5pnhcnp3w62xb0ha0pic1d363rabn4fh8sdpmwnmakww"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "junixsocket-common.jar"
+       #:source-dir "junixsocket-common/src/main/java"
+       #:tests? #f));no tests
+    (home-page "")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
@@ -1697,10 +1778,10 @@ from ORO, Inc.")
     (inherit javacc)
     (version "6.1.3")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/javacc/javacc/archive/release_"
+              (method url-fetch)
+              (uri (string-append "https://github.com/javacc/javacc/archive/release_"
                                   (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
-				  ".tar.gz"))
+                                  ".tar.gz"))
               (sha256
                (base32
                 "03xpipk365szfzrab7divlr1i1r58j1hh47mhj5cpj1kv9zc2p6c"))))
@@ -1708,11 +1789,11 @@ from ORO, Inc.")
      `(#:tests? #f
        #:phases
        (modify-phases %standard-phases
-	 (add-after 'unpack 'delete-bundled-libs
-	   (lambda _
-	     (delete-file-recursively "lib")
-	      #t))
-	 (replace 'install (install-jars "target")))))
+         (add-after 'unpack 'delete-bundled-libs
+           (lambda _
+             (delete-file-recursively "lib")
+              #t))
+         (replace 'install (install-jars "target")))))
     (native-inputs
      `(("java-junit" ,java-junit)))))
 
@@ -1809,16 +1890,16 @@ from ORO, Inc.")
              (copy-recursively "src/main/resources" "build/classes")
              #t))
          (add-before 'build 'remove-unpackaged-dependencies
-	   ;; TODO: package these dependencies
-	   (lambda _
-	     (delete-file-recursively "src/main/java/freemarker/ext/jython")
+           ;; TODO: package these dependencies
+           (lambda _
+             (delete-file-recursively "src/main/java/freemarker/ext/jython")
          (delete-file "src/test/java/freemarker/core/ObjectBuilderSettingsTest.java")
-	     (delete-file-recursively "src/main/java/freemarker/ext/rhino")
-	     ;; This class depends on javareble, a non-free package
-	     (delete-file "src/main/java/freemarker/ext/beans/JRebelClassChangeNotifier.java")
-	     (delete-file "src/main/java/freemarker/ext/ant/UnlinkedJythonOperationsImpl.java")
-	     (delete-file "src/main/java/freemarker/template/utility/JythonRuntime.java")
-	     #t))
+             (delete-file-recursively "src/main/java/freemarker/ext/rhino")
+             ;; This class depends on javareble, a non-free package
+             (delete-file "src/main/java/freemarker/ext/beans/JRebelClassChangeNotifier.java")
+             (delete-file "src/main/java/freemarker/ext/ant/UnlinkedJythonOperationsImpl.java")
+             (delete-file "src/main/java/freemarker/template/utility/JythonRuntime.java")
+             #t))
      (add-before 'build 'update-jsp
        (lambda _
          (substitute* "src/main/java/freemarker/ext/jsp/FreeMarkerJspFactory.java"
@@ -1845,12 +1926,12 @@ public ELContext getELContext() {
 
 import javax.el.ELContext;"))
          #t))
-	 (add-before 'build 'run-javacc
-	   (lambda _
-	     (invoke "java" "-cp" (getenv "CLASSPATH") "javacc"
-		     "-OUTPUT_DIRECTORY=src/main/java/freemarker/core"
-		     "src/main/javacc/FTL.jj")
-	     #t)))))
+         (add-before 'build 'run-javacc
+           (lambda _
+             (invoke "java" "-cp" (getenv "CLASSPATH") "javacc"
+                     "-OUTPUT_DIRECTORY=src/main/java/freemarker/core"
+                     "src/main/javacc/FTL.jj")
+             #t)))))
     (inputs
      `(("java-avalon-logkit" ,java-avalon-logkit)
        ("java-commons-jxpath" ,java-commons-jxpath)
@@ -4866,8 +4947,8 @@ namespaces.")
     (version "1.2.6")
     (source (origin
               (method url-fetch)
-	      (uri (string-append "https://www.cs.princeton.edu/~appel/modern/"
-				  "java/JLex/Archive/" version "/Main.java"))
+              (uri (string-append "https://www.cs.princeton.edu/~appel/modern/"
+                                  "java/JLex/Archive/" version "/Main.java"))
               (sha256
                (base32
                 "1msblmsgzij3z9pwm7gff1q2cv1q802q23xsn0mrflrs7g7axsxf"))))
@@ -4876,17 +4957,17 @@ namespaces.")
      `(#:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
-	 (delete 'unpack)
-	 (delete 'configure)
-	 (replace 'build
-	   (lambda* (#:key inputs #:allow-other-keys)
-	     (mkdir "JLex")
-	     (copy-file (assoc-ref inputs "source") "Main.java")
-	     (invoke "javac" "Main.java" "-d" ".")
-	     (apply invoke "jar" "cf" "jlex.jar" (find-files "." ".*.class"));"JLex/Main.class")
-	     #t))
-	 (replace 'install
-	   (install-jars ".")))))
+         (delete 'unpack)
+         (delete 'configure)
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir "JLex")
+             (copy-file (assoc-ref inputs "source") "Main.java")
+             (invoke "javac" "Main.java" "-d" ".")
+             (apply invoke "jar" "cf" "jlex.jar" (find-files "." ".*.class"));"JLex/Main.class")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
     (home-page "https://jflex.de")
     (synopsis "")
     (description "")
@@ -6343,6 +6424,7 @@ logging framework for Java.")))
     (arguments
      `(#:jar-name "mockito.jar"
        #:source-dir "src/main/java"
+       #:tests? #f; Some compilation errors
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'use-system-asm
@@ -6350,12 +6432,15 @@ logging framework for Java.")))
              (substitute* "src/main/java/org/mockito/internal/creation/bytebuddy/InlineBytecodeGenerator.java"
                (("net.bytebuddy.jar.asm") "org.objectweb.asm"))
              #t)))))
-    (inputs
+    (propagated-inputs
      `(("java-asm" ,java-asm)
+       ("java-byte-buddy-agent" ,java-byte-buddy-agent)
        ("java-byte-buddy-dep" ,java-byte-buddy-dep)
        ("java-hamcrest-core" ,java-hamcrest-core)
        ("java-junit" ,java-junit)
        ("java-objenesis" ,java-objenesis)))
+    (native-inputs
+     `(("java-assertj" ,java-assertj)))
     (home-page "https://mockito.org/")
     (synopsis "")
     (description "")
@@ -6376,7 +6461,10 @@ logging framework for Java.")))
     (arguments
      `(#:jar-name "netty-common.jar"
        #:source-dir "common/src/main/java"
-       #:test-dir "common/src/test"))
+       #:test-dir "common/src/test"
+       ;; Weird issue with log4j
+       #:test-exclude (list "**/Abstract*.*"
+                            "**/Log4JLoggerFactoryTest.*")))
     (inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-jctools-core" ,java-jctools-core)
@@ -6387,7 +6475,8 @@ logging framework for Java.")))
     (native-inputs
      `(("java-hamcrest-all" ,java-hamcrest-all)
        ("java-junit" ,java-junit)
-       ("java-mockito" ,java-mockito)))
+       ("java-mockito" ,java-mockito)
+       ("java-slf4j-simple" ,java-slf4j-simple)))
     (home-page "https://netty.io/")
     (synopsis "")
     (description "")
