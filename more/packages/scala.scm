@@ -28,7 +28,8 @@
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
   #:use-module (gnu packages compression)
-  #:use-module (gnu packages java))
+  #:use-module (gnu packages java)
+  #:use-module (more packages java))
 
 ;; This package downloads the so-called official version of scala, a pre-built
 ;; binary by the scala developers.
@@ -189,6 +190,30 @@ def main(args: Array[String]): Unit = {
     (description "")
     (license license:asl2.0)))
 
+;; TODO: https://github.com/mdedetrich/scalajson
+(define-public scala-sjsonnew-support-scalajson
+  (package
+    (inherit scala-sjsonnew)
+    (name "scala-sjsonnew-support-scalajson")
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "support/scalajson/src/main/scala" ".*.scala$"))
+             (mkdir-p "build/jar")
+             (invoke "jar" "-cf" "build/jar/sjsonnew-support-scalajson.jar"
+                     "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (inputs
+     `(("scala-sjsonnew" ,scala-sjsonnew)))))
+
 (define-public scala-kind-projector
   (package
     (name "scala-kind-projector")
@@ -328,7 +353,19 @@ lambdas (type projections) easier to write.")
     ;(version "2.11.1")
     (arguments
      (ensure-keyword-arguments (package-arguments java-log4j-api)
-       `(#:jdk ,icedtea-7)))
+       `(#:jdk ,icedtea-8
+	 #:source-dir "src/main/java"
+	 #:phases
+	 (modify-phases %standard-phases
+	   (add-after 'unpack 'chdir
+	     (lambda _
+	       (chdir "log4j-api")
+	       #t))
+	   (add-before 'build 'fix-ambiguous
+	     (lambda _
+	       (substitute* "src/main/java/org/apache/logging/log4j/message/MapMessage.java"
+		 (("append\\(data") "append((CharSequence)data"))
+	       #t))))))
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/logging/log4j/" version
@@ -350,6 +387,7 @@ lambdas (type projections) easier to write.")
        ("java-mail" ,java-mail)
        ("java-jansi" ,java-jansi)
        ("java-jboss-jms-api-spec" ,java-jboss-jms-api-spec)
+       ("java-jctools-core" ,java-jctools-core)
        ("java-lmax-disruptor" ,java-lmax-disruptor)
        ("java-kafka" ,java-kafka-clients)
        ("java-datanucleus-javax-persistence" ,java-datanucleus-javax-persistence)
@@ -360,6 +398,9 @@ lambdas (type projections) easier to write.")
        ("java-fasterxml-jackson-dataformat-yaml" ,java-fasterxml-jackson-dataformat-yaml)
        ("java-commons-compress" ,java-commons-compress)
        ("java-commons-csv" ,java-commons-csv)
+       ("java-conversantmedia-disruptor" ,java-conversantmedia-disruptor)
+       ("java-jcommander" ,java-jcommander)
+       ("java-stax2-api" ,java-stax2-api)
        ("java-jeromq" ,java-jeromq)
        ("java-junit" ,java-junit)))
     (native-inputs
@@ -379,7 +420,12 @@ lambdas (type projections) easier to write.")
        #:phases
        (modify-phases %standard-phases
          (add-after 'unpack 'enter-dir
-           (lambda _ (chdir "log4j-core") #t)))))
+           (lambda _ (chdir "log4j-core") #t))
+	 (add-before 'build 'fix-ambiguous
+	   (lambda _
+	     (substitute* "src/main/java/org/apache/logging/log4j/core/pattern/MapPatternConverter.java"
+	       (("append\\(sortedMap") "append((CharSequence)sortedMap"))
+	     #t)))))
     (synopsis "Core component of the Log4j framework")
     (description "This package provides the core component of the Log4j
 logging framework for Java.")))

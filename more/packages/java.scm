@@ -45,6 +45,7 @@
   #:use-module (gnu packages linux)
   #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
+  #:use-module (gnu packages protobuf)
   #:use-module (gnu packages version-control)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
@@ -3330,7 +3331,8 @@ import org.objenesis.ObjenesisException;"))
              (copy-recursively "src/test/resources" "build/test-classes")
              #t)))))
     (inputs
-     `(;("java-netty" ,java-netty)
+     `(("java-nethandlerr" ,java-netty-handler)
+       ("java-netty-transport" ,java-netty-transport)
        ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-core" ,java-spring-framework-core)
        ("java-httpcomponents-httpasyncclient" ,java-httpcomponents-httpasyncclient)
@@ -6446,6 +6448,60 @@ logging framework for Java.")))
     (description "")
     (license license:asl2.0)))
 
+(define-public java-protobuf
+  (package
+    (name "java-protobuf")
+    (version (package-version protobuf))
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/google/protobuf/releases/"
+                                  "download/v" version "/protobuf-java-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1mvbibm8p1cdbaf5frql406ipgm56k0ygilswn633jg9qz2n69sc"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "protobuf.jar"
+       #:source-dir "java/core/src/main/java"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+	 (add-before 'build 'build-DescriptorProtos.java
+	   (lambda _
+	     (invoke "protoc" "--java_out=java/core/src/main/java" "-Isrc"
+                     "src/google/protobuf/descriptor.proto")
+	     #t)))))
+    (inputs
+     `(("java-guava" ,java-guava)))
+    (native-inputs
+     `(("protobuf" ,protobuf)))
+    (home-page (package-home-page protobuf))
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-jzlib
+  (package
+    (name "java-jzlib")
+    (version "1.1.3")
+    (source (origin
+	      (method url-fetch)
+	      (uri (string-append "https://github.com/ymnk/jzlib/archive/"
+				  version ".tar.gz"))
+              (sha256
+               (base32
+                "1i0fplk22dlyaz3id0d8hb2wlsl36w9ggbvsq67sx77y0mi6bnl3"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jzlib.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
 (define-public java-netty-common
   (package
     (name "java-netty-common")
@@ -6478,6 +6534,109 @@ logging framework for Java.")))
        ("java-mockito" ,java-mockito)
        ("java-slf4j-simple" ,java-slf4j-simple)))
     (home-page "https://netty.io/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-netty-buffer
+  (package
+    (inherit java-netty-common)
+    (name "java-netty-buffer")
+    (arguments
+     `(#:jar-name "netty-buffer.jar"
+       #:source-dir "buffer/src/main/java"
+       #:test-dir "buffer/src/test"
+       #:test-exclude (list "**/Abstract*.*"
+                            "**/ByteBufAllocatorTest.*")))
+    (inputs
+     `(("java-netty-common" ,java-netty-common)
+       ,@(package-inputs java-netty-common)))))
+
+(define-public java-netty-resolver
+  (package
+    (inherit java-netty-common)
+    (name "java-netty-resolver")
+    (arguments
+     `(#:jar-name "netty-resolver.jar"
+       #:source-dir "resolver/src/main/java"
+       #:test-dir "resolver/src/test"))
+    (inputs
+     `(("java-netty-common" ,java-netty-common)
+       ,@(package-inputs java-netty-common)))))
+
+(define-public java-netty-transport
+  (package
+    (inherit java-netty-common)
+    (name "java-netty-transport")
+    (arguments
+     `(#:jar-name "netty-transport.jar"
+       #:source-dir "transport/src/main/java"
+       #:test-dir "transport/src/test"
+       ;; reference to assertEquals is ambiguous
+       #:tests? #f))
+    (inputs
+     `(("java-netty-buffer" ,java-netty-buffer)
+       ("java-netty-common" ,java-netty-common)
+       ("java-netty-resolver" ,java-netty-resolver)
+       ,@(package-inputs java-netty-common)))
+    (native-inputs
+     `(("java-logback-classic" ,java-logback-classic)
+       ("java-logback-core" ,java-logback-core)
+       ,@(package-native-inputs java-netty-common)))))
+
+(define-public java-netty-codec
+  (package
+    (inherit java-netty-common)
+    (name "java-netty-codec")
+    (arguments
+     `(#:jar-name "netty-codec.jar"
+       #:source-dir "codec/src/main/java"
+       #:test-dir "codec/src/test"))
+    (inputs
+     `(("java-netty-buffer" ,java-netty-buffer)
+       ("java-netty-common" ,java-netty-common)
+       ("java-netty-transport" ,java-netty-transport)
+       ("java-lz4" ,java-lz4)
+       ("java-jzlib" ,java-jzlib)
+       ("java-protobuf" ,java-protobuf)
+       ,@(package-inputs java-netty-common)))))
+
+(define-public java-netty-handler
+  (package
+    (inherit java-netty-common)
+    (name "java-netty-handler")
+    (arguments
+     `(#:jar-name "netty-handler.jar"
+       #:source-dir "handler/src/main/java"
+       #:test-dir "handler/src/test"))
+    (inputs
+     `(("java-netty-buffer" ,java-netty-buffer)
+       ("java-netty-common" ,java-netty-common)
+       ("java-netty-transport" ,java-netty-transport)
+       ("java-bouncycastle" ,java-bouncycastle)
+       ,@(package-inputs java-netty-common)))))
+
+(define-public java-conversantmedia-disruptor
+  (package
+    (name "java-conversantmedia-disruptor")
+    (version "1.2.14")
+    (source (origin
+	      (method url-fetch)
+	      (uri (string-append "https://github.com/conversant/disruptor/archive/" version ".tar.gz"))
+	      (sha256
+	       (base32
+		"0sbr6bcsawzfzwcxxlyh6lqqlqd09qld0xika9dhd01kxl60srwb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "conversantmedia-disruptor.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"))
+    (inputs
+     `(("java-slf4j-api" ,java-slf4j-api)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
