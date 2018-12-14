@@ -190,7 +190,96 @@ def main(args: Array[String]): Unit = {
     (description "")
     (license license:asl2.0)))
 
-;; TODO: https://github.com/mdedetrich/scalajson
+(define-public scala-scalajson
+  (package
+    (name "scala-scalajson")
+    (version "1.0.0-M4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/mdedetrich/scalajson/archive/v" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0k4dj2zm7zilhshdnvqi9n17qr4szc5s9ymsm9imgqpr8r5hm2vj"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "shared/src/main/scala" ".*.scala$"))
+             (mkdir-p "build/jar")
+             (invoke "jar" "-cf" "build/jar/scalajson-shared.jar"
+                     "-C" "build/classes" ".")
+             (delete-file-recursively "build/classes")
+             (setenv "CLASSPATH" (string-append (getenv "CLASSPATH") ":build/jar/scalajson-shared.jar"))
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "jvm/src/main/scala" ".*.scala$"))
+             (mkdir-p "build/jar")
+             (invoke "jar" "-cf" "build/jar/scalajson-jvm.jar"
+                     "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+;; Latest is 0.13.0, but this version is required for scala-jsonnew
+(define-public scala-jawn
+  (package
+    (name "scala-jawn")
+    (version "0.10.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/non/jawn/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1iic1rp7w7vsy0xhi40rcp339vcq5b4b46f51qrkfpv433f7hafi"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "util/src/main/scala" ".*.scala$"))
+             (mkdir-p "build/jar")
+             (invoke "jar" "-cf" "build/jar/jawn-util.jar"
+                     "-C" "build/classes" ".")
+             (delete-file-recursively "build/classes")
+             (setenv "CLASSPATH" (string-append (getenv "CLASSPATH") ":build/jar/scalajson-shared.jar"))
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "parser/src/main/scala" ".*.scala$"))
+             (mkdir-p "build/jar")
+             (invoke "jar" "-cf" "build/jar/jawn-parser.jar"
+                     "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
 (define-public scala-sjsonnew-support-scalajson
   (package
     (inherit scala-sjsonnew)
@@ -201,12 +290,39 @@ def main(args: Array[String]): Unit = {
        (modify-phases %standard-phases
          (replace 'build
            (lambda _
+             (substitute* (find-files "." ".*.scala")
+               (("shaded.scalajson") "scalajson"))
              (mkdir-p "build/classes")
              (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
                     "-d" "build/classes"
                     (find-files "support/scalajson/src/main/scala" ".*.scala$"))
              (mkdir-p "build/jar")
              (invoke "jar" "-cf" "build/jar/sjsonnew-support-scalajson.jar"
+                     "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (inputs
+     `(("scala-sjsonnew" ,scala-sjsonnew)
+       ("scala-scalajson" ,scala-scalajson)
+       ("scala-jawn" ,scala-jawn)))))
+
+(define-public scala-sjsonnew-support-murmurhash
+  (package
+    (inherit scala-sjsonnew)
+    (name "scala-sjsonnew-support-murmurhash")
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "support/murmurhash/src/main/scala" ".*.scala$"))
+             (mkdir-p "build/jar")
+             (invoke "jar" "-cf" "build/jar/sjsonnew-support-murmurhash.jar"
                      "-C" "build/classes" ".")
              #t))
          (replace 'install
@@ -354,18 +470,18 @@ lambdas (type projections) easier to write.")
     (arguments
      (ensure-keyword-arguments (package-arguments java-log4j-api)
        `(#:jdk ,icedtea-8
-	 #:source-dir "src/main/java"
-	 #:phases
-	 (modify-phases %standard-phases
-	   (add-after 'unpack 'chdir
-	     (lambda _
-	       (chdir "log4j-api")
-	       #t))
-	   (add-before 'build 'fix-ambiguous
-	     (lambda _
-	       (substitute* "src/main/java/org/apache/logging/log4j/message/MapMessage.java"
-		 (("append\\(data") "append((CharSequence)data"))
-	       #t))))))
+         #:source-dir "src/main/java"
+         #:phases
+         (modify-phases %standard-phases
+           (add-after 'unpack 'chdir
+             (lambda _
+               (chdir "log4j-api")
+               #t))
+           (add-before 'build 'fix-ambiguous
+             (lambda _
+               (substitute* "src/main/java/org/apache/logging/log4j/message/MapMessage.java"
+                 (("append\\(data") "append((CharSequence)data"))
+               #t))))))
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/logging/log4j/" version
@@ -421,11 +537,11 @@ lambdas (type projections) easier to write.")
        (modify-phases %standard-phases
          (add-after 'unpack 'enter-dir
            (lambda _ (chdir "log4j-core") #t))
-	 (add-before 'build 'fix-ambiguous
-	   (lambda _
-	     (substitute* "src/main/java/org/apache/logging/log4j/core/pattern/MapPatternConverter.java"
-	       (("append\\(sortedMap") "append((CharSequence)sortedMap"))
-	     #t)))))
+         (add-before 'build 'fix-ambiguous
+           (lambda _
+             (substitute* "src/main/java/org/apache/logging/log4j/core/pattern/MapPatternConverter.java"
+               (("append\\(sortedMap") "append((CharSequence)sortedMap"))
+             #t)))))
     (synopsis "Core component of the Log4j framework")
     (description "This package provides the core component of the Log4j
 logging framework for Java.")))
@@ -447,6 +563,8 @@ logging framework for Java.")))
                      (jar-name (string-append name ".jar")))
                  (mkdir-p build-directory)
                  (format #t "Building project ~a...~%" name)
+                 (substitute* (find-files "." ".*.scala")
+                   (("sjsonnew.shaded.") ""))
                  (apply invoke "scalac" "-classpath"
                         (string-append (getenv "CLASSPATH") ":build/util-interface")
                         "-d" build-directory "-language:experimental.macros"
@@ -464,7 +582,49 @@ logging framework for Java.")))
      `(("java-log4j-api" ,java-log4j-api-for-sbt)
        ("java-log4j-core" ,java-log4j-core-for-sbt)
        ("sbt-util-interface" ,sbt-util-interface)
-       ("scala-sjsonnew" ,scala-sjsonnew)))
+       ("scala-scalajson" ,scala-scalajson)
+       ("scala-sjsonnew" ,scala-sjsonnew)
+       ("scala-sjsonnew-support-scalajson" ,scala-sjsonnew-support-scalajson)))
+    (native-inputs
+     `(("scala-official" ,scala-official)))))
+
+(define-public sbt-util-cache
+  (package
+    (inherit sbt-util-position)
+    (name "sbt-util-cache")
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (build-subproject prefix name)
+               (let ((build-directory (string-append "build/" name))
+                     (jar-name (string-append name ".jar")))
+                 (mkdir-p build-directory)
+                 (substitute* (find-files "." ".*.scala")
+                   (("sjsonnew.shaded.") ""))
+                 (format #t "Building project ~a...~%" name)
+                 (apply invoke "scalac" "-classpath"
+                        (string-append (getenv "CLASSPATH") ":build/util-interface")
+                        "-d" build-directory "-language:experimental.macros"
+                        (append
+                          (find-files (string-append prefix name "/src/main/contraband-scala")
+                                      ".*.scala$")
+                          (find-files (string-append prefix name "/src/main/scala")
+                                      ".*.scala$")))
+                 (invoke "jar" "cf" jar-name "-C" build-directory ".")))
+             (build-subproject "" "util-cache")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (inputs
+     `(("sbt-io" ,sbt-io)
+       ("scala-jawn" ,scala-jawn)
+       ("scala-scalajson" ,scala-scalajson)
+       ("scala-sjsonnew" ,scala-sjsonnew)
+       ("scala-sjsonnew-support-murmurhash" ,scala-sjsonnew-support-murmurhash)
+       ("scala-sjsonnew-support-scalajson" ,scala-sjsonnew-support-scalajson)))
     (native-inputs
      `(("scala-official" ,scala-official)))))
 
@@ -534,10 +694,55 @@ logging framework for Java.")))
     (description "")
     (license license:bsd-3)))
 
+;; https://index.scala-lang.org/eed3si9n/gigahorse/gigahorse-okhttp/0.3.0?target=_2.12
+(define-public sbt-librarymanagement
+  (package
+    (name "sbt-librarymanagement")
+    (version "1.2.3")
+    (source (origin
+	      (method url-fetch)
+	      (uri (string-append "https://github.com/sbt/librarymanagement/archive/v" version ".tar.gz"))
+	      (file-name (string-append name "-" version ".tar.gz"))
+	      (sha256
+	       (base32
+		"0a29xzcw2qzviv073g040m3lcylybh2qj1xcdkcjdcfajad7c27k"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (append
+                      (find-files "core/src/main/java" ".*.java$")
+                      (find-files "core/src/main/scala" ".*.scala$")
+                      (find-files "core/src/main/contraband-scala" ".*.scala$")))
+             (invoke "jar" "cf" "sbt-io.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (inputs
+     `(("sbt-util-cache" ,sbt-util-cache)
+       ("sbt-util-interface" ,sbt-util-interface)
+       ("sbt-util-logging" ,sbt-util-logging)
+       ("sbt-util-position" ,sbt-util-position)
+       ("sbt-io" ,sbt-io)
+       ("scala-sjsonnew" ,scala-sjsonnew)))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    ;; From core/NOTICE
+    (license license:bsd-2)))
+
 (define-public sbt
   (package
     (name "sbt")
-    (version "1.2.1")
+    (version "1.2.7")
     (source
       (origin
         (method url-fetch)
@@ -546,7 +751,7 @@ logging framework for Java.")))
         (file-name (string-append name "-" version ".tar.gz"))
         (sha256
          (base32
-          "15i8fd7zgairaaikscrva8d1klz0w9nh7fc0896x1n8nrs578vmy"))))
+          "0i0j6dcgn80bajq05h739h0d7kgcz7zbfk6qsnln8qrcx1wgbf0q"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -619,6 +824,7 @@ object WriteKeywords {
      `(("scala" ,scala-official)
        ("scala-sjsonnew" ,scala-sjsonnew)
        ("sbt-io" ,sbt-io)
+       ("sbt-util-cache" ,sbt-util-cache)
        ("sbt-util-control" ,sbt-util-control)
        ("sbt-util-interface" ,sbt-util-interface)
        ("sbt-util-logging" ,sbt-util-logging)
