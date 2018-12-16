@@ -4718,7 +4718,7 @@ namespaces.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1350yl003y1fjzdwis0dg5jhi5kggk2sxnkv9821z5janw4p986m"))))
+                "11k7fhhx6xcpz6iwsxpvr5ivbv1db6xmrrnhl1nzhxl8ja1rsmdc"))))
     (build-system ant-build-system)
     (propagated-inputs
      `(("java-asm" ,java-asm)))
@@ -6467,11 +6467,11 @@ logging framework for Java.")))
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'build-DescriptorProtos.java
-	   (lambda _
-	     (invoke "protoc" "--java_out=java/core/src/main/java" "-Isrc"
+         (add-before 'build 'build-DescriptorProtos.java
+           (lambda _
+             (invoke "protoc" "--java_out=java/core/src/main/java" "-Isrc"
                      "src/google/protobuf/descriptor.proto")
-	     #t)))))
+             #t)))))
     (inputs
      `(("java-guava" ,java-guava)))
     (native-inputs
@@ -6486,9 +6486,9 @@ logging framework for Java.")))
     (name "java-jzlib")
     (version "1.1.3")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/ymnk/jzlib/archive/"
-				  version ".tar.gz"))
+              (method url-fetch)
+              (uri (string-append "https://github.com/ymnk/jzlib/archive/"
+                                  version ".tar.gz"))
               (sha256
                (base32
                 "1i0fplk22dlyaz3id0d8hb2wlsl36w9ggbvsq67sx77y0mi6bnl3"))))
@@ -6621,11 +6621,11 @@ logging framework for Java.")))
     (name "java-conversantmedia-disruptor")
     (version "1.2.14")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/conversant/disruptor/archive/" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"0sbr6bcsawzfzwcxxlyh6lqqlqd09qld0xika9dhd01kxl60srwb"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/conversant/disruptor/archive/" version ".tar.gz"))
+              (sha256
+               (base32
+                "0sbr6bcsawzfzwcxxlyh6lqqlqd09qld0xika9dhd01kxl60srwb"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "conversantmedia-disruptor.jar"
@@ -6636,6 +6636,126 @@ logging framework for Java.")))
     (native-inputs
      `(("java-hamcrest-core" ,java-hamcrest-core)
        ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-okio
+  (package
+    (name "java-okio")
+    (version "1.16.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/square/okio/archive/okio-parent-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "05xxrsv2klfvcnp5r4ri28d7hh502wcwlvsm9lnx4kpqlpkq0yzp"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "okio.jar"
+       #:source-dir "okio/src/main/java"
+       #:test-dir "okio/src/test"))
+    (inputs
+     `(("java-jsr305" ,java-jsr305)
+       ("java-animal-sniffer-annotations" ,java-animal-sniffer-annotations)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-okhttp
+  (package
+    (name "java-okhttp")
+    (version "3.12.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/square/okhttp/archive/parent-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1gj3rlz2sy6hbdy7yp18f2rb19z0mrp0wai6fls1slsds4fay2gr"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "okhttp.jar"
+       #:source-dir "okhttp/src/main/java"
+       #:test-dir "okhttp/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'remove-platforms
+	   (lambda _
+	     (delete-file "okhttp/src/main/java/okhttp3/internal/platform/AndroidPlatform.java")
+	     (delete-file "okhttp/src/main/java/okhttp3/internal/platform/ConscryptPlatform.java")
+	     (substitute* "okhttp/src/main/java/okhttp3/internal/platform/Platform.java"
+	       (("AndroidPlatform.buildIfSupported.*") "null;\n")
+	       (("ConscryptPlatform.buildIfSupported.*") "null;\n"))
+	     #t))
+	 (add-after 'unpack 'fill-templates
+	   (lambda _
+	     (with-directory-excursion "okhttp/src/main/java-templates"
+	       (for-each
+	         (lambda (file)
+		   (let ((installed-name (string-append "../java/" file)))
+	             (copy-file file installed-name)
+		     (substitute* installed-name
+		       (("\\$\\{project.version\\}") ,version))))
+	         (find-files "." ".*.java")))
+	     #t)))))
+    (inputs
+     `(("java-animal-sniffer-annotations" ,java-animal-sniffer-annotations)
+       ("java-jsr305" ,java-jsr305)
+       ("java-okio" ,java-okio)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-config
+  (package
+    (name "java-config")
+    (version "1.3.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/lightbend/config/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0jsw3s902aqj5c9iddj7ahy9qlrc39d7w3jj9y13bn5ja8biazzk"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "config.jar"
+       #:source-dir "config/src/main/java"
+       #:test-dir "config/src/test"))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-reactive-streams
+  (package
+    (name "java-reactive-streams")
+    (version "1.0.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/reactive-streams/reactive-streams-jvm/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "16nrm8fv058vr8442986yl6kvdb7w5if8lb8ip2jakawjq93k2vm"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "reactive-streams.jar"
+       #:source-dir "api/src/main/java"
+       ;; No tests
+       #:tests? #f))
     (home-page "")
     (synopsis "")
     (description "")

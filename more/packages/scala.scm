@@ -694,18 +694,96 @@ logging framework for Java.")))
     (description "")
     (license license:bsd-3)))
 
+(define-public scala-ssl-config
+  (package
+    (name "scala-ssl-config")
+    (version "0.3.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/lightbend/ssl-config/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1wbxxg64xlgw1p5mrqn0vkj2l7k55c4safdxw05pxrdx0nmirnl2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "ssl-config-core/src/main/scala" ".*.scala$"))
+             (invoke "jar" "cf" "okhttp.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (inputs
+     `(("java-config" ,java-config)))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public scala-okhttp
+  (package
+    (name "scala-okhttp")
+    (version "0.3.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/eed3si9n/gigahorse/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "06ac03vr0cyr63zw0ibdwmswa03crm6i8mb00y69zpkm2jxqq2mb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (append
+                      (find-files "core/src/main/scala" ".*.scala$")
+                      (find-files "gigahorse/src/main/scala" ".*.scala$")
+                      (find-files "core/src/main/contraband-scala" ".*.scala$")))
+             (invoke "jar" "cf" "okhttp.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (inputs
+     `(("java-config" ,java-config)
+       ("java-reactive-streams" ,java-reactive-streams)
+       ("java-slf4j-api" ,java-slf4j-api)
+       ("scala-ssl-config" ,scala-ssl-config)))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 ;; https://index.scala-lang.org/eed3si9n/gigahorse/gigahorse-okhttp/0.3.0?target=_2.12
 (define-public sbt-librarymanagement
   (package
     (name "sbt-librarymanagement")
     (version "1.2.3")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/sbt/librarymanagement/archive/v" version ".tar.gz"))
-	      (file-name (string-append name "-" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"0a29xzcw2qzviv073g040m3lcylybh2qj1xcdkcjdcfajad7c27k"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/sbt/librarymanagement/archive/v" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0a29xzcw2qzviv073g040m3lcylybh2qj1xcdkcjdcfajad7c27k"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -730,6 +808,7 @@ logging framework for Java.")))
        ("sbt-util-logging" ,sbt-util-logging)
        ("sbt-util-position" ,sbt-util-position)
        ("sbt-io" ,sbt-io)
+       ("scala-okhttp" ,scala-okhttp)
        ("scala-sjsonnew" ,scala-sjsonnew)))
     (native-inputs
      `(("scala" ,scala-official)))
@@ -824,6 +903,7 @@ object WriteKeywords {
      `(("scala" ,scala-official)
        ("scala-sjsonnew" ,scala-sjsonnew)
        ("sbt-io" ,sbt-io)
+       ("sbt-librarymanagement" ,sbt-librarymanagement)
        ("sbt-util-cache" ,sbt-util-cache)
        ("sbt-util-control" ,sbt-util-control)
        ("sbt-util-interface" ,sbt-util-interface)
