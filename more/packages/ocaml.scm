@@ -512,3 +512,33 @@ package is not free software!")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
+
+(define-public coq-io
+  (package
+    (name "coq-io")
+    (version "3.3.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/coq-io/io/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0k1z8kav3wz5n04g3imm1hqjimb9cf12ga5wkj1skz8l5ccjxprw"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:make-flags
+       (list (string-append "COQLIB=" (assoc-ref %outputs "out") "/lib/coq/"))
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'configure
+           (lambda _
+             (invoke "./configure.sh")
+             #t)))))
+    (native-inputs
+     `(("coq" ,coq-8.6)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
