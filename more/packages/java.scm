@@ -1896,7 +1896,7 @@ from ORO, Inc.")
              (delete-file-recursively "src/main/java/freemarker/ext/jython")
          (delete-file "src/test/java/freemarker/core/ObjectBuilderSettingsTest.java")
              (delete-file-recursively "src/main/java/freemarker/ext/rhino")
-             ;; This class depends on javareble, a non-free package
+             ;; This class depends on javarebel, a non-free package
              (delete-file "src/main/java/freemarker/ext/beans/JRebelClassChangeNotifier.java")
              (delete-file "src/main/java/freemarker/ext/ant/UnlinkedJythonOperationsImpl.java")
              (delete-file "src/main/java/freemarker/template/utility/JythonRuntime.java")
@@ -1955,7 +1955,7 @@ import javax.el.ELContext;"))
        ("java-eclipse-jetty-server" ,java-eclipse-jetty-server)
        ("java-eclipse-jetty-webapp" ,java-eclipse-jetty-webapp)
        ("java-junit" ,java-junit)))
-    (home-page "https://github.com/ralfstx/minimal-json")
+    (home-page "")
     (synopsis "")
     (description "")
     (license license:expat)))
@@ -6469,8 +6469,14 @@ logging framework for Java.")))
        (modify-phases %standard-phases
          (add-before 'build 'build-DescriptorProtos.java
            (lambda _
+             (for-each
+               (lambda (proto)
+                 (invoke "protoc" "--java_out=java/core/src/main/java" "-Isrc"
+                         (string-append "src/google/protobuf/" proto ".proto")))
+                 '("any" "api" "descriptor" "duration" "empty" "field_mask"
+                   "source_context" "struct" "timestamp" "type" "wrappers"))
              (invoke "protoc" "--java_out=java/core/src/main/java" "-Isrc"
-                     "src/google/protobuf/descriptor.proto")
+                     "src/google/protobuf/compiler/plugin.proto")
              #t)))))
     (inputs
      `(("java-guava" ,java-guava)))
@@ -6756,6 +6762,187 @@ logging framework for Java.")))
        #:source-dir "api/src/main/java"
        ;; No tests
        #:tests? #f))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-picocli
+  (package
+    (name "java-picocli")
+    (version "3.8.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/remkop/picocli/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0rbk4kccy8qd2gnrfk9455rp48ign82h9a5n98ry4ac1i1x2ffax"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "picocli.jar"
+       #:source-dir "src/main/java"
+       ;; Require org.junit.contrib.java.lang.system.*
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-groovy-dependency
+           (lambda _
+	     ;; Groovy depends on picocli, so remove a cyclic dependency here
+	     (delete-file-recursively "src/main/java/picocli/groovy")
+	     #t)))))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-protoc-jar
+  (package
+    (name "java-protoc-jar")
+    (version "3.6.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/os72/protoc-jar/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "13q9cvplsbv9jxx5myiir4hdlhclgr9ka6c9x9f022hcn0lzgjpw"))
+              (modules '((guix build utils)))
+              (snippet
+               `(delete-file-recursively "bin"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "protoc-jar.jar"
+       #:tests? #f; require network
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'embed-protoc
+           (lambda* (#:key inputs system #:allow-other-keys)
+             (let* ((dir (string-append "build/classes/bin/" ,(package-version protobuf)))
+                    (file (string-append dir "/protoc-" ,(package-version protobuf)
+                                         "-linux-" (string-drop-right system 6) ".exe")))
+               (mkdir-p dir)
+               (copy-file (string-append (assoc-ref inputs "protobuf") "/bin/protoc") file))
+             #t)))))
+    (inputs
+     `(("protobuf" ,protobuf)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-fmpp
+  (package
+    (name "java-fmpp")
+    (version "0.9.16")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/freemarker/fmpp/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0k66qq8mss165mqbn3gs537xgqx74rch6zx335d415vd4h9d83va"))
+              (patches
+                (search-patches "java-fmpp-remove-imageinfo.patch"))
+              (modules '((guix build utils)))
+              (snippet
+               ;; NOTE: the bin/ directory only contain scripts
+               `(begin
+                  (delete-file-recursively "lib")
+                  #t))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:test-target "test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'set-modification-time
+           (lambda _
+             ;; This software assumes that a modification date of 0 means
+             ;; that it failed to get the modification time. Guix sets
+             ;; a modification time of 0, which leads to test failures.
+             (for-each (lambda (file) (utime file 1 1)) (find-files "src" "."))
+             #t))
+         (add-before 'build 'create-lib
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "lib")
+             (copy-file (string-append (assoc-ref inputs "java-apache-freemarker")
+                                       "/share/java/java-apache-freemarker.jar")
+                        "lib/freemarker.jar")
+             (copy-file (string-append (assoc-ref inputs "ant") "/lib/ant.jar")
+                        "lib/ant.jar")
+             (copy-file (string-append (assoc-ref inputs "java-junit")
+                                       "/share/java/junit.jar")
+                        "lib/junit.jar")
+             (copy-file (string-append (assoc-ref inputs "java-hamcrest-all")
+                                       "/share/java/hamcrest-all.jar")
+                        "lib/hamcrest-generator-nodeps.jar")
+             (copy-file (car (find-files (string-append (assoc-ref inputs "java-bsh")
+                                                        "/share/java/")
+                                         ".*.jar$"))
+                        "lib/bsh.jar")
+             (copy-file (car (find-files (string-append
+                                           (assoc-ref
+                                             inputs
+                                             "java-apache-xml-commons-resolver")
+                                           "/share/java/")
+                                         ".*.jar$"))
+                        "lib/resolver.jar")
+             #t))
+         (add-before 'build 'fix-class-path
+           (lambda* (#:key inputs #:allow-other-keys)
+             ;; The result otherwise requires its dependencies alongside it.
+             (with-fluids ((%default-port-encoding "ISO-8859-1"))
+               (substitute* "build.xml"
+                 ;; Also fix embedded timestamp
+                 (("\\$\\{timeStamp\\}") "1970-01-01T00:00:00Z")
+                 ((" imageinfo.jar") "")
+                 (("freemarker.jar ")
+                  (string-append
+                    ;; In java8, we can only refer to jar files relatively to
+                    ;; the current jar...
+                    "../../../../../../../../../../"
+                    (car (find-files
+                           (assoc-ref inputs "java-apache-freemarker")
+                           "freemarker.jar"))
+                    " "))
+                 (("bsh.jar ")
+                  (string-append
+                    "../../../../../../../../../../"
+                    (car (find-files (assoc-ref inputs "java-bsh") ".*.jar$"))
+                    " "))
+                 ((" resolver.jar")
+                  (string-append
+                    " ../../../../../../../../../../"
+                    (car (find-files
+                           (assoc-ref inputs "java-apache-xml-commons-resolver")
+                           ".*.jar$"))))))
+             #t))
+         (replace 'install
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "out"))
+                    (java (string-append out "/lib"))
+                    (bin (string-append out "/bin")))
+               (install-file "lib/fmpp.jar" java)
+               (substitute* "bin/fmpp"
+                 (("#!.*")
+                  (string-append "#!" (which "sh") "\n"
+                                 "JAVA_HOME=" (assoc-ref inputs "jdk"))))
+               (install-file "bin/fmpp" bin)
+               (chmod (string-append bin "/fmpp") #o755))
+             #t)))))
+    (inputs
+     `(("java-apache-freemarker" ,java-apache-freemarker)
+       ("java-apache-xml-commons-resolver" ,java-apache-xml-commons-resolver)
+       ("java-bsh" ,java-bsh)))
+    (native-inputs
+     `(("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-junit" ,java-junit)))
     (home-page "")
     (synopsis "")
     (description "")

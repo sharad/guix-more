@@ -29,6 +29,7 @@
   #:use-module (gnu packages bash)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages java)
+  #:use-module (gnu packages protobuf)
   #:use-module (more packages java))
 
 ;; This package downloads the so-called official version of scala, a pre-built
@@ -39,7 +40,7 @@
 (define-public scala-official
   (package
     (name "scala-official")
-    (version "2.12.6")
+    (version "2.12.8")
     (source
       (origin
         (method url-fetch)
@@ -47,7 +48,7 @@
                             version "/scala-" version ".tgz"))
         (sha256
          (base32
-          "05ili2959yrshqi44wpmwy0dyfm4kvp6i8mlbnj1xvc5b9649iqs"))))
+          "18w0vdbsp0q5rxglgalwlgkggld926bqi1fxc598rn4gh46a03j4"))))
     (build-system trivial-build-system)
     (arguments
      `(#:modules ((guix build utils))
@@ -65,7 +66,7 @@
                      (mkdir-p output)
                      (setenv "PATH" (string-append (getenv "PATH") ":" gzip "/bin"))
                      (invoke tar "xf" source)
-                     (copy-recursively "scala-2.12.6" output)
+                     (copy-recursively "scala-2.12.8" output)
                      (chdir output)
                      (for-each delete-file (find-files "bin" "bat$"))
                      (substitute* (find-files "bin" ".*")
@@ -80,6 +81,61 @@
     (synopsis "")
     (description "")
     (license license:bsd-3)))
+
+;; TODO: put it in guix/build/java-utils.scm
+;; TODO: remove contraband-* directories and regenerate them from contraband/
+(define (sbt-building-phase subprojects)
+  `(lambda* (#:key inputs #:allow-other-keys)
+     (define (build-subproject prefix name)
+       (let ((build-directory (string-append "build/" name))
+             (jar-name (string-append
+                         (if (> (string-length prefix) 0)
+                           (string-replace prefix "-" (- (string-length prefix) 1))
+                           "")
+                         name ".jar"))
+             (java-files
+                (append
+                  (find-files (string-append prefix name "/src/main/contraband-java")
+                              ".*.java$")
+                  (find-files (string-append prefix name "/src/main/java")
+                              ".*.java$")))
+             (scala-files
+                (append
+                  (find-files (string-append prefix name "/src/main/contraband-scala")
+                              ".*.scala$")
+                  (find-files (string-append prefix name "/src/main/scala")
+                              ".*.scala$"))))
+         (mkdir-p build-directory)
+         (format #t "Building project ~a...~%" jar-name)
+         (unless (eq? scala-files '())
+           (apply invoke "scalac" "-classpath"
+                  (string-append
+                    (getenv "CLASSPATH") ":"
+                    ;; Add any top-level directory in build that may contain
+                    ;; .class files, but don't actually add build/ iteself or
+                    ;; any individual class file.
+                    (string-join
+                      (filter (lambda (s) (eq? (string-count s #\/) 1))
+                              (find-files "build" "." #:directories? #t))
+                      ":"))
+                  "-d" build-directory "-language:experimental.macros"
+                  (append scala-files java-files)))
+         (unless (eq? java-files '())
+           (apply invoke "javac" "-classpath"
+                  (string-append
+                    (getenv "CLASSPATH") ":"
+                    (string-join
+                      (filter (lambda (s) (eq? (string-count s #\/) 1))
+                              (find-files "build" "." #:directories? #t))
+                      ":"))
+                  "-d" build-directory java-files))
+         (invoke "jar" "cf" (string-append "build/jar/" jar-name)
+                 "-C" build-directory ".")))
+     (mkdir-p "build/jar")
+     (for-each (lambda (project)
+                   (build-subproject (car project) (cadr project)))
+       '(,@subprojects))
+     #t))
 
 (define-public sbt-boilerplate-standalone
   (package
@@ -96,7 +152,6 @@
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'add-standalone
@@ -150,7 +205,6 @@ def main(args: Array[String]): Unit = {
           "1rv0c50af5kn27x51g650wl2ig94z52fhs0rn8ykahpz4jhg1p7p"))))
     (arguments
      `(#:tests? #f
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-boilerplate
@@ -333,7 +387,7 @@ def main(args: Array[String]): Unit = {
 (define-public scala-kind-projector
   (package
     (name "scala-kind-projector")
-    (version "0.9.7")
+    (version "0.9.9")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/non/kind-projector/archive/v"
@@ -341,11 +395,10 @@ def main(args: Array[String]): Unit = {
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "176g2d7ix2asp94ch39mza84k6z8by308hzglxs8933j8byramff"))))
+                "125amrhy7ri0z4bk2jzghg7341fm88a0p6gw3qg5diminlpaida3"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:phases
+     `(#:phases
        (modify-phases %standard-phases
          (replace 'build
            (lambda _
@@ -379,10 +432,10 @@ def main(args: Array[String]): Unit = {
 lambdas (type projections) easier to write.")
     (license license:expat)))
 
-(define-public sbt-util-position
+(define-public sbt-util
   (package
-    (name "sbt-util-position")
-    (version "1.2.2")
+    (name "sbt-util")
+    (version "1.2.4")
     (source
       (origin
         (method url-fetch)
@@ -391,76 +444,44 @@ lambdas (type projections) easier to write.")
         (file-name (string-append "sbt-util-" version ".tar.gz"))
         (sha256
          (base32
-          "1mj6ny62crq1d8850lkj00g3wsjhflaxrqiiv72b02fb8hn671dh"))))
+          "04ss1q4rl272ryxys05zmd4j2gm3aanaiqn6dmqbh6jii934pyxg"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
-         (replace 'build
-           (lambda* (#:key inputs #:allow-other-keys)
-             (define (build-subproject prefix name)
-               (let ((build-directory (string-append "build/" name))
-                     (jar-name (string-append name ".jar")))
-                 (mkdir-p build-directory)
-                 (format #t "Building project ~a...~%" name)
-                 (apply invoke "scalac" "-classpath"
-                        (string-append (getenv "CLASSPATH") ":build/util-interface")
-                        "-d" build-directory "-language:experimental.macros"
-                        (find-files (string-append prefix name "/src/main/scala")
-                                    ".*.scala$"))
-                 (invoke "jar" "cf" jar-name "-C" build-directory ".")))
-             (build-subproject "internal/" "util-position")
+         (add-before 'build 'fix-sjsonnew
+           (lambda _
+             (substitute* (find-files "." ".*.scala")
+               (("sjsonnew.shaded.") ""))
              #t))
+         (replace 'build
+           ,(sbt-building-phase
+              '(("internal/" "util-position")
+                ("internal/" "util-control")
+                ("internal/" "util-interface")
+                ("internal/" "util-logging")
+                ("internal/" "util-relation")
+                ("internal/" "util-scripted")
+                ("" "util-cache")
+                ("" "util-tracking"))))
          (replace 'install
            (install-jars ".")))))
     (inputs
-     `(("java-log4j-api" ,java-log4j-api)
-       ("java-log4j-core" ,java-log4j-core)
-       ("scala" ,scala-official)
-       ("scala-sjsonnew" ,scala-sjsonnew)))
+     `(("java-log4j-api" ,java-log4j-api-for-sbt)
+       ("java-log4j-core" ,java-log4j-core-for-sbt)
+       ("sbt-io" ,sbt-io)
+       ("scala-jawn" ,scala-jawn)
+       ("scala-scalajson" ,scala-scalajson)
+       ("scala-sjsonnew" ,scala-sjsonnew)
+       ("scala-sjsonnew-support-murmurhash" ,scala-sjsonnew-support-murmurhash)
+       ("scala-sjsonnew-support-scalajson" ,scala-sjsonnew-support-scalajson)))
+    (native-inputs
+     `(("scala" ,scala-official)))
     (home-page "https://www.scala-sbt.org/")
     (synopsis "")
     (description "")
     (license license:bsd-3)))
-
-(define-public sbt-util-control
-  (package
-    (inherit sbt-util-position)
-    (name "sbt-util-control")
-    (arguments
-     `(#:tests? #f
-       #:jdk ,icedtea-8
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'build
-           (lambda* (#:key inputs #:allow-other-keys)
-             (define (build-subproject prefix name)
-               (let ((build-directory (string-append "build/" name))
-                     (jar-name (string-append name ".jar")))
-                 (mkdir-p build-directory)
-                 (format #t "Building project ~a...~%" name)
-                 (apply invoke "scalac" "-classpath"
-                        (string-append (getenv "CLASSPATH") ":build/util-interface")
-                        "-d" build-directory "-language:experimental.macros"
-                        (find-files (string-append prefix name "/src/main/scala")
-                                    ".*.scala$"))
-                 (invoke "jar" "cf" jar-name "-C" build-directory ".")))
-             (build-subproject "internal/" "util-control")
-             #t))
-         (replace 'install
-           (install-jars ".")))))))
-
-(define-public sbt-util-interface
-  (package
-    (inherit sbt-util-position)
-    (name "sbt-util-interface")
-    (arguments
-     `(#:tests? #f
-       #:jdk ,icedtea-8
-       #:source-dir "internal/util-interface/src/main/java"
-       #:jar-name "util-interface.jar"))))
 
 (define-public java-log4j-api-for-sbt
   (package
@@ -469,8 +490,7 @@ lambdas (type projections) easier to write.")
     ;(version "2.11.1")
     (arguments
      (ensure-keyword-arguments (package-arguments java-log4j-api)
-       `(#:jdk ,icedtea-8
-         #:source-dir "src/main/java"
+       `(#:source-dir "src/main/java"
          #:phases
          (modify-phases %standard-phases
            (add-after 'unpack 'chdir
@@ -529,7 +549,6 @@ lambdas (type projections) easier to write.")
        #:test-dir "src/test"
        #:source-dir "src/main/java"
        #:jar-name "log4j-core.jar"
-       #:jdk ,icedtea-8
        #:make-flags
        (list (string-append "-Ddist.dir=" (assoc-ref %outputs "out")
                             "/share/java"))
@@ -547,87 +566,7 @@ lambdas (type projections) easier to write.")
 logging framework for Java.")))
 
 
-(define-public sbt-util-logging
-  (package
-    (inherit sbt-util-position)
-    (name "sbt-util-logging")
-    (arguments
-     `(#:tests? #f
-       #:jdk ,icedtea-8
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'build
-           (lambda* (#:key inputs #:allow-other-keys)
-             (define (build-subproject prefix name)
-               (let ((build-directory (string-append "build/" name))
-                     (jar-name (string-append name ".jar")))
-                 (mkdir-p build-directory)
-                 (format #t "Building project ~a...~%" name)
-                 (substitute* (find-files "." ".*.scala")
-                   (("sjsonnew.shaded.") ""))
-                 (apply invoke "scalac" "-classpath"
-                        (string-append (getenv "CLASSPATH") ":build/util-interface")
-                        "-d" build-directory "-language:experimental.macros"
-                        (append
-                          (find-files (string-append prefix name "/src/main/contraband-scala")
-                                      ".*.scala$")
-                          (find-files (string-append prefix name "/src/main/scala")
-                                      ".*.scala$")))
-                 (invoke "jar" "cf" jar-name "-C" build-directory ".")))
-             (build-subproject "internal/" "util-logging")
-             #t))
-         (replace 'install
-           (install-jars ".")))))
-    (inputs
-     `(("java-log4j-api" ,java-log4j-api-for-sbt)
-       ("java-log4j-core" ,java-log4j-core-for-sbt)
-       ("sbt-util-interface" ,sbt-util-interface)
-       ("scala-scalajson" ,scala-scalajson)
-       ("scala-sjsonnew" ,scala-sjsonnew)
-       ("scala-sjsonnew-support-scalajson" ,scala-sjsonnew-support-scalajson)))
-    (native-inputs
-     `(("scala-official" ,scala-official)))))
-
-(define-public sbt-util-cache
-  (package
-    (inherit sbt-util-position)
-    (name "sbt-util-cache")
-    (arguments
-     `(#:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'build
-           (lambda* (#:key inputs #:allow-other-keys)
-             (define (build-subproject prefix name)
-               (let ((build-directory (string-append "build/" name))
-                     (jar-name (string-append name ".jar")))
-                 (mkdir-p build-directory)
-                 (substitute* (find-files "." ".*.scala")
-                   (("sjsonnew.shaded.") ""))
-                 (format #t "Building project ~a...~%" name)
-                 (apply invoke "scalac" "-classpath"
-                        (string-append (getenv "CLASSPATH") ":build/util-interface")
-                        "-d" build-directory "-language:experimental.macros"
-                        (append
-                          (find-files (string-append prefix name "/src/main/contraband-scala")
-                                      ".*.scala$")
-                          (find-files (string-append prefix name "/src/main/scala")
-                                      ".*.scala$")))
-                 (invoke "jar" "cf" jar-name "-C" build-directory ".")))
-             (build-subproject "" "util-cache")
-             #t))
-         (replace 'install
-           (install-jars ".")))))
-    (inputs
-     `(("sbt-io" ,sbt-io)
-       ("scala-jawn" ,scala-jawn)
-       ("scala-scalajson" ,scala-scalajson)
-       ("scala-sjsonnew" ,scala-sjsonnew)
-       ("scala-sjsonnew-support-murmurhash" ,scala-sjsonnew-support-murmurhash)
-       ("scala-sjsonnew-support-scalajson" ,scala-sjsonnew-support-scalajson)))
-    (native-inputs
-     `(("scala-official" ,scala-official)))))
-
+;; TODO: Update to 2.0.6?
 (define-public java-swoval-apple-file-events
   (package
     (name "java-swoval-apple-file-events")
@@ -642,8 +581,7 @@ logging framework for Java.")))
                 "0ivrc4lcali84xp8frkjb2zi1l3lw8pim9xbkfah5iyj120gw6mq"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:tests? #f; no tests
+     `(#:tests? #f; no tests
        #:jar-name "apple-file-events.jar"
        #:source-dir "apple-file-events/jvm/src/main/java"))
     (home-page "")
@@ -654,7 +592,7 @@ logging framework for Java.")))
 (define-public sbt-io
   (package
     (name "sbt-io")
-    (version "1.2.1")
+    (version "1.2.2")
     (source
       (origin
         (method url-fetch)
@@ -663,11 +601,10 @@ logging framework for Java.")))
         (file-name (string-append name "-" version ".tar.gz"))
         (sha256
          (base32
-          "0cgk3y3w8yjpivi910px529bz8bil49lrnib6wbwmvq8lw8mgrwq"))))
+          "0f9yjrrcr15kx2fn7w8f8swpx2dsx5zn95yg744l9gi2ri2qpyj5"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (replace 'build
@@ -697,7 +634,7 @@ logging framework for Java.")))
 (define-public scala-ssl-config
   (package
     (name "scala-ssl-config")
-    (version "0.3.4")
+    (version "0.3.7")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/lightbend/ssl-config/archive/v"
@@ -705,7 +642,7 @@ logging framework for Java.")))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1wbxxg64xlgw1p5mrqn0vkj2l7k55c4safdxw05pxrdx0nmirnl2"))))
+                "0sg477705flhcdnhjyl8v9jkhx1xfsnc73md8iva1agylpj5546f"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -754,7 +691,7 @@ logging framework for Java.")))
                     "-d" "build/classes"
                     (append
                       (find-files "core/src/main/scala" ".*.scala$")
-                      (find-files "gigahorse/src/main/scala" ".*.scala$")
+                      (find-files "okhttp/src/main/scala" ".*.scala$")
                       (find-files "core/src/main/contraband-scala" ".*.scala$")))
              (invoke "jar" "cf" "okhttp.jar" "-C" "build/classes" ".")
              #t))
@@ -764,6 +701,8 @@ logging framework for Java.")))
      `(("java-config" ,java-config)
        ("java-reactive-streams" ,java-reactive-streams)
        ("java-slf4j-api" ,java-slf4j-api)
+       ("java-okhttp" ,java-okhttp)
+       ("java-okio" ,java-okio)
        ("scala-ssl-config" ,scala-ssl-config)))
     (native-inputs
      `(("scala" ,scala-official)))
@@ -772,18 +711,65 @@ logging framework for Java.")))
     (description "")
     (license license:asl2.0)))
 
+(define-public sbt-launcher
+  (package
+    (name "sbt-launcher")
+    (version "1.0.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/sbt/launcher/archive/v" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1a9dfqm47fn2nbqvjl723s0h16jf71cgnilg1i7gz6h4a7i0snak"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "launcher-implementation/src/main/input_sources/CrossVersionUtil.scala"
+               (("\\$\\{\\{cross.package0\\}\\}") "xsbt")
+               (("\\$\\{\\{cross.package1\\}\\}") "boot"))
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (append
+                      (find-files "launcher-interface/src/main/java" ".*.java$")
+                      (find-files "launcher-implementation/src/main/input_sources" ".*.scala$")
+                      (find-files "launcher-implementation/src/main/scala" ".*.scala$")))
+             (apply invoke "javac" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
+                    "-d" "build/classes"
+                    (find-files "launcher-interface/src/main/java" ".*.java$"))
+             (invoke "jar" "cf" "sbt-launcher.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (inputs
+     `(("java-apache-ivy" ,java-apache-ivy)))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
 ;; https://index.scala-lang.org/eed3si9n/gigahorse/gigahorse-okhttp/0.3.0?target=_2.12
 (define-public sbt-librarymanagement
   (package
     (name "sbt-librarymanagement")
-    (version "1.2.3")
+    (version "1.2.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/sbt/librarymanagement/archive/v" version ".tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0a29xzcw2qzviv073g040m3lcylybh2qj1xcdkcjdcfajad7c27k"))))
+                "0g37agv3xkq1fjl9a25ybcdk4d5aq1m81rz5d2a8zvny135m73gl"))
+              (modules '((guix build utils)))
+              (snippet
+                `(for-each delete-file (find-files "." ".*.jar")))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -798,15 +784,13 @@ logging framework for Java.")))
                       (find-files "core/src/main/java" ".*.java$")
                       (find-files "core/src/main/scala" ".*.scala$")
                       (find-files "core/src/main/contraband-scala" ".*.scala$")))
-             (invoke "jar" "cf" "sbt-io.jar" "-C" "build/classes" ".")
+             (invoke "jar" "cf" "sbt-librarymanagement.jar" "-C" "build/classes" ".")
              #t))
          (replace 'install
            (install-jars ".")))))
     (inputs
-     `(("sbt-util-cache" ,sbt-util-cache)
-       ("sbt-util-interface" ,sbt-util-interface)
-       ("sbt-util-logging" ,sbt-util-logging)
-       ("sbt-util-position" ,sbt-util-position)
+     `(("sbt-launcher" ,sbt-launcher)
+       ("sbt-util" ,sbt-util)
        ("sbt-io" ,sbt-io)
        ("scala-okhttp" ,scala-okhttp)
        ("scala-sjsonnew" ,scala-sjsonnew)))
@@ -818,10 +802,501 @@ logging framework for Java.")))
     ;; From core/NOTICE
     (license license:bsd-2)))
 
+;; LICENSE?
+(define-public scala-protoc-bridge
+  (package
+    (name "scala-protoc-bridge")
+    (version "0.7.3")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "https://github.com/scalapb/protoc-bridge/archive/v"
+                            version ".tar.gz"))
+        (file-name (string-append name "-" version ".tar.gz"))
+        (sha256
+         (base32
+          "17xjsa70h0w80rhps00kj42fmghk98c789aaa19g4bii2j1ckry8"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-script
+           (lambda _
+             (substitute* "src/main/scala/protocbridge/frontend/PosixPluginFrontend.scala"
+               (("/usr/bin/env sh") (which "sh")))
+             #t))
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (append
+                      (find-files "src/main/scala" ".*.scala$")
+                      (find-files "src/main/java" ".*.java$")))
+             (apply invoke "javac" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
+                    "-d" "build/classes"
+                    (find-files "src/main/java" ".*.java$"))
+             (mkdir-p "build/jar")
+             (invoke "jar" "-cf" "build/jar/protoc-bridge.jar"
+                     "-C" "build/classes" ".")
+             #t))
+         (replace 'check
+           (lambda _
+             (mkdir-p "build/test-classes")
+             ;(apply invoke "scalac" "-classpath" (string-append (getenv "CLASSPATH")
+             ;                                                   ":build/classes")
+             ;       "-d" "build/test-classes"
+             ;       (find-files "src/test/scala" ".*.scala$"))
+             ;; TODO: actually run the tests
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public scala-sourcecode
+  (package
+    (name "scala-sourcecode")
+    (version "0.1.5")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/lihaoyi/sourcecode/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1cq15cxsv0j6xdrl566ywmab5il3239ja4cbgm39ihyn0yw2q1q4"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; in sourcecode/shared/src/test
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-compat
+           (lambda _
+             (with-directory-excursion "sourcecode/shared/src/main"
+               (copy-file "scala-2.11/sourcecode/Compat.scala"
+                          "scala/sourcecode/Compat.scala"))
+             #t))
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "sourcecode/shared/src/main/scala" ".*.scala$"))
+             (invoke "jar" "cf" "build/jar/sourcecode.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public scala-acyclic
+  (package
+    (name "scala-acyclic")
+    (version "0.1.8")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/lihaoyi/acyclic/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0c26qnjfhihn06sf17bxskacjcr51s03ygcmj8fp5vdzgcyfh7dl"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; in sourcecode/shared/src/test
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-compat
+           (lambda _
+             (with-directory-excursion "src/main"
+               (copy-file "scala-2.10_2.12/acyclic/plugin/Compat.scala"
+                          "scala/acyclic/plugin/Compat.scala"))
+             #t))
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "src/main/scala" ".*.scala$"))
+             (copy-recursively "src/main/resources" "build/classes")
+             (invoke "jar" "cf" "build/jar/acyclic.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public scala-fastparse
+  (package
+    (name "scala-fastparse")
+    (version "2.1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/lihaoyi/fastparse/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1h8s3izykv3x2g7klihk03mbnjcp23f2613827y62kdk6x9q6yjs"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; in fastpares/test/src
+       #:modules
+       ((guix build ant-build-system)
+        (guix build java-utils)
+        (guix build utils)
+        (srfi srfi-1))
+       #:imported-modules
+       ((srfi srfi-1) ; for iota
+        ,@%ant-build-system-modules)
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-sources
+           (lambda _
+             (define (tuple num)
+               (let* ((ts (map (lambda (n) (string-append "T" (number->string n)))
+                               (iota num 1)))
+                      (chunks (map (lambda (n)
+                                     (string-append "t._" (number->string n)))
+                                   (iota num 1)))
+                      (chunkss (string-join chunks ", "))
+                      (tsD (string-join (reverse (cons "D" (reverse ts))) ","))
+                      (anys (string-join (map (const "Any") ts) ", "))
+                      (tss (string-join ts ", ")))
+                 (format #t "
+val BaseSequencer~a: Sequencer[(~a), Any, (~a, Any)] =
+  Sequencer0((t, d) => (~a, d))
+implicit def Sequencer~a[~a]: Sequencer[(~a), D, (~a)] =
+  BaseSequencer~a.asInstanceOf[Sequencer[(~a), D, (~a)]]
+" num anys anys chunkss num tsD tss tsD num tss tsD)))
+             (with-output-to-file "fastparse/src/fastparse/SequencerGen.scala"
+               (lambda _
+                 (format #t "package fastparse
+trait SequencerGen[Sequencer[_, _, _]] extends LowestPriSequencer[Sequencer]{
+  protected[this] def Sequencer0[A, B, C](f: (A, B) => C): Sequencer[A, B, C]
+")
+                 (for-each tuple (iota 20 2))
+                 (format #t "}
+trait LowestPriSequencer[Sequencer[_, _, _]]{
+  protected[this] def Sequencer0[A, B, C](f: (A, B) => C): Sequencer[A, B, C]
+  implicit def Sequencer1[T1, T2]: Sequencer[T1, T2, (T1, T2)] = Sequencer0{case (t1, t2) => (t1, t2)}
+}
+")))
+             #t))
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "fastparse/src" ".*.scala$"))
+             (invoke "jar" "cf" "build/jar/fastparse.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (inputs
+     `(("scala-sourcecode" ,scala-sourcecode)))
+    (native-inputs
+     `(("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public scala-fastparse1
+  (package
+    (inherit scala-fastparse)
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/lihaoyi/fastparse/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append "scala-fastparse-" version ".tar.gz"))
+              (sha256
+               (base32
+                "14d44f23hl6ypfwlvnzkzcvv52a0xipm5wkp2glr184aik7w5pnb"))))
+    (arguments
+     `(#:tests? #f; in fastpares/test/src
+       #:modules
+       ((guix build ant-build-system)
+        (guix build java-utils)
+        (guix build utils)
+        (srfi srfi-1))
+       #:imported-modules
+       ((srfi srfi-1) ; for iota
+        ,@%ant-build-system-modules)
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-compat
+           (lambda _
+             (with-directory-excursion "utils/shared/src/main"
+               (copy-file "scala-2.11/fastparse/utils/Compat.scala"
+                          "scala/fastparse/utils/Compat.scala"))
+             #t))
+         (add-before 'build 'generate-sources
+           (lambda _
+             (define (tuple num)
+               (let* ((ts (map (lambda (n) (string-append "T" (number->string n)))
+                               (iota num 1)))
+                      (chunks (map (lambda (n)
+                                     (string-append "t._" (number->string n)))
+                                   (iota num 1)))
+                      (chunkss (string-join chunks ", "))
+                      (tsD (string-join (reverse (cons "D" (reverse ts))) ","))
+                      (anys (string-join (map (const "Any") ts) ", "))
+                      (tss (string-join ts ", ")))
+                 (format #t "
+val BaseSequencer~a: Sequencer[(~a), Any, (~a, Any)] =
+  Sequencer0((t, d) => (~a, d))
+implicit def Sequencer~a[~a]: Sequencer[(~a), D, (~a)] =
+  BaseSequencer~a.asInstanceOf[Sequencer[(~a), D, (~a)]]
+" num anys anys chunkss num tsD tss tsD num tss tsD)))
+             (with-output-to-file
+               "fastparse/shared/src/main/scala/fastparse/core/SequencerGen.scala"
+               (lambda _
+                 (format #t "package fastparse.core
+trait SequencerGen[Sequencer[_, _, _]] extends LowestPriSequencer[Sequencer]{
+  protected[this] def Sequencer0[A, B, C](f: (A, B) => C): Sequencer[A, B, C]
+")
+                 (for-each tuple (iota 20 2))
+                 (format #t "}
+trait LowestPriSequencer[Sequencer[_, _, _]]{
+  protected[this] def Sequencer0[A, B, C](f: (A, B) => C): Sequencer[A, B, C]
+  implicit def Sequencer1[T1, T2]: Sequencer[T1, T2, (T1, T2)] = Sequencer0{case (t1, t2) => (t1, t2)}
+}
+")))
+             #t))
+         (replace 'build
+           (lambda _
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "scalac" "-classpath" (getenv "CLASSPATH")
+                    "-d" "build/classes"
+                    (find-files "utils/shared/src/main/scala" ".*.scala$"))
+             (apply invoke "scalac" "-classpath"
+                    (string-append (getenv "CLASSPATH") ":build/classes")
+                    "-d" "build/classes"
+                    (find-files "fastparse/shared/src/main/scala" ".*.scala$"))
+             (invoke "jar" "cf" "build/jar/fastparse.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build")))))
+    (inputs
+     `(("scala-acyclic" ,scala-acyclic)
+       ("scala-sourcecode" ,scala-sourcecode)))))
+
+;; LICENSE?
+(define-public scala-protobuf
+  (package
+    (name "scala-protobuf")
+    (version "0.8.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/scalapb/ScalaPB/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0x6mfpyhzxh54dxh1pj3x952gyvp05m7vkj0c3p8ssx214r327kj"))
+              (modules '((guix build utils)))
+              (snippet
+                `(delete-file-recursively "third_party"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; TODO
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-sources
+           (lambda _
+             (with-output-to-file "compiler-plugin/src/main/scala/scalapb/compiler/Version.scala"
+               (lambda _
+                 (format #t "package scalapb.compiler
+object Version {
+  val scalapbVersion = \"~a\"
+  val protobufVersion = \"~a\"
+  val grpcJavaVersion = \"~a\"
+}" ,version ,(package-version protobuf) "TODO")))
+             (mkdir-p "compiler-plugin/src/main/scala/scalapb/compiler/internal")
+             (copy-file
+               "scalapb-runtime/shared/src/main/scala/scalapb/Encoding.scala"
+               "compiler-plugin/src/main/scala/scalapb/compiler/internal/Encoding.scala")
+             (substitute* "compiler-plugin/src/main/scala/scalapb/compiler/internal/Encoding.scala"
+               (("package scalapb") "package scalapb.internal"))
+             #t))
+         (add-before 'build 'merge-runtime
+           (lambda _
+             (copy-recursively "scalapb-runtime/shared/src" "scalapb-runtime/src")
+             (copy-recursively "scalapb-runtime/jvm/src" "scalapb-runtime/src")
+             #t))
+         (add-before 'build 'copy-compat
+           (lambda _
+             (with-directory-excursion "scalapb-runtime/src/main"
+               (copy-file "scala-2.11/scalapb/textformat/ParserCompat.scala"
+                          "scala/scalapb/textformat/ParserCompat.scala"))
+             #t))
+         (replace 'build
+           ,(sbt-building-phase
+              '(("lenses/" "shared")
+                ("" "scalapb-runtime")
+                ("" "compiler-plugin")
+                ("" "scalapbc"))))
+         (replace 'install
+           (install-jars "build"))
+         (add-after 'install 'install-bin
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((bin (string-append (assoc-ref outputs "out") "/bin")))
+               (mkdir-p bin)
+               (with-output-to-file (string-append bin "/scalapbc")
+                 (lambda _
+                   (format #t "#!~a
+java -cp ~a scalapb.ScalaPBC $@\n" (which "bash")
+                           (string-join
+                             (append
+                               (find-files (assoc-ref outputs "out") ".*.jar")
+                               (find-files (assoc-ref inputs "java-protobuf") ".*.jar")
+                               (find-files (assoc-ref inputs "java-protoc-jar") ".*.jar")
+                               (find-files (assoc-ref inputs "scala-fastparse1") ".*.jar")
+                               (find-files (assoc-ref inputs "scala-protoc-bridge") ".*.jar")
+                               (find-files (assoc-ref inputs "scala-sourcecode") ".*.jar")
+                               (find-files (assoc-ref inputs "scala") ".*.jar"))
+                             ":"))))
+               (chmod (string-append bin "/scalapbc") #o755))
+             #t)))))
+    (inputs
+     `(("java-protobuf" ,java-protobuf)
+       ("java-protoc-jar" ,java-protoc-jar)
+       ("scala-fastparse1" ,scala-fastparse1)
+       ("scala-protoc-bridge" ,scala-protoc-bridge)
+       ("scala-sourcecode" ,scala-sourcecode)))
+    (native-inputs
+     `(("protobuf" ,protobuf)
+       ("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public sbt-sbinary
+  (package
+    (name "sbt-sbinary")
+    (version "0.5.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "https://github.com/sbt/sbinary/archive/v"
+                            version ".tar.gz"))
+        (file-name (string-append "sbt-util-" version ".tar.gz"))
+        (sha256
+         (base32
+          "12mcny4flfc6zbgncjwqljrsg6qw7azagkackyqcp4gmv9ssw99f"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-fmpp
+           (lambda _
+             (invoke "fmpp" "-U" "all" "-S" "core/src/main/fmpp" "-O"
+                     "core/src/main/scala")
+             #t))
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "build/classes")
+             (apply invoke "scalac" "-classpath"
+                    (string-append (getenv "CLASSPATH") ":build/util-interface")
+                    "-d" "build/classes"
+                    (append
+                      (find-files "core/src/main/scala-2.13-" ".*.scala$")
+                      (find-files "core/src/main/scala" ".*.scala$")))
+             (invoke "jar" "cf" "sbt-sbinary.jar" "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (native-inputs
+     `(("java-fmpp" ,java-fmpp)
+       ("scala" ,scala-official)))
+    (home-page "https://www.scala-sbt.org/")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public sbt-zinc
+  (package
+    (name "sbt-zinc")
+    (version "1.2.5")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (string-append "https://github.com/sbt/zinc/archive/v"
+                            version ".tar.gz"))
+        (file-name (string-append name "-" version ".tar.gz"))
+        (sha256
+         (base32
+          "1b01nv3dk3g7jx59jnzp2m2va5brhmds4bpgp824fnmp2fdjzgl0"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-protobuf
+           (lambda _
+             (invoke "scalapbc"
+                     (string-append
+                       "-v"
+                       (string-delete #\. ,(package-version protobuf)))
+                     "--scala_out=internal/zinc-persist/src/main/scala"
+                     "internal/zinc-persist/src/main/protobuf/schema.proto")
+             #t))
+         (replace 'build
+           ,(sbt-building-phase
+              '(("internal/" "compiler-interface")
+                ("internal/" "zinc-classpath")
+                ("internal/" "zinc-classfile")
+                ("internal/" "zinc-apiinfo")
+                ("internal/" "zinc-core")
+                ("internal/" "zinc-persist")
+                ("internal/" "zinc-compile-core")
+                ("" "zinc"))))
+         (replace 'install
+           (install-jars ".")))))
+    (inputs
+     `(("java-log4j-api" ,java-log4j-api-for-sbt)
+       ("java-log4j-core" ,java-log4j-core-for-sbt)
+       ("java-protobuf" ,java-protobuf)
+       ("sbt-io" ,sbt-io)
+       ("sbt-launcher" ,sbt-launcher)
+       ("sbt-librarymanagement" ,sbt-librarymanagement)
+       ("sbt-sbinary" ,sbt-sbinary)
+       ("sbt-util" ,sbt-util)
+       ("scala-protoc-bridge" ,scala-protoc-bridge)
+       ("scala-sjsonnew" ,scala-sjsonnew)))
+    (native-inputs
+     `(("scala-protobuf" ,scala-protobuf)
+       ("scala" ,scala-official)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
 (define-public sbt
   (package
     (name "sbt")
-    (version "1.2.7")
+    (version "1.2.8")
     (source
       (origin
         (method url-fetch)
@@ -830,11 +1305,10 @@ logging framework for Java.")))
         (file-name (string-append name "-" version ".tar.gz"))
         (sha256
          (base32
-          "0i0j6dcgn80bajq05h739h0d7kgcz7zbfk6qsnln8qrcx1wgbf0q"))))
+          "0fpm9jcd84xjxlfdfh2iwz7544ksgqik6591i7nrzlamygmbfadr"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
@@ -894,21 +1368,23 @@ object WriteKeywords {
              (build-subproject "" "core-macros")
              (build-subproject "" "tasks")
              (build-subproject "" "tasks-standard")
+             (build-subproject "" "protocol")
+             (build-subproject "" "main-command")
              (build-subproject "" "main-settings")
              (build-subproject "" "sbt")
              #t))
          (replace 'install
            (install-jars ".")))))
     (inputs
-     `(("scala" ,scala-official)
+     `(("java-log4j-api" ,java-log4j-api-for-sbt)
+       ("java-log4j-core" ,java-log4j-core-for-sbt)
+       ("scala" ,scala-official)
        ("scala-sjsonnew" ,scala-sjsonnew)
        ("sbt-io" ,sbt-io)
+       ("sbt-launcher" ,sbt-launcher)
        ("sbt-librarymanagement" ,sbt-librarymanagement)
-       ("sbt-util-cache" ,sbt-util-cache)
-       ("sbt-util-control" ,sbt-util-control)
-       ("sbt-util-interface" ,sbt-util-interface)
-       ("sbt-util-logging" ,sbt-util-logging)
-       ("sbt-util-position" ,sbt-util-position)))
+       ("sbt-util" ,sbt-util)
+       ("sbt-zinc" ,sbt-zinc)))
     (native-inputs
      `(("scala-kind-projector" ,scala-kind-projector)))
     (home-page "https://www.scala-sbt.org/")
