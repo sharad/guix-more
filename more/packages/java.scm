@@ -6722,6 +6722,20 @@ logging framework for Java.")))
     (description "")
     (license license:asl2.0)))
 
+(define-public java-okhttp-urlconnection
+  (package
+    (inherit java-okhttp)
+    (name "java-okhttp-urlconnection")
+    (arguments
+     `(#:jar-name "okhttp.jar"
+       #:source-dir "okhttp-urlconnection/src/main/java"
+       #:test-dir "okhttp-urlconnection/src/test"
+       ;; TODO: require okhttp-mockwebserver
+       #:tests? #f))
+    (inputs
+     `(("java-okhttp" ,java-okhttp)
+       ,@(package-inputs java-okhttp)))))
+
 (define-public java-config
   (package
     (name "java-config")
@@ -6943,6 +6957,85 @@ logging framework for Java.")))
     (native-inputs
      `(("java-hamcrest-all" ,java-hamcrest-all)
        ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-sbt-ipcsocket
+  (package
+    (name "java-sbt-ipcsocket")
+    (version "1.0.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/sbt/ipcsocket/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0zqg1c10dwjzvqb9wngmprs2cfiyw3n1jq8ag0hwk978f1d93a4h"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "ipcsocket.jar"
+       #:source-dir "src/main/java"
+       ;; Cannot create unix domain socket properly in the build environment
+       #:tests? #f))
+    (inputs
+     `(("java-native-access" ,java-native-access)
+       ("java-native-access-platform" ,java-native-access-platform)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-sbt-test-interface
+  (package
+    (name "java-sbt-test-interface")
+    (version "1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/sbt/test-interface/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "0lqsaik33d7wfq8d69mq4s6jb16rb2fmnhv2wjqisrxi0m4nmffw"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "test-interface.jar"
+       #:source-dir "src/main/java"
+       ;; TODO: tests are written in scala
+       #:tests? #f))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-caffeine
+  (package
+    (name "java-caffeine")
+    (version "2.6.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/ben-manes/caffeine/archive/v"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "1kaxz4fpjpgyv4n2zhlb3q0f8mn5ji68wilzwhf9dsbq4l12zkx4"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "caffeine.jar"
+       #:source-dir "caffeine/src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate-javapoet
+           (lambda _
+             (mkdir-p "build/javapoet")
+             (apply invoke "javac" "-cp" (getenv "CLASSPATH")
+                    "-d" "build/javapoet"
+                    (find-files "caffeine/src/javaPoet" ".*.java$"))
+             #t)))))
+    (inputs
+     `(("java-jsr305" ,java-jsr305)
+       ("java-javapoet" ,java-javapoet)))
     (home-page "")
     (synopsis "")
     (description "")
