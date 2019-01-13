@@ -480,36 +480,155 @@ It can also be used as a library.")
 (define-public java-javaparser
   (package
     (name "java-javaparser")
-    (version "3.5.6")
+    (version "3.9.0")
     (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/javaparser/javaparser/"
-                                  "archive/javaparser-parent-" version ".tar.gz"))
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/javaparser/javaparser.git")
+                     (commit "b7907a0dc39ff10388943dfffba01bec4bb116dc")))
+              (file-name (git-file-name name version))
               (sha256
                (base32
-                "04b1frvz65sg5jchw32ah32n2wj5agmil1fcq6kf1vxg78dj5d3d"))))
+                "172y8wbwqwwvqlhk65df0zilyicq7nagnsa9f4gav8s85p9ijxr8"))
+              (modules '((guix build utils)))
+              (snippet
+               '(begin
+                  (for-each delete-file
+                            (find-files "." "\\.jar$"))
+                  #t))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "javaparser.jar"
-       #:source-dir "javaparser-core/src/main/java:javaparser-core/src/main/javacc-support"
-       #:tests? #f; require org.junit.contrib
-       #:jdk ,icedtea-8
-       #:phases
+     `(#:phases
        (modify-phases %standard-phases
-         (add-before 'build 'generate-parser
-           (lambda* _
-             (mkdir-p "")
-             (zero? (system* "javacc" "-DEBUG_PARSER=false"
-                             "-DEBUG_TOKEN_MANAGER=false" "-JDK_VERSION=1.8"
-                             "-GRAMMAR_ENCODING=UTF-8"
-                             "-OUTPUT_DIRECTORY=javaparser-core/src/main/java"
-                             "javaparser-core/src/main/javacc/java.jj")))))))
+         (add-before 'build 'fill-template
+           (lambda _
+             (with-directory-excursion "javaparser-core/src/main"
+               (copy-file "java-templates/com/github/javaparser/JavaParserBuild.java"
+                          "java/com/github/javaparser/JavaParserBuild.java")
+               (substitute* "java/com/github/javaparser/JavaParserBuild.java"
+                 (("\\$\\{project.version\\}") ,version)
+                 (("\\$\\{project.name\\}") "javaparser")
+                 (("\\$\\{project.build.finalName\\}") "javaparser")
+                 (("\\$\\{maven.version\\}") "fake")
+                 (("\\$\\{maven.build.version\\}") "fake")
+                 (("\\$\\{build.timestamp\\}") "0")
+                 (("\\$\\{java.vendor\\}") "Guix")
+                 (("\\$\\{java.vendor.url\\}") "https://gnu.org/software/guix")
+                 (("\\$\\{java.version\\}") "1.8")
+                 (("\\$\\{os.arch\\}") "any")
+                 (("\\$\\{os.name\\}") "GuixSD")
+                 (("\\$\\{os.version\\}") "not available")))
+             #t))
+         (add-before 'build 'generate-javacc
+           (lambda _
+             (with-directory-excursion "javaparser-core/src/main/java"
+               (invoke "java" "javacc" "../javacc/java.jj"))
+             #t))
+         (add-before 'build 'copy-javacc-support
+           (lambda _
+             (with-directory-excursion "javaparser-core/src/main"
+               (copy-recursively "javacc-support" "java"))
+             #t))
+         (add-before 'build 'fix-ambiguousity
+           (lambda _
+             (substitute* (find-files "javaparser-symbol-solver-core/src/main/java" ".*.java")
+               (("TypeParameter node")
+                "com.github.javaparser.ast.type.TypeParameter node"))
+             (substitute* (find-files "javaparser-core-metamodel-generator/src/main/java" ".*.java")
+               (("\\(TypeParameter.class")
+                "(com.github.javaparser.ast.type.TypeParameter.class"))
+             (substitute* (find-files "javaparser-core/src/main/java" ".*.java")
+               (("final TypeParameter ")
+                "final com.github.javaparser.ast.type.TypeParameter ")
+               (("\\(TypeParameter.class")
+                "(com.github.javaparser.ast.type.TypeParameter.class")
+               (("new TypeParameter\\(")
+                "new com.github.javaparser.ast.type.TypeParameter(")
+               (("\\(TypeParameter\\)")
+                "(com.github.javaparser.ast.type.TypeParameter)")
+               (("TypeParameter r")
+                "com.github.javaparser.ast.type.TypeParameter r")
+               (("TypeParameter tp")
+                "com.github.javaparser.ast.type.TypeParameter tp")
+               (("\\{TypeParameter")
+                "{com.github.javaparser.ast.type.TypeParameter")
+               (("public TypeParameter ")
+                "public com.github.javaparser.ast.type.TypeParameter ")
+               (("visit\\(TypeParameter ")
+                "visit(com.github.javaparser.ast.type.TypeParameter ")
+               (("<TypeParameter>")
+                "<com.github.javaparser.ast.type.TypeParameter>"))
+             #t))
+         (replace 'build
+           (lambda _
+             (define (build name)
+               (format #t "Building ~a~%" name)
+               (delete-file-recursively "build/classes")
+               (mkdir-p "build/classes")
+               (apply invoke "javac"
+                      "-cp" (string-append (getenv "CLASSPATH") ":"
+                                           (string-join (find-files "build/jar" ".") ":"))
+                      "-d" "build/classes"
+                      (find-files (string-append name "/src/main/java")
+                                  ".*.java"))
+               (invoke "jar" "-cf" (string-append "build/jar/" name ".jar")
+                       "-C" "build/classes" "."))
+             (mkdir-p "build/classes")
+             (mkdir-p "build/test-classes")
+             (mkdir-p "build/jar")
+             (build "javaparser-core")
+             (build "javaparser-core-serialization")
+             (build "javaparser-core-generators")
+             (build "javaparser-core-metamodel-generator")
+             (build "javaparser-symbol-solver-model")
+             (build "javaparser-symbol-solver-logic")
+             (build "javaparser-symbol-solver-core")
+             #t))
+         (replace 'check
+           (lambda _
+             (define (test name)
+               (format #t "Testing ~a~%" name)
+               (delete-file-recursively "build/test-classes")
+               (mkdir-p "build/test-classes")
+               (apply invoke "javac" "-d" "build/test-classes"
+                      "-cp" (string-append (getenv "CLASSPATH") ":"
+                                           (string-join (find-files "build/jar" ".") ":"))
+                      (find-files (string-append name "/src/test/java")
+                                  ".*.java"))
+               (invoke "java" "-cp" (string-append (getenv "CLASSPATH") ":"
+                                                   (string-join (find-files "build/jar" ".") ":")
+                                                   ":build/test-classes")
+                       "org.junit.runner.JUnitCore"
+                       (map
+                         (lambda (file)
+                           (string-join
+                             (string-split
+                               (substring file 14 (- (string-length file) 5)) #\/)
+                             "."))
+                         (find-files (string-append name "/src/test/java")
+                                     ".*Test.java"))))
+             ;; We need junit5 that recursively depend on this package,
+             ;; as well as jbehave.
+             ;(test "javaparser-core-testing")
+             ;(test "javaparser-symbol-solver-testing")
+             #t))
+         (replace 'install
+           (install-jars "build/jar")))))
+    (inputs
+     `(("java-guava" ,java-guava)
+       ("java-jboss-javassist" ,java-jboss-javassist)
+       ("java-jsonp" ,java-jsonp)))
     (native-inputs
-     `(("java-javacc" ,java-javacc)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:lgpl3+)))
+     `(("javacc" ,javacc)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)
+       ("java-okhttp" ,java-okhttp)))
+    (home-page "http://javaparser.org/")
+    (synopsis "Parser for Java")
+    (description
+     "This project contains a set of libraries implementing a Java 1.0 - Java
+11 Parser with advanced analysis functionalities.")
+    (license license:lgpl2.0+)))
 
 (define-public java-jul-to-slf4j
   (package
@@ -4455,7 +4574,6 @@ import org.objenesis.ObjenesisException;"))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f ; no tests included
-       #:jdk ,icedtea-8
        #:jar-name "jsr250.jar"))
     (home-page "https://jcp.org/en/jsr/detail?id=250")
     (synopsis "Security-related annotations")
@@ -4464,28 +4582,236 @@ packages in the @code{javax.annotation} and @code{javax.annotation.security}
 namespaces.")
     (license (list license:cddl1.0 license:gpl2)))); gpl2 only, with classpath exception
 
-(define-public java-checker-framework
+(define-public java-jsr308-langtools
   (package
-    (name "java-checker-framework")
-    (version "2.1.10")
+    (name "java-jsr308-langtools")
+    (version "2.4.0")
     (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/typetools/checker-framework/"
-                                  "archive/checker-framework-" version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
+              (method hg-fetch)
+              (uri (hg-reference
+                     (url "https://bitbucket.org/typetools/jsr308-langtools")
+                     (changeset (string-append "jsr308-" version))))
+              (file-name (git-file-name name version))
               (sha256
                (base32
-                "1infq1hr53zi9bd81v90rn3iripbinb3w145m3xblq8yvnfrxy20"))))
+                "1h38pib2snw5pxyz79p6i4ls2gr9gb5gkdpbc2c3w597samm6vwp"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar$"))
+                   #t))))
+    (build-system gnu-build-system)
+    ;; We need "jdk" because we want to use this package as the jdk later on.
+    (outputs '("out" "jdk"))
+    (arguments
+     `(;#:make-flags (list "-f" "make/build.xml")
+       ;#:build-target "clean-and-build-all-tools"
+       #:tests? #f; TODO: find the right target
+       #:validate-runpath? #f
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (setenv "JAVA_HOME" (assoc-ref inputs "jdk"))
+             (invoke "ant" "-f" "make/build.xml" "clean-and-build-all-tools")
+             #t))
+         (replace 'install
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let* ((out (assoc-ref outputs "jdk"))
+                    (jdk (assoc-ref inputs "jdk"))
+                    (java (string-append out "/share/java"))
+                    (bin (string-append out "/bin")))
+              (for-each (lambda (jar)
+                          (install-file jar java))
+                (find-files "." ".*.jar$"))
+              (mkdir-p bin)
+              (symlink (string-append jdk "/bin/java")
+                       (string-append bin "/java"))
+              (for-each (lambda (jar)
+                          (let* ((name (substring jar 2 (- (string-length jar) 4)))
+                                 (file (string-append bin "/" name)))
+                            (copy-file "src/share/bin/launcher.sh-template"
+                                       file)
+                            (substitute* file
+                              (("#TARGET_JAVA#") (string-append bin "/java"))
+                              (("#PS#") ":")
+                              (("#PROGRAM#") name)
+                              (("mylib=.*") "mylib=\"$mydir/../share/java\"\n"))
+                            (chmod file #o755)))
+                (with-directory-excursion java
+                  (find-files "." ".*.jar$"))))
+             #t)))))
+    (native-inputs
+     `(("jdk" ,icedtea-8 "jdk")
+       ("ant" ,ant)))
+    (home-page "https://checkerframework.org/jsr308/")
+    (synopsis "Alternative java compiler implementation")
+    (description "This package contains the type annotations compiler, which
+is fully backward-compatible.  It can be used in place of javac and will have
+the same behaviour, but it will also allow the use of annotations in comments
+for compatibility with java 7.  This package is part of the checkerframework.")
+    (license license:gpl2))); GPL 2 only
+
+(define-public java-annotation-tools
+  (package
+    (name "java-annotation-tools")
+    (version "3.8.3")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/typetools/annotation-tools.git")
+                     (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1izl36pf9ahg5c4sq0ki49sfyq9r89v5snsp6559w12ykbl9x3pg"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "dataflow/src:javacutil/src"
-       #:tests? #f; no tests
-       #:jdk ,icedtea-8))
-    (home-page "https://checkerframework.org")
-    (synopsis "")
-    (description "")
-    (license license:gpl2))); with classpath exception
+     `(#:build-target "all"
+       #:jdk ,java-jsr308-langtools))
+    (home-page "https://checkerframework.org/annotation-file-utilities/")
+    (synopsis "External storage of annotations")
+    (description "Sometimes, it is convenient to specify the annotations
+outside the source code or the @file{.class} file.  This package is also known
+as the Annotation File Utilities, which is one of its components.")
+    (license license:expat)))
+
+(define-public java-checkerframework
+  (package
+    (name "java-checkerframework")
+    (version "2.5.8")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/typetools/checker-framework.git")
+                     (commit "21a34d7db3c20f314fa435190fc4db48b1f50e24")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "0fdf6m9s1bw8k4567vymhz7x6vpx255ks30nsawdsxhi0kqd219s"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "checkerframework.jar"
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (define (build name)
+               (format #t "Building ~a~%" name)
+               (delete-file-recursively "build/classes")
+               (mkdir-p "build/classes")
+               (apply invoke "javac" "-d" "build/classes"
+                      "-cp" (string-append (getenv "CLASSPATH") ":"
+                                           (string-join (find-files "build/jar" ".") ":"))
+                      (find-files (string-append name "/src/main/java")
+                                  ".*.java"))
+               (invoke "jar" "-cf" (string-append "build/jar/checkerframework-"
+                                                  name ".jar")
+                       "-C" "build/classes" "."))
+             (mkdir-p "build/classes")
+             (mkdir-p "build/test-classes")
+             (mkdir-p "build/jar")
+             (build "javacutil")
+             (build "dataflow")
+             (build "framework")
+             (build "checker")
+             #t))
+         (replace 'check
+           (lambda _
+             (define (test name)
+               (format #t "Testing ~a~%" name)
+               (delete-file-recursively "build/test-classes")
+               (mkdir-p "build/test-classes")
+               (apply invoke "javac" "-d" "build/test-classes"
+                      "-cp" (string-append (getenv "CLASSPATH") ":"
+                                           (string-join (find-files "build/jar" ".") ":"))
+                      (find-files (string-append name "/src/test/java")
+                                  ".*.java"))
+               (invoke "java" "-cp" (string-append (getenv "CLASSPATH") ":"
+                                                   (string-join (find-files "build/jar" ".") ":")
+                                                   ":build/test-classes")
+                       "org.junit.runner.JUnitCore"
+                       (map
+                         (lambda (file)
+                           (string-join
+                             (string-split
+                               (substring file 14 (- (string-length file) 5)) #\/)
+                             "."))
+                         (find-files (string-append name "/src/test/java")
+                                     ".*Test.java"))))
+             (test "framework")
+             (test "checker")
+             #t)))))
+    (inputs
+     `(("java-javaparser" ,java-javaparser)))
+    (home-page "https://checkerframework.org/")
+    (synopsis "Statically detect common mistakes")
+    (description "This framework enhances the Java type system in order to
+detect null pointer exceptions, unintended side effects, SQL injections,
+concurrency errors, mistaken equality tests, and other run-time errors.")
+    (license (list
+               license:gpl2+; with classpath exception
+               license:expat))))
+
+(define-public java-truth
+  (package
+    (name "java-truth")
+    (version "0.42")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/google/truth.git")
+                     (commit "5aaf4bc1874583db510bbb209365382e5681d65a")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1lyjmy66sprxx9hn9krwys4pv2ibjf4d1vqmbyhsx61bb6ji627f"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "truth.jar"
+       #:source-dir "core/src/main/java"
+       #:test-dir "core/src/test"))
+    (inputs
+     `(("java-checkerframework" ,java-checkerframework)
+       ("java-diff-utils" ,java-diff-utils)
+       ("java-guava" ,java-guava)
+       ("java-junit" ,java-junit)))
+    (home-page "https://google.github.io/truth")
+    (synopsis "Assertion library for Java")
+    (description "Truth makes your test assertions and failure messages more
+readable.  Similar to AssertJ, it natively supports many JDK and Guava types,
+and it is extensible to others.")
+    (license license:asl2.0)))
+
+(define-public java-truth
+  (package
+    (name "java-truth")
+    (version "0.42")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/google/truth.git")
+                     (commit "5aaf4bc1874583db510bbb209365382e5681d65a")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1lyjmy66sprxx9hn9krwys4pv2ibjf4d1vqmbyhsx61bb6ji627f"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "truth.jar"
+       #:source-dir "core/src/main/java"
+       #:test-dir "core/src/test"))
+    (inputs
+     `(("java-diff-utils" ,java-diff-utils)
+       ("java-guava" ,java-guava)
+       ("java-junit" ,java-junit)))
+    (home-page "https://google.github.io/truth")
+    (synopsis "Assertion library for Java")
+    (description "Truth makes your test assertions and failure messages more
+readable.  Similar to AssertJ, it natively supports many JDK and Guava types,
+and it is extensible to others.")
+    (license license:asl2.0)))
 
 (define-public java-javapoet
   (package
@@ -4506,7 +4832,8 @@ namespaces.")
        #:jdk ,icedtea-8))
     (native-inputs
      `(("guice" ,java-guice)
-       ("java-junit" ,java-junit)))
+       ("java-junit" ,java-junit)
+       ("java-truth" ,java-truth)))
     (home-page "https://github.com/square/javapoet")
     (synopsis "")
     (description "")
