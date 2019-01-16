@@ -4628,6 +4628,8 @@ namespaces.")
               (mkdir-p bin)
               (symlink (string-append jdk "/bin/java")
                        (string-append bin "/java"))
+              (symlink (string-append jdk "/bin/jar")
+                       (string-append bin "/jar"))
               (for-each (lambda (jar)
                           (let* ((name (substring jar 2 (- (string-length jar) 4)))
                                  (file (string-append bin "/" name)))
@@ -4637,11 +4639,14 @@ namespaces.")
                               (("#TARGET_JAVA#") (string-append bin "/java"))
                               (("#PS#") ":")
                               (("#PROGRAM#") name)
-                              (("mylib=.*") "mylib=\"$mydir/../share/java\"\n"))
+                              (("mylib=.*") "mylib=\"$mydir/../share/java\"\n")
+                              (("unzip") (which "unzip")))
                             (chmod file #o755)))
                 (with-directory-excursion java
                   (find-files "." ".*.jar$"))))
              #t)))))
+    (inputs
+     `(("unzip" ,unzip)))
     (native-inputs
      `(("jdk" ,icedtea-8 "jdk")
        ("ant" ,ant)))
@@ -4652,6 +4657,61 @@ is fully backward-compatible.  It can be used in place of javac and will have
 the same behaviour, but it will also allow the use of annotations in comments
 for compatibility with java 7.  This package is part of the checkerframework.")
     (license license:gpl2))); GPL 2 only
+
+(define-public java-plume-lib-reflection-util
+  (package
+    (name "java-plume-lib-reflection-util")
+    (version "0.0.1.1")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/plume-lib/reflection-util.git")
+                     (commit "b0de5e70ad71f75a6fd1918d35fdaeb29e97e189")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "0k1ls34ka0vjpyav1kn3ys19wjyp1vrjaha73yr90knpjwij8mi2"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "plume-lib-reflection-util.jar"
+       #:source-dir "src/main/java"))
+    (inputs
+     `(("java-checkerframework-qual-annotation"
+        ,java-checkerframework-qual-annotation)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "https://plumelib.org")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
+
+(define-public java-plume-lib-util
+  (package
+    (name "java-plume-lib-util")
+    (version "1.0.5")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/plume-lib/plume-util.git")
+                     (commit "db6dd1795b942e75360bf93de16f973922d767d8")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1i1hyvyprx879awypb0hjq74k484dw3744ljrhwyxzvvrazr5rc4"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "plume-lib-util.jar"
+       #:source-dir "src/main/java"))
+    (inputs
+     `(("java-checkerframework-qual-annotation"
+        ,java-checkerframework-qual-annotation)
+       ("java-plume-lib-reflection-util" ,java-plume-lib-reflection-util)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "https://plumelib.org")
+    (synopsis "")
+    (description "")
+    (license license:expat)))
 
 (define-public java-annotation-tools
   (package
@@ -4669,7 +4729,42 @@ for compatibility with java 7.  This package is part of the checkerframework.")
     (build-system ant-build-system)
     (arguments
      `(#:build-target "all"
-       #:jdk ,java-jsr308-langtools))
+       #:jdk ,java-jsr308-langtools
+       #:tests? #f; too complex for now
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "build/jar")
+             (mkdir-p "build/classes")
+             (apply invoke "javac" "-d" "build/classes"
+                    (find-files "asmx/src" ".*.java$"))
+             (invoke "jar" "cf" "build/jar/asmx.jar"
+                     "-C" "build/classes" ".")
+             (delete-file-recursively "build/classes")
+             (mkdir-p "build/classes")
+             (apply invoke "javac" "-d" "build/classes"
+                    "-cp" (string-append "build/jar/asmx.jar:" (getenv "CLASSPATH"))
+                    (find-files "scene-lib/src" ".*.java$"))
+             (invoke "jar" "cf" "build/jar/scenelib.jar"
+                     "-C" "build/classes" ".")
+             (delete-file-recursively "build/classes")
+             (mkdir-p "build/classes")
+             (apply invoke "javac" "-d" "build/classes"
+                    "-cp" (string-append
+                            "build/jar/asmx.jar:build/jar/scenelib.jar:"
+                            (getenv "CLASSPATH"))
+                    (find-files "annotation-file-utilities/src" ".*.java$"))
+             (invoke "jar" "cf" "build/jar/annotation-file-utilities.jar"
+                     "-C" "build/classes" ".")
+             #t))
+           (replace 'install
+             (install-jars "build/jar")))))
+    (inputs
+     `(("java-checkerframework-qual-annotation"
+        ,java-checkerframework-qual-annotation)
+       ("java-guava" ,java-guava)
+       ("java-plume-lib-util" ,java-plume-lib-util)))
     (home-page "https://checkerframework.org/annotation-file-utilities/")
     (synopsis "External storage of annotations")
     (description "Sometimes, it is convenient to specify the annotations
@@ -4689,7 +4784,12 @@ as the Annotation File Utilities, which is one of its components.")
               (file-name (git-file-name name version))
               (sha256
                (base32
-                "0fdf6m9s1bw8k4567vymhz7x6vpx255ks30nsawdsxhi0kqd219s"))))
+                "0fdf6m9s1bw8k4567vymhz7x6vpx255ks30nsawdsxhi0kqd219s"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar$"))
+                   #t))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "checkerframework.jar"
@@ -4744,7 +4844,8 @@ as the Annotation File Utilities, which is one of its components.")
              (test "checker")
              #t)))))
     (inputs
-     `(("java-javaparser" ,java-javaparser)))
+     `(("java-annotation-tools" ,java-annotation-tools)
+       ("java-javaparser" ,java-javaparser)))
     (home-page "https://checkerframework.org/")
     (synopsis "Statically detect common mistakes")
     (description "This framework enhances the Java type system in order to
@@ -4754,35 +4855,95 @@ concurrency errors, mistaken equality tests, and other run-time errors.")
                license:gpl2+; with classpath exception
                license:expat))))
 
-(define-public java-truth
+;; Some random annotations required by dependencies of checkerframework
+(define-public java-checkerframework-qual-annotation
   (package
-    (name "java-truth")
-    (version "0.42")
+    (inherit java-checkerframework)
+    (name "java-checkerframework-qual-annotation")
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (define (find-files* dir dirs pattern)
+               (if (null? dirs)
+                 (find-files dir pattern)
+                 (let ((next (car dirs))
+                       (rest (cdr dirs)))
+                   (apply append (map (lambda (dir) (find-files* dir rest pattern)) (find-files dir next #:directories? #t))))))
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "javac" "-d" "build/classes"
+                    "-cp" (getenv "CLASSPATH")
+                    (append
+                      ;; List from checker-qual/build.gradle (copySources)
+                      (find-files "." "^FormatUtil.java")
+                      (find-files "." "^NullnessUtil.java")
+                      (find-files "." "^RegexUtil.java")
+                      (find-files "." "^UnitsTools.java")
+                      (find-files "." "^SignednessUtil.java")
+                      (find-files "." "^I18nFormatUtil.java")
+                      (find-files "." "^Opt.java")
+                      (find-files "." "^PurityUnqualified.java")
+                      (find-files* "." '("^org$" "^checkerframework$" "^qual$")
+                                   ".*.java$")))
+             (invoke "jar" "cf" "build/jar/checkerframework-qual-annotation.jar"
+                     "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build/jar")))))
+    (inputs '())
+    (native-inputs '())))
+
+;; Some random annotations required by dependencies of checkerframework
+(define-public java-checkerframework-compat-qual-annotation
+  (package
+    (inherit java-checkerframework)
+    (name "java-checkerframework-compat-qual-annotation")
+    ;; Last version to provide this package
+    (version "2.5.5")
     (source (origin
               (method git-fetch)
               (uri (git-reference
-                     (url "https://github.com/google/truth.git")
-                     (commit "5aaf4bc1874583db510bbb209365382e5681d65a")))
+                     (url "https://github.com/typetools/checker-framework.git")
+                     (commit "62602db32dbc0dd64b5aecc8c84671252a50e08b")))
               (file-name (git-file-name name version))
               (sha256
                (base32
-                "1lyjmy66sprxx9hn9krwys4pv2ibjf4d1vqmbyhsx61bb6ji627f"))))
-    (build-system ant-build-system)
+                "0d6ngrv0262ipisfzb2f2wp7ygziqfmgd2hhsxdnip4a69ws1lz2"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar$"))
+                   #t))))
     (arguments
-     `(#:jar-name "truth.jar"
-       #:source-dir "core/src/main/java"
-       #:test-dir "core/src/test"))
-    (inputs
-     `(("java-checkerframework" ,java-checkerframework)
-       ("java-diff-utils" ,java-diff-utils)
-       ("java-guava" ,java-guava)
-       ("java-junit" ,java-junit)))
-    (home-page "https://google.github.io/truth")
-    (synopsis "Assertion library for Java")
-    (description "Truth makes your test assertions and failure messages more
-readable.  Similar to AssertJ, it natively supports many JDK and Guava types,
-and it is extensible to others.")
-    (license license:asl2.0)))
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'build
+           (lambda _
+             (define (find-files* dir dirs pattern)
+               (if (null? dirs)
+                 (find-files dir pattern)
+                 (let ((next (car dirs))
+                       (rest (cdr dirs)))
+                   (apply append (map (lambda (dir) (find-files* dir rest pattern)) (find-files dir next #:directories? #t))))))
+             (mkdir-p "build/classes")
+             (mkdir-p "build/jar")
+             (apply invoke "javac" "-d" "build/classes"
+                    "-cp" (getenv "CLASSPATH")
+                    (append
+                      ;; List from checker-qual/build.gradle (copySources)
+                      (find-files* "." '("^org$" "^checkerframework$" "^compatqual$")
+                                   ".*.java$")))
+             (invoke "jar" "cf" "build/jar/checkerframework-qual-annotation.jar"
+                     "-C" "build/classes" ".")
+             #t))
+         (replace 'install
+           (install-jars "build/jar")))))
+    (inputs '())
+    (native-inputs '())))
 
 (define-public java-truth
   (package
@@ -4801,10 +4962,24 @@ and it is extensible to others.")
     (arguments
      `(#:jar-name "truth.jar"
        #:source-dir "core/src/main/java"
-       #:test-dir "core/src/test"))
+       #:test-dir "core/src/test"
+       #:tests? #f; TODO: require google-testing
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'remove-duplicate
+           (lambda _
+             (delete-file-recursively
+               "core/src/main/java/com/google/common/truth/super")
+             (delete-file-recursively
+               "core/src/test/java/com/google/common/truth/super")
+             #t)))))
     (inputs
-     `(("java-diff-utils" ,java-diff-utils)
-       ("java-guava" ,java-guava)
+     `(("java-checkerframework-compat-qual-annotation"
+        ,java-checkerframework-compat-qual-annotation)
+       ("java-diff-utils" ,java-diff-utils)
+       ("java-error-prone-annotations" ,java-error-prone-annotations)
+       ("java-guava-25" ,java-guava-25)
+       ("java-hamcrest-core" ,java-hamcrest-core)
        ("java-junit" ,java-junit)))
     (home-page "https://google.github.io/truth")
     (synopsis "Assertion library for Java")
@@ -4829,10 +5004,12 @@ and it is extensible to others.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "src/main/java"
+       #:tests? #f; TODO: require google-testing
        #:jdk ,icedtea-8))
     (native-inputs
-     `(("guice" ,java-guice)
+     `(("java-guava-25" ,java-guava-25)
        ("java-junit" ,java-junit)
+       ("java-mockito-1" ,java-mockito-1)
        ("java-truth" ,java-truth)))
     (home-page "https://github.com/square/javapoet")
     (synopsis "")
@@ -4917,7 +5094,7 @@ and it is extensible to others.")
 (define-public java-error-prone
   (package
     (name "java-error-prone")
-    (version "2.0.19")
+    (version "2.3.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/google/error-prone/archive/v"
@@ -4925,7 +5102,7 @@ and it is extensible to others.")
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1qm7zpf0m75ps623h90xwb0rfyj4pywybvp005s9ykaqcvp50kzf"))))
+                "0m0gzdhahjmiyr1ccl2zbf35qin3qbjxf3ay42vj49ba4c3yy8s7"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -4938,7 +5115,8 @@ and it is extensible to others.")
              (mkdir-p "ant/src/main/java/com/google/errorprone/internal")
              (copy-file
                "core/src/main/java/com/google/errorprone/internal/NonDelegatingClassLoader.java"
-               "ant/src/main/java/com/google/errorprone/internal/NonDelegatingClassLoader.java"))))))
+               "ant/src/main/java/com/google/errorprone/internal/NonDelegatingClassLoader.java")
+             #t)))))
     (propagated-inputs '())
     (home-page "https://github.com/google/guava")
     (synopsis "")
@@ -5170,23 +5348,19 @@ and it is extensible to others.")
                ;; * "IgnoreJRERequirement" is used for Android.
                (substitute* (find-files "." "\\.java$")
                  (("import com.google.j2objc.*") "")
-                 (("import com.google.errorprone.annotation.*") "")
                  (("import org.codehaus.mojo.animal_sniffer.*") "")
-                 (("@CanIgnoreReturnValue") "")
-                 (("@LazyInit") "")
                  (("@WeakOuter") "")
                  (("@RetainedWith") "")
                  (("@Weak") "")
-                 (("@ForOverride") "")
                  (("@J2ObjCIncompatible") "")
-                 (("@CompatibleWith\\(\"[A-Z]\"\\)") "")
-                 (("@Immutable\\([^\\)]*\\)") "")
-                 (("@Immutable") "")
                  (("@ReflectionSupport\\([^\\)]*\\)") "")
-                 (("@DoNotMock.*") "")
-                 (("@MustBeClosed") "")
                  (("@IgnoreJRERequirement") "")))
-             #t)))))))
+             #t)))))
+     (inputs
+      `(("java-checkerframework-qual-annotation"
+         ,java-checkerframework-qual-annotation)
+        ("java-error-prone-annotations" ,java-error-prone-annotations)
+        ("java-jsr305" ,java-jsr305)))))
 
 ;(define-public java-xml-commons
 ;  (package
@@ -6331,234 +6505,6 @@ import java.util.Collection;")
     (description "")
     (license license:asl2.0)))
 
-(define-public openjdk9
-  (package
-    (name "openjdk")
-    (version "9+181")
-    (source (origin
-              (method url-fetch)
-              (uri "http://hg.openjdk.java.net/jdk/jdk/archive/3cc80be736f2.tar.bz2")
-              (file-name (string-append name "-" version ".tar.bz2"))
-              (sha256
-               (base32
-                "01ihmyf7k5z17wbr7xig7y40l9f01d5zjgkcmawn1102hw5kchpq"))))
-    (build-system gnu-build-system)
-    (outputs '("out" "jdk" "doc"))
-    (arguments
-     `(#:tests? #f; require jtreg
-       #:imported-modules
-       ((guix build syscalls)
-        ,@%gnu-build-system-modules)
-       #:phases
-       (modify-phases %standard-phases
-         (delete 'patch-source-shebangs)
-         (replace 'configure
-           (lambda* (#:key inputs outputs #:allow-other-keys)
-             (invoke "bash" "./configure"
-                     (string-append "--with-freetype=" (assoc-ref inputs "freetype"))
-                     "--disable-freetype-bundling"
-                     "--disable-warnings-as-errors"
-                     "--disable-hotspot-gtest"
-                     (string-append "--prefix=" (assoc-ref outputs "out")))
-             #t))
-         (replace 'build
-           (lambda _
-             (with-output-to-file ".src-rev"
-               (lambda _
-                 (display ,version)))
-             (setenv "GUIX_LD_WRAPPER_ALLOW_IMPURITIES" "yes")
-             (invoke "make" "all")
-             #t))
-         ;; Some of the libraries in the lib/ folder link to libjvm.so.
-         ;; But that shared object is located in the server/ folder, so it
-         ;; cannot be found.  This phase creates a symbolic link in the
-         ;; lib/ folder so that the other libraries can find it.
-         ;;
-         ;; See:
-         ;; https://lists.gnu.org/archive/html/guix-devel/2017-10/msg00169.html
-         ;;
-         ;; FIXME: Find the bug in the build system, so that this symlink is
-         ;; not needed.
-         (add-after 'install 'install-libjvm
-           (lambda* (#:key inputs outputs #:allow-other-keys)
-             (let* ((lib-out (string-append (assoc-ref outputs "out")
-                                             "/lib"))
-                    (lib-jdk (string-append (assoc-ref outputs "jdk")
-                                             "/lib")))
-               (symlink (string-append lib-jdk "/server/libjvm.so")
-                        (string-append lib-jdk "/libjvm.so"))
-               (symlink (string-append lib-out "/server/libjvm.so")
-                        (string-append lib-out "/libjvm.so")))
-             #t))
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((out (assoc-ref outputs "out"))
-                   (jdk (assoc-ref outputs "jdk"))
-                   (doc (assoc-ref outputs "doc"))
-                   (images (car (find-files "build" ".*-server-release"
-                                            #:directories? #t))))
-               (copy-recursively (string-append images "/images/jdk") jdk)
-               (copy-recursively (string-append images "/images/jre") out)
-               (copy-recursively (string-append images "/images/docs") doc))
-             #t))
-         (add-after 'install 'strip-zip-timestamps
-           (lambda* (#:key outputs #:allow-other-keys)
-             (use-modules (guix build syscalls))
-             (for-each (lambda (zip)
-                         (let ((dir (mkdtemp! "zip-contents.XXXXXX")))
-                           (with-directory-excursion dir
-                             (invoke "unzip" zip))
-                           (delete-file zip)
-                           (for-each (lambda (file)
-                                       (let ((s (lstat file)))
-                                         (unless (eq? (stat:type s) 'symlink)
-                                           (format #t "reset ~a~%" file)
-                                           (utime file 0 0 0 0))))
-                             (find-files dir #:directories? #t))
-                           (with-directory-excursion dir
-                             (let ((files (find-files "." ".*" #:directories? #t)))
-                               (apply invoke "zip" "-0" "-X" zip files)))))
-               (find-files (assoc-ref outputs "doc") ".*.zip$"))
-             #t)))))
-    (inputs
-     `(("alsa-lib" ,alsa-lib)
-       ("cups" ,cups)
-       ("fontconfig" ,fontconfig)
-       ("freetype" ,freetype)
-       ("libelf" ,libelf)
-       ("libice" ,libice)
-       ("libx11" ,libx11)
-       ("libxcomposite" ,libxcomposite)
-       ("libxi" ,libxi)
-       ("libxinerama" ,libxinerama)
-       ("libxrender" ,libxrender)
-       ("libxt" ,libxt)
-       ("libxtst" ,libxtst)))
-    (native-inputs
-     `(("icedtea-8" ,icedtea-8)
-       ("icedtea-8:jdk" ,icedtea-8 "jdk")
-       ("unzip" ,unzip)
-       ("which" ,which)
-       ("zip" ,zip)))
-    (home-page "http://openjdk.java.net/projects/jdk9/")
-    (synopsis "")
-    (description "")
-    (license license:gpl2)))
-
-(define-public openjdk10
-  (package
-    (name "openjdk")
-    (version "10+46")
-    (source (origin
-              (method url-fetch)
-              (uri "http://hg.openjdk.java.net/jdk/jdk/archive/6fa770f9f8ab.tar.bz2")
-              (file-name (string-append name "-" version ".tar.bz2"))
-              (sha256
-               (base32
-                "0zywq2203b4hx4jms9vbwvjcj1d3k2v3qpx4s33729fkpmid97r4"))))
-    (build-system gnu-build-system)
-    (outputs '("out" "jdk" "doc"))
-    (arguments
-     `(#:tests? #f; require jtreg
-       #:imported-modules
-       ((guix build syscalls)
-        ,@%gnu-build-system-modules)
-       #:phases
-       (modify-phases %standard-phases
-         (delete 'patch-source-shebangs)
-         (replace 'configure
-           (lambda* (#:key inputs outputs #:allow-other-keys)
-             (invoke "bash" "./configure"
-                     (string-append "--with-freetype=" (assoc-ref inputs "freetype"))
-                     "--disable-freetype-bundling"
-                     "--disable-warnings-as-errors"
-                     "--disable-hotspot-gtest"
-                     (string-append "--prefix=" (assoc-ref outputs "out")))
-             #t))
-         (replace 'build
-           (lambda _
-             (with-output-to-file ".src-rev"
-               (lambda _
-                 (display ,version)))
-             (setenv "GUIX_LD_WRAPPER_ALLOW_IMPURITIES" "yes")
-             (invoke "make" "all")
-             #t))
-         ;; Some of the libraries in the lib/ folder link to libjvm.so.
-         ;; But that shared object is located in the server/ folder, so it
-         ;; cannot be found.  This phase creates a symbolic link in the
-         ;; lib/ folder so that the other libraries can find it.
-         ;;
-         ;; See:
-         ;; https://lists.gnu.org/archive/html/guix-devel/2017-10/msg00169.html
-         ;;
-         ;; FIXME: Find the bug in the build system, so that this symlink is
-         ;; not needed.
-         (add-after 'install 'install-libjvm
-           (lambda* (#:key inputs outputs #:allow-other-keys)
-             (let* ((lib-out (string-append (assoc-ref outputs "out")
-                                             "/lib"))
-                    (lib-jdk (string-append (assoc-ref outputs "jdk")
-                                             "/lib")))
-               (symlink (string-append lib-jdk "/server/libjvm.so")
-                        (string-append lib-jdk "/libjvm.so"))
-               (symlink (string-append lib-out "/server/libjvm.so")
-                        (string-append lib-out "/libjvm.so")))
-             #t))
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((out (assoc-ref outputs "out"))
-                   (jdk (assoc-ref outputs "jdk"))
-                   (doc (assoc-ref outputs "doc"))
-                   (images (car (find-files "build" ".*-server-release"
-                                            #:directories? #t))))
-               (copy-recursively (string-append images "/images/jdk") jdk)
-               (copy-recursively (string-append images "/images/jre") out)
-               (copy-recursively (string-append images "/images/docs") doc))
-             #t))
-         (add-after 'install 'strip-zip-timestamps
-           (lambda* (#:key outputs #:allow-other-keys)
-             (use-modules (guix build syscalls))
-             (for-each (lambda (zip)
-                         (let ((dir (mkdtemp! "zip-contents.XXXXXX")))
-                           (with-directory-excursion dir
-                             (invoke "unzip" zip))
-                           (delete-file zip)
-                           (for-each (lambda (file)
-                                       (let ((s (lstat file)))
-                                         (unless (eq? (stat:type s) 'symlink)
-                                           (format #t "reset ~a~%" file)
-                                           (utime file 0 0 0 0))))
-                             (find-files dir #:directories? #t))
-                           (with-directory-excursion dir
-                             (let ((files (find-files "." ".*" #:directories? #t)))
-                               (apply invoke "zip" "-0" "-X" zip files)))))
-               (find-files (assoc-ref outputs "doc") ".*.zip$"))
-             #t)))))
-    (inputs
-     `(("alsa-lib" ,alsa-lib)
-       ("cups" ,cups)
-       ("fontconfig" ,fontconfig)
-       ("freetype" ,freetype)
-       ("libelf" ,libelf)
-       ("libice" ,libice)
-       ("libx11" ,libx11)
-       ("libxcomposite" ,libxcomposite)
-       ("libxi" ,libxi)
-       ("libxinerama" ,libxinerama)
-       ("libxrender" ,libxrender)
-       ("libxt" ,libxt)
-       ("libxtst" ,libxtst)))
-    (native-inputs
-     `(("openjdk9" ,openjdk9)
-       ("openjdk9:jdk" ,openjdk9 "jdk")
-       ("unzip" ,unzip)
-       ("which" ,which)
-       ("zip" ,zip)))
-    (home-page "http://openjdk.java.net/projects/jdk9/")
-    (synopsis "")
-    (description "")
-    (license license:gpl2)))
-
 (define-public java-procyon
   (package
     (name "java-procyon")
@@ -7350,7 +7296,9 @@ logging framework for Java.")))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "caffeine.jar"
-       #:source-dir "caffeine/src/main/java"
+       #:source-dir "caffeine/src/main/java:caffeine/generated-sources"
+       #:test-dir "caffeine/src/test"
+       #:jdk ,openjdk9
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-javapoet
@@ -7359,10 +7307,28 @@ logging framework for Java.")))
              (apply invoke "javac" "-cp" (getenv "CLASSPATH")
                     "-d" "build/javapoet"
                     (find-files "caffeine/src/javaPoet" ".*.java$"))
+             (copy-recursively "caffeine/src/javaPoet/resources"
+                               "build/javapoet")
+             (invoke "java" "-cp" (string-append (getenv "CLASSPATH")
+                                                 ":build/javapoet")
+                     "-noverify"
+                     "com.github.benmanes.caffeine.cache.LocalCacheFactoryGenerator"
+                     "caffeine/generated-sources")
+             (invoke "java" "-cp" (string-append (getenv "CLASSPATH")
+                                                 ":build/javapoet")
+                     "-noverify"
+                     "com.github.benmanes.caffeine.cache.NodeFactoryGenerator"
+                     "caffeine/generated-sources")
              #t)))))
     (inputs
-     `(("java-jsr305" ,java-jsr305)
+     `(("java-commons-lang3" ,java-commons-lang3)
+       ("java-guava" ,java-guava)
+       ("java-jsr305" ,java-jsr305)
        ("java-javapoet" ,java-javapoet)))
+    (native-inputs
+     `(("java-hamcrest-all" ,java-hamcrest-all)
+       ("java-mockito-1" ,java-mockito-1)
+       ("java-testng" ,java-testng)))
     (home-page "")
     (synopsis "")
     (description "")
