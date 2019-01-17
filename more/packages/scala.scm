@@ -24,6 +24,7 @@
   #:use-module (guix git-download)
   #:use-module (guix utils)
   #:use-module (guix build-system ant)
+  #:use-module (guix build-system gnu)
   #:use-module (guix build-system trivial)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bash)
@@ -734,6 +735,10 @@ logging framework for Java.")))
        (modify-phases %standard-phases
          (replace 'build
            (lambda* (#:key inputs #:allow-other-keys)
+             (define (split n str)
+               (if (<= (string-length str) n)
+                 (list str)
+                 (cons (substring str 0 n) (split n (substring str n)))))
              (substitute* "launcher-implementation/src/main/input_sources/CrossVersionUtil.scala"
                (("\\$\\{\\{cross.package0\\}\\}") "xsbt")
                (("\\$\\{\\{cross.package1\\}\\}") "boot"))
@@ -747,7 +752,25 @@ logging framework for Java.")))
              (apply invoke "javac" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
                     "-d" "build/classes"
                     (find-files "launcher-interface/src/main/java" ".*.java$"))
-             (invoke "jar" "cf" "sbt-launcher.jar" "-C" "build/classes" ".")
+             (mkdir-p "build/classes/META-INF")
+             (with-output-to-file "build/classes/META-INF/MANIFEST.MF"
+               (lambda _
+                 (format #t "Manifest-Version: 1.0\n")
+                 (format #t "Class-Path: ~a\n"
+                         (string-join
+                           (split
+                             58
+                             (string-join
+                               (map
+                                 (lambda (jar)
+                                   ;; We can't use absolute paths with java 8 :/
+                                   (string-append "../../../../../../../../.." jar))
+                                 (string-split (getenv "CLASSPATH") #\:))
+                               " "))
+                            "\n "))
+                 (format #t "Main-Class: xsbt.boot.Boot\n\n")))
+             (invoke "jar" "cfm" "sbt-launcher.jar" "build/classes/META-INF/MANIFEST.MF"
+                     "-C" "build/classes" ".")
              #t))
          (replace 'install
            (install-jars ".")))))
@@ -760,7 +783,6 @@ logging framework for Java.")))
     (description "")
     (license license:bsd-3)))
 
-;; https://index.scala-lang.org/eed3si9n/gigahorse/gigahorse-okhttp/0.3.0?target=_2.12
 (define-public sbt-librarymanagement
   (package
     (name "sbt-librarymanagement")
@@ -774,7 +796,9 @@ logging framework for Java.")))
                 "0g37agv3xkq1fjl9a25ybcdk4d5aq1m81rz5d2a8zvny135m73gl"))
               (modules '((guix build utils)))
               (snippet
-                `(for-each delete-file (find-files "." ".*.jar")))))
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar"))
+                   #t))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -1294,6 +1318,7 @@ java -cp ~a scalapb.ScalaPBC $@\n" (which "bash")
                 ("internal/" "zinc-persist")
                 ("internal/" "zinc-compile-core")
                 ("internal/" "zinc-ivy-integration")
+                ("" "zinc-compile")
                 ("" "zinc"))))
          (replace 'install
            (install-jars ".")))))
@@ -1355,19 +1380,23 @@ java -cp ~a scalapb.ScalaPBC $@\n" (which "bash")
     (description "")
     (license license:bsd-3)))
 
-(define-public sbt
+(define-public sbt-jars
   (package
-    (name "sbt")
+    (name "sbt-jars")
     (version "1.2.8")
-    (source
-      (origin
-        (method url-fetch)
-        (uri (string-append "https://github.com/sbt/sbt/archive/v"
-                            version ".tar.gz"))
-        (file-name (string-append name "-" version ".tar.gz"))
-        (sha256
-         (base32
-          "0fpm9jcd84xjxlfdfh2iwz7544ksgqik6591i7nrzlamygmbfadr"))))
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/sbt/sbt/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0fpm9jcd84xjxlfdfh2iwz7544ksgqik6591i7nrzlamygmbfadr"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar"))
+                   #t))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
@@ -1415,6 +1444,7 @@ object WriteKeywords {
            ,(sbt-building-phase
              `(("internal/" "util-collection")
                ("internal/" "util-complete")
+               ("internal/" "util-logic")
                ("testing/" "agent")
                ("" "testing")
                ("" "core-macros")
@@ -1428,6 +1458,22 @@ object WriteKeywords {
                ("" "main")
                ("" "sbt"))
              #t))
+         (add-before 'build 'build-launch
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "build/launch")
+             (mkdir-p "build/jar")
+             (with-directory-excursion "build/launch"
+               (invoke "jar" "xf" (string-append
+                                    (assoc-ref inputs "sbt-launcher")
+                                    "/share/java/sbt-launcher.jar")))
+             (copy-recursively "launch/src/main/input_resources" "build/launch")
+             (copy-recursively "launch/src/main/resources" "build/launch")
+             (substitute* "build/launch/sbt/sbt.boot.properties"
+               (("\\$\\{\\{sbt.version\\}\\}") ,version)
+               (("\\$\\{\\{org\\}\\}") "org.scala-sbt"))
+             (invoke "jar" "cmf" "build/launch/META-INF/MANIFEST.MF"
+                     "build/jar/sbt-launch.jar" "-C" "build/launch" ".")
+             #t))
          (replace 'install
            (install-jars ".")))))
     (inputs
@@ -1438,6 +1484,7 @@ object WriteKeywords {
        ("java-log4j-core" ,java-log4j-core-for-sbt)
        ("java-native-access" ,java-native-access)
        ("scala" ,scala-official)
+       ("scala-cache" ,scala-cache)
        ("scala-jawn" ,scala-jawn)
        ("scala-scalajson" ,scala-scalajson)
        ("scala-sjsonnew" ,scala-sjsonnew)
@@ -1450,6 +1497,57 @@ object WriteKeywords {
        ("sbt-zinc" ,sbt-zinc)))
     (native-inputs
      `(("scala-kind-projector" ,scala-kind-projector)))
+    (home-page "https://www.scala-sbt.org/")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public sbt
+  (package
+    (name "sbt")
+    (version (package-version sbt-jars))
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/sbt/sbt-launcher-package/"
+                                  "archive/v" version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0bcqjambyf4x89ind2hg6ngh6qn46wiwa8q4gcyw65jyl4rsxls9"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (delete 'build)
+         (replace 'install
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             (delete-file "src/universal/bin/sbt.bat")
+             (let ((out (assoc-ref outputs "out"))
+                   (sbt (assoc-ref inputs "sbt-jars"))
+                   (scala (assoc-ref inputs "scala"))
+                   (icedtea (assoc-ref inputs "icedtea")))
+               (substitute* "src/universal/bin/sbt-launch-lib.bash"
+                 (("java_cmd=.*") (string-append "java_cmd=\"" icedtea "/bin/java\"\n")))
+               (mkdir-p (string-append out "/lib/local-preloaded"))
+               (for-each
+                 (lambda (package)
+                   (for-each
+                     (lambda (jar)
+                       (symlink jar (string-append out "/lib/local-preloaded/"
+                                                   (basename jar))))
+                     (find-files (assoc-ref inputs package) ".*.jar$")))
+                 '("scala" "sbt-jars"))
+               (copy-recursively "src/universal" out)
+               (copy-recursively "src/linux/usr" out)
+               (copy-file (string-append sbt "/share/java/sbt-launch.jar")
+                          (string-append out "/bin/sbt-launch.jar")))
+             #t)))))
+    (inputs
+     `(("icedtea" ,icedtea-8)
+       ("sbt-jars" ,sbt-jars)
+       ("scala" ,scala-official)))
     (home-page "https://www.scala-sbt.org/")
     (synopsis "")
     (description "")
