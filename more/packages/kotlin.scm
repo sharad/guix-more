@@ -40,7 +40,7 @@
   #:use-module (more packages java))
 
 ;; Needs maven-core
-(define-public kotlin
+(define-public kotlin-1.2
   (package
     (name "kotlin")
     ;; last version with a build.xml file
@@ -65,6 +65,25 @@
                 "ant/src/org/jetbrains/kotlin/ant/antlib.xml")))))))
     (native-inputs
      `(("java-intellij-compiler-javac2" ,java-intellij-compiler-javac2)))
+    (home-page "https://kotlinlang.org/")
+    (synopsis "Programming language targetting the JVM")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public kotlin
+  (package
+    (name "kotlin")
+    (version "1.3.11")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/JetBrains/kotlin")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "123gfr72p0715n925kivl3khlqzk11qpyv65jwlhcplgfvw8rl73"))))
+    (build-system ant-build-system)
     (home-page "https://kotlinlang.org/")
     (synopsis "Programming language targetting the JVM")
     (description "")

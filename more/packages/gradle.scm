@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2017, 2018 Julien Lepiller <julien@lepiller.eu>
+;;; Copyright © 2017-2019 Julien Lepiller <julien@lepiller.eu>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -37,21 +37,22 @@
 
 ;; Gradle requires guava@17.
 ;; TODO: patch gradle to support at least guava@20 and send it upstream.
-(define-public java-guava-for-gradle
-  (package
-    (inherit java-guava)
-    (version "17.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/google/guava/"
-                                  "archive/v" version ".tar.gz"))
-              (sha256
-               (base32
-                "0kg2n0dfdncbm3kgf8fa6kig8djfhar24vf0yf287x27w5sqzhnb"))))
-    (arguments
-     `(#:jar-name "guava.jar"
-       #:source-dir "guava/src/"
-       #:tests? #f)))); Not in a "java" subdirectory
+(define-public java-guava-for-gradle java-guava-25)
+;  (package
+;    (inherit java-guava)
+;    (version "17.0")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/google/guava/"
+;                                  "archive/v" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "0kg2n0dfdncbm3kgf8fa6kig8djfhar24vf0yf287x27w5sqzhnb"))))
+;    (arguments
+;     `(#:jar-name "guava.jar"
+;       #:jdk ,icedtea-7
+;       #:source-dir "guava/src/"
+;       #:tests? #f)))); Not in a "java" subdirectory
 
 (define (gradle-subproject subproject projects runtime)
   "Gradle is made of a lot of subprojects. Each subproject can be compiled in
@@ -61,10 +62,18 @@ This procedure builds the java source of @code{subproject}.
 
 Each subproject contains at least a text file, gradle-*-classpath.properties
 that contain dependency information. This file is created using the
-@code{projects} and @code{runtime} parameters."
+@code{projects} and @code{runtime} parameters.
+
+@code{projects} is a list of gradle projects.  The right list is present in
+the @file{build.gradle} file of the subproject,
+
+@code{runtime} is a list of dependencies on non-gradle libraries.  The exact
+list to pass is present in the @file{build.gradle} file of the subproject: in
+the dependencies section, look for @code{compile libraries.*.coordinates}."
   (package
     (name (string-append "gradle-" subproject))
-    (version "4.9.0")
+    ;(version "4.9.0")
+    (version "5.1.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/gradle/gradle/archive/v"
@@ -72,7 +81,8 @@ that contain dependency information. This file is created using the
               (file-name (string-append "gradle-" version ".tar.gz"))
               (sha256
                (base32
-                "19x1sksin2nh277pvd1f7h6kphbbqv4fb6sax696kvn1ci5h2fvp"))
+                ;"19x1sksin2nh277pvd1f7h6kphbbqv4fb6sax696kvn1ci5h2fvp"))
+                "0brjlj3gzgqfh0j132xrakl0jd4gpkm2q889yr688mglbmp5phw3"))
               (patches
                 (search-patches
                   "gradle-match-files-without-version-number.patch"))))
@@ -82,7 +92,7 @@ that contain dependency information. This file is created using the
      ;; if they are named differently.
      `(#:jar-name (string-append "gradle-" ,subproject "-" ,version ".jar")
        #:source-dir (string-append "subprojects/" ,subproject "/src/main/java")
-       #:jdk ,icedtea-8
+       #:jdk ,openjdk9
        #:tests? #f;; Ignore tests for now
        #:test-dir (string-append "subprojects/" ,subproject "/src/test")
        #:phases
@@ -92,11 +102,11 @@ that contain dependency information. This file is created using the
              ;; Add implementation information to the MANIFEST.MF file.  We can
              ;; substitute this in the manifest phase.
              (substitute* "build.xml"
-               (("message=\"")
-                (string-append "message=\"Implementation-Title: Gradle"
-                               "${line.separator}"
-                               "Implementation-Version: " ,version
-                               "${line.separator}")))
+               (("</manifest>")
+                (string-append "<attribute name=\"Implementation-Title\" "
+                               "value=\"Gradle\" />"
+                               "<attribute name=\"Implementation-Version\" "
+                               "value=\"" ,version "\" /></manifest>")))
              #t))
          (add-before 'build 'add-properties
            (lambda* (#:key inputs #:allow-other-keys)
@@ -148,36 +158,32 @@ builds a module containing groovy source code."
   (let ((base (gradle-subproject subproject projects runtime)))
     (package
       (inherit base)
+      (version (package-version base))
       (arguments
        (substitute-keyword-arguments (package-arguments base)
          ((#:source-dir source-dir)
           `(string-append "subprojects/" ,subproject "/src/main/groovy"))
          ((#:phases phases)
           `(modify-phases ,phases
-             (add-before 'build 'use-groovy
+             (replace 'build
                (lambda _
-                 (substitute* "build.xml"
-                   ;; Change the compiler to groovyc
-                   (("javac") "groovyc")
-                   ;; Make it fork
-                   (("includeantruntime=\"false\"")
-                    "includeantruntime=\"false\" fork=\"yes\"")
-                   ;; groovyc doesn't understand the --classpath argument (bug?)
-                   (("classpath=\"@refidclasspath\"")
-                    "classpathref=\"classpath\"")
-                   ;; To enable joint compilation
-                   (("classpathref=\"classpath\" />")
-                    "classpathref=\"classpath\"><javac source=\"1.5\" target=\"1.5\" /></groovyc>")
-                   ;; Actually create a definition of the groovyc task.
-                   ;; FIXME: Can't we use groovy-ant for that?
-                   (("<project basedir=\".\">")
-                    "<project basedir=\".\"><taskdef name=\"groovyc\"
-classname=\"org.codehaus.groovy.ant.Groovyc\" />")
-                   ;; Tests are in test.home/groovy, not /java
-                   (("\\}/java") "}/groovy"))))))))
+                 (mkdir-p "build/classes")
+                 (mkdir-p "build/jar")
+                 (invoke "ant" "manifest")
+                 (apply invoke "java" "-cp" (getenv "CLASSPATH")
+                               "org.codehaus.groovy.tools.FileSystemCompiler"
+                               "--classpath" (getenv "CLASSPATH")
+                               "-d" "build/classes" "-j"
+                               (find-files (string-append "subprojects/" ,subproject
+                                                          "/src/main/groovy")
+                                           ".*\\.(groovy|java)$"))
+                 (invoke "jar" "cmf" "build/manifest/MANIFEST.MF"
+                         (string-append "build/jar/gradle-" ,subproject
+                                        "-" ,version ".jar")
+                         "-C" "build/classes" ".")
+                 #t))))))
       (native-inputs
-       `(("groovy" ,groovy)
-         ,@(package-inputs groovy))))))
+       `(("groovy" ,groovy))))))
 
 ;; This gradle plugin is not a subproject, but it is required by buildsrc.
 (define-public gradle-japicmp-plugin
@@ -355,7 +361,8 @@ versionNumber=~a
 isSnapshot=false" ,(package-version base) ,(package-version base))))
                  #t))))))
       (inputs
-       `(("java-guava-for-gradle" ,java-guava-for-gradle)
+       `(("java-asm-7" ,java-asm-7)
+         ("java-guava-for-gradle" ,java-guava-for-gradle)
          ("java-slf4j-api" ,java-slf4j-api)
          ("java-commons-lang" ,java-commons-lang)
          ("java-commons-io" ,java-commons-io)
@@ -372,7 +379,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
     (inputs
      `(("gradle-base-services" ,gradle-base-services)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-jsr305" ,java-jsr305)))))
 
@@ -405,7 +412,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
 (define-public gradle-messaging
   (let ((base  (gradle-subproject "messaging" '("gradle-base-services")
                                   '("java-slf4j-api" "java-kryo" "java-objenesis"
-                                    "java-minlog" "java-reflectasm" "java-asm-6"))))
+                                    "java-minlog" "java-reflectasm" "java-asm-7"))))
     (package
       (inherit base)
       (arguments
@@ -424,7 +431,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
       (inputs
        `(("gradle-base-services" ,gradle-base-services)
          ("gradle-base-services-groovy" ,gradle-base-services-groovy)
-         ("java-asm-6" ,java-asm-6)
+         ("java-asm-7" ,java-asm-7)
          ("java-commons-lang" ,java-commons-lang)
          ("java-fastutil" ,java-fastutil)
          ("java-guava-for-gradle" ,java-guava-for-gradle)
@@ -444,8 +451,10 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                  "java-commons-io" "java-commons-lang")))
     (inputs
      `(("gradle-base-services" ,gradle-base-services)
+       ("gradle-logging" ,gradle-logging)
        ("gradle-messaging" ,gradle-messaging)
        ("gradle-native" ,gradle-native)
+       ("gradle-resources" ,gradle-resources)
        ("java-commons-collections" ,java-commons-collections)
        ("java-commons-io" ,java-commons-io)
        ("java-commons-lang" ,java-commons-lang)
@@ -573,12 +582,14 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                "model-core"
                '("gradle-base-services-groovy" "gradle-base-services")
                '("groovy" "java-slf4j-api" "java-guava-for-gradle"
-                 "java-jcip-annotations" "java-commons-lang" "java-asm-6")))
+                 "java-jcip-annotations" "java-commons-lang" "java-asm-7")))
     (inputs
      `(("gradle-base-services" ,gradle-base-services)
        ("gradle-base-services-groovy" ,gradle-base-services-groovy)
+       ("gradle-core-api" ,gradle-core-api)
+       ("gradle-logging" ,gradle-logging)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-commons-lang" ,java-commons-lang)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-jcip-annotations" ,java-jcip-annotations)
@@ -594,11 +605,11 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                '("java-guava-for-gradle" "java-commons-io")))
     (inputs
      `(("gradle-base-services" ,gradle-base-services)
-       ("gradle-model-core" ,gradle-model-core)
        ("gradle-native" ,gradle-native)
        ("java-commons-io" ,java-commons-io)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
-       ("java-jsr305" ,java-jsr305)))))
+       ("java-jsr305" ,java-jsr305)
+       ("java-slf4j-api" ,java-slf4j-api)))))
 
 (define-public gradle-build-cache
   (package
@@ -610,6 +621,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
     (inputs
      `(("gradle-base-services" ,gradle-base-services)
        ("gradle-logging" ,gradle-logging)
+       ("gradle-messaging" ,gradle-messaging)
        ("gradle-persistent-cache" ,gradle-persistent-cache)
        ("gradle-resources" ,gradle-resources)
        ("java-commons-io" ,java-commons-io)
@@ -648,7 +660,6 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("gradle-base-services-groovy" ,gradle-base-services-groovy)
        ("gradle-build-cache" ,gradle-build-cache)
        ("gradle-logging" ,gradle-logging)
-       ("gradle-model-core" ,gradle-model-core)
        ("gradle-persistent-cache" ,gradle-persistent-cache)
        ("gradle-process-services" ,gradle-process-services)
        ("gradle-resources" ,gradle-resources)
@@ -672,7 +683,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("gradle-base-services-groovy" ,gradle-base-services-groovy)
        ("gradle-model-core" ,gradle-model-core)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-jcip-annotations" ,java-jcip-annotations)
        ("java-jsr305" ,java-jsr305)))))
@@ -716,7 +727,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                   "gradle-build-cache" "gradle-core-api" "gradle-process-services"
                   "gradle-jvm-services" "gradle-model-core")
                 '("groovy" "ant" "java-guava-for-gradle"
-                  "java-javax-inject" "java-asm-6" "java-slf4j-api"
+                  "java-javax-inject" "java-asm-7" "java-slf4j-api"
                   "java-commons-collections" "java-commons-io"
                   "java-commons-lang" "java-jcip-annotations" "java-jaxp"
                   "java-native-platform" "java-commons-compress"))))
@@ -773,7 +784,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
          ("gradle-process-services" ,gradle-process-services)
          ("gradle-resources" ,gradle-resources)
          ("groovy" ,groovy)
-         ("java-asm-6" ,java-asm-6)
+         ("java-asm-7" ,java-asm-7)
          ("java-commons-collections" ,java-commons-collections)
          ("java-commons-compress" ,java-commons-compress)
          ("java-commons-io" ,java-commons-io)
@@ -816,7 +827,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
   (let ((base (gradle-subproject
                 "launcher"
                 '("gradle-base-services" "gradle-core-api" "gradle-core" "gradle-tooling-api")
-                '("java-asm-6" "java-commons-io" "java-slf4j-api"))))
+                '("java-asm-7" "java-commons-io" "java-commons-lang" "java-slf4j-api"))))
     (package
       (inherit base)
       (inputs
@@ -833,8 +844,9 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
          ("gradle-process-services" ,gradle-process-services)
          ("gradle-tooling-api" ,gradle-tooling-api)
          ("groovy" ,groovy)
-         ("java-asm-6" ,java-asm-6)
+         ("java-asm-7" ,java-asm-7)
          ("java-commons-io" ,java-commons-io)
+         ("java-commons-lang" ,java-commons-lang)
          ("java-guava-for-gradle" ,java-guava-for-gradle)
          ("java-jcip-annotations" ,java-jcip-annotations)
          ("java-jsr305" ,java-jsr305)
@@ -971,7 +983,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                  ;; plexus-cipher plexus-classworlds plexus-container-default
                  ;; plexus-component-annotations plexus-interpolation plexus-utils
                  ;; maven-settings maven-settings-builder xbean-reflect
-                 '("java-asm-6" "java-commons-lang" "java-commons-io"
+                 '("java-asm-7" "java-commons-lang" "java-commons-io"
                    "java-apache-ivy" "java-slf4j-api" "java-gson"
                    "java-jcip-annotations" "java-bouncycastle"
                    "java-jsch"))))
@@ -1005,7 +1017,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
          ("gradle-version-control" ,gradle-version-control)
          ("groovy" ,groovy)
          ("java-apache-ivy" ,java-apache-ivy)
-         ("java-asm-6" ,java-asm-6)
+         ("java-asm-7" ,java-asm-7)
          ("java-bouncycastle" ,java-bouncycastle)
          ("java-commons-io" ,java-commons-io)
          ("java-commons-lang" ,java-commons-lang)
@@ -1044,7 +1056,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                 "testing-base"
                 '("gradle-core" "gradle-reporting" "gradle-platform-base")
                 '("java-kryo" "java-objenesis" "java-minlog" "java-reflectasm"
-                  "java-asm-6"))))
+                  "java-asm-7"))))
     (package
       (inherit base)
       (arguments
@@ -1069,7 +1081,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
          ("gradle-process-services" ,gradle-process-services)
          ("gradle-reporting" ,gradle-reporting)
          ("groovy" ,groovy)
-         ("java-asm-6" ,java-asm-6)
+         ("java-asm-7" ,java-asm-7)
          ("java-bouncycastle" ,java-bouncycastle)
          ("java-commons-io" ,java-commons-io)
          ("java-commons-lang" ,java-commons-lang)
@@ -1128,7 +1140,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("gradle-platform-base" ,gradle-platform-base)
        ("gradle-process-services" ,gradle-process-services)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-commons-io" ,java-commons-io)
        ("java-commons-lang" ,java-commons-lang)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
@@ -1160,7 +1172,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("gradle-reporting" ,gradle-reporting)
        ("gradle-testing-base" ,gradle-testing-base)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-bsh" ,java-bsh)
        ("java-commons-io" ,java-commons-io)
        ("java-commons-lang" ,java-commons-lang)
@@ -1199,7 +1211,8 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("java-javax-inject" ,java-javax-inject)
        ("java-jsr305" ,java-jsr305)
        ("java-native-platform" ,java-native-platform)
-       ("java-slf4j-api" ,java-slf4j-api)))))
+       ("java-slf4j-api" ,java-slf4j-api)
+       ("java-snakeyaml" ,java-snakeyaml)))))
 
 (define-public gradle-composite-builds
   (package
@@ -1268,7 +1281,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("gradle-process-services" ,gradle-process-services)
        ("gradle-workers" ,gradle-workers)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-commons-lang" ,java-commons-lang)
        ("java-fastutil" ,java-fastutil)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
@@ -1296,7 +1309,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("gradle-process-services" ,gradle-process-services)
        ("gradle-workers" ,gradle-workers)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-guava-for-gradle" ,java-guava-for-gradle)
        ("java-javax-inject" ,java-javax-inject)
        ("java-jsr305" ,java-jsr305)
@@ -1311,7 +1324,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                  "gradle-platform-jvm" "gradle-language-jvm"
                  "gradle-language-java" "gradle-language-groovy"
                  "gradle-diagnostics" "gradle-testing-jvm")
-               '("groovy" "ant" "java-asm-6" "java-commons-io"
+               '("groovy" "ant" "java-asm-7" "java-commons-io"
                  "java-commons-lang" "java-commons-cli" "java-slf4j-api")))
     (inputs
      `(("gradle-base-services" ,gradle-base-services)
@@ -1336,7 +1349,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
        ("gradle-process-services" ,gradle-process-services)
        ("gradle-workers" ,gradle-workers)
        ("groovy" ,groovy)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-commons-cli" ,java-commons-cli)
        ("java-commons-io" ,java-commons-io)
        ("java-commons-lang" ,java-commons-lang)
@@ -1625,8 +1638,11 @@ org/objectweb/asm
 org/objenesis
 "))))
              (mkdir-p "build/jar")
-             (invoke "jar" "cf" "build/jar/gradle-runtime-api-info-"
-                     (package-version base) ".jar" "-C" "build/classes" ".")
+             (invoke "jar" "cf"
+                     (string-append
+                       "build/jar/gradle-runtime-api-info-"
+                       ,(package-version base) ".jar")
+                     "-C" "build/classes" ".")
              #t)))))))))
 
 (define-public gradle-announce
@@ -3332,7 +3348,7 @@ WorkerExecutor:org.gradle.workers.WorkerExecutor;
                              "maven-wagon-file"
                              "maven-wagon-http"
                              "maven-wagon-http-shared"))
-                          ;; java-asm-6 and java-jansi are already present in groovy.
+                          ;; java-asm-7 and java-jansi are already present in groovy.
                           (dependencies 
                            '("gradle-wrapper"
                              "gradle-tooling-api"
@@ -3474,7 +3490,7 @@ export GRADLE_HOME=~a\n
        ("gradle-announce"              ,gradle-announce)
        ("groovy" ,groovy)
        ("icedtea-8" ,icedtea-8)
-       ("java-asm-6" ,java-asm-6)
+       ("java-asm-7" ,java-asm-7)
        ("java-apache-ivy" ,java-apache-ivy)
        ("java-bouncycastle" ,java-bouncycastle)
        ("java-bsh" ,java-bsh)

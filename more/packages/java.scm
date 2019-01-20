@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2017 Julien Lepiller <julien@lepiller.eu>
+;;; Copyright © 2017-2019 Julien Lepiller <julien@lepiller.eu>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -31,6 +31,7 @@
   #:use-module (guix build-system ant)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system trivial)
+  #:use-module (gnu packages apr)
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages compression)
@@ -46,12 +47,15 @@
   #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages protobuf)
+  #:use-module (gnu packages tls)
   #:use-module (gnu packages version-control)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg)
   #:use-module (more packages maven)
-  #:use-module (more packages python))
+  #:use-module (more packages python)
+  #:use-module (more packages tls)
+  #:use-module (more packages web))
 
 (define-public java-httpcomponents-httpasyncclient
   (package
@@ -95,18 +99,17 @@ standards and recommendations.")
 (define-public java-fastutil
   (package
     (name "java-fastutil")
-    (version "8.2.1")
+    (version "8.2.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://fastutil.di.unimi.it/fastutil-"
                                   version "-src.tar.gz"))
               (sha256
                (base32
-                "039gh3b9a72dvc9jmijfhshd2i7bnj18p2yi67200qfrnw17wbkj"))))
+                "005d310p97qb2s74icl9avr7b6yqwn0wlbbyb5byzxf3189y3yh8"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:tests? #f; no tests
+     `(#:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-sources
@@ -140,7 +143,6 @@ standards and recommendations.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "http-builder-ng.jar"
-       #:jdk ,icedtea-8
        #:source-dir "http-builder-ng-core/src/main/java"
        #:test-dir "http-builder-ng-core/src/test"
        #:tests? #f)); TODO: com.stehno.ersatz
@@ -178,7 +180,6 @@ standards and recommendations.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "commons-text.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"))
     (inputs
      `(("java-commons-lang3" ,java-commons-lang3)))
@@ -212,7 +213,6 @@ standards and recommendations.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "opencsv.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:phases
        (modify-phases %standard-phases
@@ -312,8 +312,7 @@ standards and recommendations.")
                 `(for-each delete-file (find-files "." ".*.jar")))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:tests? #f; No tests
+     `(#:tests? #f; No tests
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'fix-classpath
@@ -355,8 +354,7 @@ standards and recommendations.")
                 `(delete-file (string-append "jcifs-" ,version ".jar")))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:tests? #f; No tests
+     `(#:tests? #f; No tests
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'fix-compiler
@@ -391,7 +389,6 @@ standards and recommendations.")
      `(#:jar-name "airline.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (replace 'check
@@ -435,7 +432,6 @@ which generates man-page-like documentation driven by the Java annotations.")
        #:source-dir "japicmp/src/main/java"
        #:test-dir "japicmp/src/test"
        #:tests? #f; require org.junit.contrib
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
@@ -467,8 +463,7 @@ It can also be used as a library.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "jatl.jar"
-       #:source-dir "src/main/java"
-       #:jdk ,icedtea-8))
+       #:source-dir "src/main/java"))
     (native-inputs
      `(("java-junit" ,java-junit)
        ("java-hamcrest-core" ,java-hamcrest-core)))
@@ -748,7 +743,6 @@ also access primitive fields via bytecode to avoid boxing.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "kryo.jar"
-       #:jdk ,icedtea-8
        #:tests? #f)); No tests
     (inputs
      `(("java-minlog" ,java-minlog)
@@ -976,8 +970,7 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
     (arguments
      `(#:jar-name "spotbugs.jar"
        #:source-dir "spotbugs-annotations/src/main/java"
-       #:tests? #f
-       #:jdk ,icedtea-8))
+       #:tests? #f))
     (inputs
      `(("java-jsr305" ,java-jsr305)))
     (home-page "https://spotbugs.github.io/")
@@ -994,7 +987,6 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
        #:source-dir "spotbugs/src/main/java:spotbugs-annotations/src/main/java:spotbugs/src/gui"
        #:test-dir "spotbugs/src/test"
        #:tests? #f; depend on jdepend
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'remove-osx
@@ -1034,8 +1026,7 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
      `(#:jar-name "spi.jar"
        #:source-dir "org.mangosdk.spi/src/main/java"
        #:test-dir "org.mangosdk.spi/src/test"
-       #:tests? #f;; FIXME: tests don't build
-       #:jdk ,icedtea-8))
+       #:tests? #f));; FIXME: tests don't build
     (native-inputs
      `(("java-junit" ,java-junit)))
     (home-page "https://github.com/rspilker/spi")
@@ -1078,7 +1069,6 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
     (arguments
      `(#:jar-name "lombok-utils.jar"
        #:source-dir "src/utils"
-       #:jdk ,icedtea-8
        #:tests? #f; No specific test
        #:phases
        (modify-phases %standard-phases
@@ -1244,22 +1234,23 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-intellij-annotation
+(define-public java-jetbrains-annotations
   (package
-    (name "java-intellij-annotation")
-    (version "181-1945")
+    (name "java-jetbrains-annotations")
+    (version "16.0.3")
     (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/JetBrains/intellij-community/"
-                                  "archive/idea/" version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/JetBrains/java-annotations/")
+                     (commit version)))
+              (file-name (git-file-name name version))
               (sha256
                (base32
-                "1mvixizk75pvhaibdy8lriy5prasg0pap80vak6vfj67kw8lmksk"))))
+                "10gz3l6lgjq35q4vqgcxvy84n7vjyqw1qxzaklcmprminqi4g9s4"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "java-intellij-annotation.jar"
-       #:source-dir "platform/annotations/src"
+     `(#:jar-name "java-annotations.jar"
+       #:source-dir "java8/src/main/java:common/src/main/java"
        #:tests? #f)); no tests
     (home-page "http://jetbrains.org")
     (synopsis "")
@@ -1269,30 +1260,28 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
 (define-public java-spockframework-core
   (package
     (name "java-spockframework-core")
-    (version "1.1")
+    (version "1.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/spockframework/spock/"
                                   "archive/spock-" version ".tar.gz"))
               (sha256
                (base32
-                "1b2bybldlnid41irkavd09bkkzfjyvc2d33grpn2vgaiyw9gzz8z"))))
+                "1nps60666y7d8gmy5bvp18cf1a5jy33kwj8fqhazrdikzphmmp0q"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "spock-core.jar"
        #:source-dir "spock-core/src/main/java"
-       #:jdk ,icedtea-8
        #:tests? #f)); No tests
     (inputs
      `(("groovy" ,groovy)
        ("java-asm" ,java-asm)
        ("java-cglib" ,java-cglib)
        ("java-hamcrest-core" ,java-hamcrest-core)
-       ("java-intellij-annotation" ,java-intellij-annotation)
+       ("java-jetbrains-annotations" ,java-jetbrains-annotations)
        ("java-junit" ,java-junit)
        ("java-objenesis" ,java-objenesis)
-       ("java-byte-buddy-dep" ,java-byte-buddy-dep)
-       ,@(package-inputs groovy)))
+       ("java-byte-buddy-dep" ,java-byte-buddy-dep)))
     (home-page "http://spockframework.org/")
     (synopsis "")
     (description "")
@@ -1337,7 +1326,6 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
      `(#:jar-name "java-openjfx.jar"
        #:source-dir "buildSrc/src/main/java"
        #:test-dir "buildSrc/src/test"
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'generate-jsl-parser
@@ -1362,7 +1350,6 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
      `(#:jar-name "java-openjfx-base.jar"
        #:source-dir "modules/base/src/main/java:modules/base/src/main/java8:modules/base/src/main/version-info"
        #:test-dir "modules/base/src/test"
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'check 'remove-empty-file
@@ -1385,8 +1372,7 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
      `(#:jar-name "java-openjfx-graphics.jar"
        #:source-dir "modules/graphics/src/main/java"
        #:tests? #f; require X?
-       #:test-dir "modules/graphics/src/test"
-       #:jdk ,icedtea-8))
+       #:test-dir "modules/graphics/src/test"))
     (inputs
      `(("java-openjfx" ,java-openjfx)
        ("java-openjfx-base" ,java-openjfx-base)
@@ -1402,8 +1388,7 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
     (arguments
      `(#:jar-name "java-openjfx-media.jar"
        #:source-dir "modules/media/src/main/java"
-       #:tests? #f; no tests
-       #:jdk ,icedtea-8))))
+       #:tests? #f)))); no tests
 
 (define-public java-brotli-dec
   (package
@@ -1431,6 +1416,102 @@ algorithm, Huffman coding and 2nd order context modeling, with a compression
 ratio comparable to the best currently available general-purpose compression
 methods.  It is similar in speed with deflate but offers more dense compression.")
     (license license:expat)))
+
+(define-public java-ning-compress
+  (package
+    (name "java-ning-compress")
+    (version "1.0.4")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/ning/compress.git")
+                     (commit (string-append "compress-lzf-" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1scyws9rs268zvi3p6jvq9yc061zrn49ppp7v91y52si8b1xpbg8"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "ning-compress.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; require testng, not junit
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'fix-tests
+           (lambda _
+             (substitute* "src/test/lzf/TestLZF.java"
+               (("package lzf;") "package lzf;
+
+import com.ning.compress.lzf.*;
+import org.junit.Assert.*;"))
+             #t)))))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-testng" ,java-testng)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-lzma-sdk
+  (package
+    (name "java-lzma-sdk")
+    (version "18.06")
+    (source (origin
+              (method url-fetch)
+              (uri "https://www.7-zip.org/a/lzma1806.7z")
+              (sha256
+               (base32
+                "0mcs90vjmp8wjqxvrjq0bl2d70njg8md1vy3zr9dd22vwfpzgy01"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:source-dir "Java"
+       #:jar-name "lzma.jar"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'unpack
+           (lambda* (#:key source #:allow-other-keys)
+             (invoke "7z" "x" source)
+             #t)))))
+    (native-inputs
+     `(("p7zip" ,p7zip)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:public-domain)))
+
+(define-public java-lzma
+  (package
+    (name "java-lzma")
+    (version "1.3")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/jponge/lzma-java.git")
+                     (commit (string-append "lzma-java-" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1cmgd95avjq1fsr1bx91cjcvz6ifwgq1iwyzvwvnr6s1w0r8m6hx"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "lzma.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'copy-resources
+           (lambda _
+             (mkdir-p "target/test-classes")
+             (copy-recursively "src/test/resources" "target/test-classes")
+             #t)))))
+    (native-inputs
+     `(("java-commons-io" ,java-commons-io)
+       ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
 
 (define-public java-commons-compress-latest
   (package
@@ -1463,7 +1544,6 @@ methods.  It is similar in speed with deflate but offers more dense compression.
      `(("unzip" ,unzip)))
     (arguments
      `(#:build-target "pack"
-       #:jdk ,icedtea-8
        #:tests? #f; No tests
        #:phases
        (modify-phases %standard-phases
@@ -1548,7 +1628,6 @@ methods.  It is similar in speed with deflate but offers more dense compression.
        ("java-zstd" ,java-zstd)))
     (arguments
      `(#:tests? #f
-       #:jdk ,icedtea-8
        #:jar-name "josm.jar"
        #:phases
        (modify-phases %standard-phases
@@ -1691,7 +1770,6 @@ from ORO, Inc.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-jboss-annotations-api_spec.jar"
-       #:jdk ,icedtea-8
        #:source-dir "."
        #:tests? #f)); no tests
     (home-page "https://github.com/jboss/jboss-annotations-api_spec")
@@ -1714,7 +1792,6 @@ from ORO, Inc.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-jboss-transaction-api_spec.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:tests? #f)); no tests
     (inputs
@@ -1741,7 +1818,6 @@ from ORO, Inc.")
     (arguments
      `(#:jar-name "java-aspectj-weaver.jar"
        #:source-dir "."
-       #:jdk ,icedtea-8
        #:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
@@ -1781,7 +1857,6 @@ from ORO, Inc.")
     (arguments
      `(#:jar-name "java-aspectj-rt.jar"
        #:source-dir "."
-       #:jdk ,icedtea-8
        #:tests? #f; no tests
        #:phases
        (modify-phases %standard-phases
@@ -1802,7 +1877,6 @@ from ORO, Inc.")
 ;    (arguments
 ;     `(#:jar-name "java-aspectj-tools.jar"
 ;       #:source-dir "."
-;       #:jdk ,icedtea-8
 ;       #:tests? #f; no tests
 ;       #:phases
 ;       (modify-phases %standard-phases
@@ -2001,7 +2075,6 @@ from ORO, Inc.")
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:tests? #f; TODO: require spring-framework-test.
-       #:jdk ,icedtea-8
        ;#:test-target "test"
        #:phases
        (modify-phases %standard-phases
@@ -2298,7 +2371,6 @@ import javax.el.ELContext;"))
          "**/JmxUtilsTest.java"
          ;; Missing hsqldb as a dependency
          "**/MonProxyTest.java")
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'remove-cyclic-dependency
@@ -2314,7 +2386,6 @@ import javax.el.ELContext;"))
        ("java-eclipse-jetty-server" ,java-eclipse-jetty-server)
        ("java-eclipse-jetty-util" ,java-eclipse-jetty-util)
        ("java-hazelcast-bootstrap" ,java-hazelcast-bootstrap)
-       ;("java-javaee-servletapi" ,java-javaee-servletapi)
        ("java-tomcat" ,java-tomcat) ; for catalina and servletapi
        ("java-log4j-api" ,java-log4j-api)
        ("java-log4j-1.2" ,java-log4j-1.2)))
@@ -2891,6 +2962,33 @@ final Map<String, Object> map = map2;"))
     (description "")
     (license license:lgpl2.1+)))
 
+(define-public java-jboss-marshalling
+  (package
+    (name "java-jboss-marshalling")
+    (version "2.0.6")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/jboss-remoting/jboss-marshalling")
+                     (commit (string-append version ".Final"))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1afcfk0wgcggyzc4c47kfmxskbpkqvi65vr0g3gl6rikqm010knc"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jboss-marshalling.jar"
+       #:source-dir "api/src/main/java"
+       #:test-dir "api/src/test"))
+    (inputs
+     `(("java-jboss-modules" ,java-jboss-modules)))
+    (native-inputs
+     `(("java-testng" ,java-testng)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
+
 (define-public java-hibernate-validator-engine
   (package
     (name "java-hibernate-validator-engine")
@@ -2992,7 +3090,6 @@ final Map<String, Object> map = map2;"))
               (patches (search-patches "java-spring-framework-remove-non-free.patch"))))
     (arguments
      `(#:jar-name "java-spring-framework-core.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:test-include (list "**/*Tests.java")
@@ -3089,7 +3186,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-beans")
     (arguments
      `(#:jar-name "java-spring-framework-beans.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:phases
@@ -3147,7 +3243,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-beans-groovy")
     (arguments
      `(#:jar-name "java-spring-framework-beans-groovy.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:tests? #f; no tests
        #:phases
@@ -3187,7 +3282,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-aop")
     (arguments
      `(#:jar-name "java-spring-framework-aop.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:test-exclude
@@ -3290,7 +3384,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-instrument")
     (arguments
      `(#:jar-name "java-spring-framework-instrument.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:phases
@@ -3318,7 +3411,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-test")
     (arguments
      `(#:jar-name "java-spring-framework-test.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:phases
@@ -3348,7 +3440,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-context")
     (arguments
      `(#:jar-name "java-spring-framework-context.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:tests? #f; TODO: require spring-framework-test
@@ -3423,7 +3514,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-web")
     (arguments
      `(#:jar-name "java-spring-framework-web.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:phases
@@ -3450,14 +3540,29 @@ import org.objenesis.ObjenesisException;"))
              (copy-recursively "src/test/resources" "build/test-classes")
              #t)))))
     (inputs
-     `(("java-nethandlerr" ,java-netty-handler)
-       ("java-netty-transport" ,java-netty-transport)
-       ("java-spring-framework-beans" ,java-spring-framework-beans)
-       ("java-spring-framework-core" ,java-spring-framework-core)
+     `(("java-aopalliance" ,java-aopalliance)
+       ("java-classpathx-servletapi" ,java-classpathx-servletapi)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-fasterxml-jackson-annotations" ,java-fasterxml-jackson-annotations)
+       ("java-fasterxml-jackson-core" ,java-fasterxml-jackson-core)
+       ("java-fasterxml-jackson-databind" ,java-fasterxml-jackson-databind)
+       ("java-fasterxml-jackson-dataformat-xml" ,java-fasterxml-jackson-dataformat-xml)
+       ("java-gson" ,java-gson)
        ("java-httpcomponents-httpasyncclient" ,java-httpcomponents-httpasyncclient)
        ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
        ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
-       ("java-httpcomponents-httpcore-nio" ,java-httpcomponents-httpcore-nio)))
+       ("java-httpcomponents-httpcore-nio" ,java-httpcomponents-httpcore-nio)
+       ("java-javax-mail" ,java-javax-mail)
+       ("java-netty-buffer" ,java-netty-buffer)
+       ("java-netty-codec" ,java-netty-codec)
+       ("java-netty-handler" ,java-netty-handler)
+       ("java-netty-transport" ,java-netty-transport)
+       ("java-okhttp" ,java-okhttp)
+       ("java-protobuf" ,java-protobuf)
+       ("java-spring-framework-aop" ,java-spring-framework-aop)
+       ("java-spring-framework-beans" ,java-spring-framework-beans)
+       ("java-spring-framework-context" ,java-spring-framework-context)
+       ("java-spring-framework-core" ,java-spring-framework-core)))
     (description "")))
 
 (define-public java-spring-framework-expression
@@ -3466,7 +3571,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-spring-framework-expression")
     (arguments
      `(#:jar-name "java-spring-framework-expression.jar"
-       #:jdk ,icedtea-8
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:phases
@@ -3519,7 +3623,6 @@ import org.objenesis.ObjenesisException;"))
                 "105z3y931hxygczl602d8vqypbs28h1jfzihdq7zlvcfw0a5b5if"))))
     (arguments
      `(#:jar-name "lucene-core.jar"
-       #:jdk ,icedtea-8
        #:source-dir "core/src/java"
        #:test-dir "core/src/test"
        #:tests? #f)); FIXME: circular dependencies
@@ -3537,7 +3640,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-lucene-queries")
     (arguments
      `(#:jar-name "lucene-queries.jar"
-       #:jdk ,icedtea-8
        #:source-dir "queries/src/java"
        #:test-dir "queries/src/test"
        #:tests? #f));; FIXME: not in java subdirectory
@@ -3550,7 +3652,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-lucene-sandbox")
     (arguments
      `(#:jar-name "lucene-sandbox.jar"
-       #:jdk ,icedtea-8
        #:source-dir "sandbox/src/java"
        #:test-dir "sandbox/src/test"
        #:tests? #f));; FIXME: not in java subdirectory
@@ -3564,7 +3665,6 @@ import org.objenesis.ObjenesisException;"))
     (name "java-lucene-queryparser")
     (arguments
      `(#:jar-name "lucene-queryparser.jar"
-       #:jdk ,icedtea-8
        #:source-dir "queryparser/src/java"
        #:test-dir "queryparser/src/test"
        #:tests? #f));; FIXME: not in java subdirectory
@@ -3612,7 +3712,6 @@ import org.objenesis.ObjenesisException;"))
     (arguments
      `(#:jar-name "h2.jar"
        #:source-dir "h2/src/main"
-       #:jdk ,icedtea-8
        #:tests? #f; no tess
        #:phases
        (modify-phases %standard-phases
@@ -3794,8 +3893,7 @@ import org.objenesis.ObjenesisException;"))
      `(#:tests? #f ; tests require unpackaged and outdated software
        #:test-dir "src/test"
        #:source-dir "src/main/java"
-       #:jar-name "log4j-1.2.jar"
-       #:jdk ,icedtea-8))))
+       #:jar-name "log4j-1.2.jar"))))
 
 (define-public java-avalon-logkit
   (package
@@ -3812,8 +3910,7 @@ import org.objenesis.ObjenesisException;"))
                 (search-patches "java-avalon-logkit-default-datasource.patch"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:test-target "test"
+     `(#:test-target "test"
        #:phases
        (modify-phases %standard-phases
          (replace 'install
@@ -3984,7 +4081,6 @@ import org.objenesis.ObjenesisException;"))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f; Tests are run as a dependency of "dist"
-       #:jdk ,icedtea-8
        #:make-flags (list "-Dcompile.version=7")
        #:phases
        (modify-phases %standard-phases
@@ -4020,33 +4116,53 @@ import org.objenesis.ObjenesisException;"))
 (define-public java-apache-struts
   (package
     (name "java-apache-struts")
-    (version "2.5.16")
+    (version "2.5.20")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/struts/" version "/struts-"
                                   version "-src.zip"))
               (sha256
                (base32
-                "14by1nsz7ky7zdw7ikmki1w9xznnvbyrjj9lbplk7wxsyhqak270"))))
+                "14ds6qrxrjd7np8yizdmqd49jd94yy2gghpq9zlvl53w4bv48kwx"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "apache-struts.jar"
        #:source-dir "src/core/src/main/java"
        #:test-dir "src/core/src/test"
-       #:jdk ,icedtea-8))
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-required-classes
+           (lambda* (#:key inputs #:allow-other-keys)
+             (let ((tools (assoc-ref inputs "java-velocity-tools"))
+                   (velocity-dir "build/velocity")
+                   (tools-dir (string-append "build/velocity/velocity-tool-"
+                                             ,(package-version java-velocity-tools)
+                                             "-src")))
+               (mkdir-p velocity-dir)
+               (with-directory-excursion velocity-dir
+                 (invoke "tar" "xf" tools))
+               (with-directory-excursion tools-dir
+                 (for-each
+                   (lambda (file)
+                     (install-file file (string-append "../../src/core/" file)))
+                   (append (find-files "." "ServletToolboxManager.java")))))
+             #t)))))
     (inputs
      `(("java-apache-freemarker" ,java-apache-freemarker)
        ("java-log4j-api" ,java-log4j-api)
-       ("java-commons-lang3" ,java-commons-lang3)
+       ("java-commons-fileupload" ,java-commons-fileupload)
        ("java-commons-io" ,java-commons-io)
+       ("java-commons-lang3" ,java-commons-lang3)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-classpathx-servletapi" ,java-classpathx-servletapi)
        ("java-ognl" ,java-ognl)
+       ("java-slf4j-api" ,java-slf4j-api)
        ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-context" ,java-spring-framework-context)
        ("java-spring-framework-core" ,java-spring-framework-core)
-       ("java-spring-framework-web" ,java-spring-framework-web)
+       ;("java-spring-framework-web" ,java-spring-framework-web)
        ("java-velocity" ,java-velocity)
+       ("java-velocity-tools" ,(package-source java-velocity-tools))
        ("java-testng" ,java-testng)))
     (native-inputs
      `(("java-junit" ,java-junit)
@@ -4071,8 +4187,7 @@ import org.objenesis.ObjenesisException;"))
             (search-patches "java-velocity-dont-use-werken-xpath.patch"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:test-target "test-main"
+     `(#:test-target "test-main"
        #:tests? #f; FIXME: need a fix to build.xml and hsqldb
        #:phases
        (modify-phases %standard-phases
@@ -4128,7 +4243,6 @@ import org.objenesis.ObjenesisException;"))
      `(#:jar-name "velocity.jar"
        #:tests? #f; FIXME: need a fix to build.xml and hsqldb
        #:source-dir "velocity-engine-core/src/main/java"
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
@@ -4178,8 +4292,7 @@ import org.objenesis.ObjenesisException;"))
                 "0d93v8nj95jfdgx7n72axaavdq2h800vxyi4vx35rdphndy1xg51"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:test-target "test-main"
+     `(#:test-target "test-main"
        #:tests? #f; FIXME: need a fix to build.xml and hsqldb
        #:phases
        (modify-phases %standard-phases
@@ -4193,21 +4306,14 @@ import org.objenesis.ObjenesisException;"))
                (("commons.digester") "commons.digester3"))
              #t))
          (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (dir (string-append out "/share/java")))
-               (mkdir-p dir)
-               (copy-file "../bin/velocity-tools-2.0.jar"
-                          (string-append dir "/velocity-tools-2.0.jar")))
-             #t)))))
+           (install-jars "../bin")))))
     (inputs
-     `(("java-dom4j" ,java-dom4j)
-       ("java-velocity" ,java-velocity)
-       ("java-commons-digester" ,java-commons-digester)
+     ;`(("java-apache-struts" ,java-apache-struts)))
+     `(("java-commons-digester" ,java-commons-digester)
        ("java-commons-validator" ,java-commons-validator)
        ("java-commons-beanutils", java-commons-beanutils)
-       ("java-apache-struts" ,java-apache-struts)))
-    ;; apache struts
+       ("java-dom4j" ,java-dom4j)
+       ("java-velocity" ,java-velocity)))
     (home-page "https://velocity.apache.org/tools/devel")
     (synopsis "")
     (description "")
@@ -4228,8 +4334,7 @@ import org.objenesis.ObjenesisException;"))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-plexus-velocity-component.jar"
-       #:source-dir "src/main/java"
-       #:jdk ,icedtea-8))
+       #:source-dir "src/main/java"))
     (inputs
      `(("java-commons-collections" ,java-commons-collections)
        ("java-geronimo-xbean-reflect" ,java-geronimo-xbean-reflect)
@@ -4325,7 +4430,6 @@ import org.objenesis.ObjenesisException;"))
     (arguments
      `(#:source-dir "src/main/java"
        #:jar-name "java-commons-dbcp.jar"
-       #:jdk ,icedtea-8
        #:tests? #f)); requires apache-geronimo
     (inputs
      `(("java-commons-pool2" ,java-commons-pool2)
@@ -4356,13 +4460,11 @@ import org.objenesis.ObjenesisException;"))
     (arguments
      `(#:source-dir "src/java"
        #:jar-name "java-commons-dbcp.jar"
-       #:jdk ,icedtea-8
        #:tests? #f)); FIXME: error in a test class
     (inputs
      `(("java-commons-pool" ,java-commons-pool)
        ("java-commons-logging" ,java-commons-logging-minimal)
        ("java-jboss-transaction-api-spec" ,java-jboss-transaction-api-spec)))))
-
 
 (define-public java-commons-jcs
   (package
@@ -4381,7 +4483,6 @@ import org.objenesis.ObjenesisException;"))
        #:source-dir "commons-jcs-core/src/main/java"
        #:test-dir "commons-jcs-core/src/test"
        #:tests? #f; requires hsqldb
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'prepare
@@ -4399,6 +4500,60 @@ import org.objenesis.ObjenesisException;"))
     (native-inputs
      `(("java-junit" ,java-junit)))
     (home-page "https://commons.apache.org/proper/commons-jcs/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-portlet-api
+  (package
+    (name "java-portlet-api")
+    (version "3.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/portals/pluto/"
+                                  "pluto-" version "-source-release.zip"))
+              (sha256
+               (base32
+                "0fl1xc1jgfvax2ccnygzfwgqrx60h40hzsv95gcmnp4n99im4pxh"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "portlet-api.jar"
+       #:source-dir "portlet-api/src/main/java"
+       ;; no proper tests
+       #:tests? #f))
+    (inputs
+     `(("java-cdi-api" ,java-cdi-api)
+       ("java-classpathx-servletapi" ,java-classpathx-servletapi)
+       ("java-javax-inject" ,java-javax-inject)))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "https://commons.apache.org/proper/commons-fileupload/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-fileupload
+  (package
+    (name "java-commons-fileupload")
+    (version "1.4")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/fileupload/source/"
+                                  "commons-fileupload-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0w88khx30yj1f629y4dl7s5jiygh3lrdyxz8zmr2vmj8rhzd1dsf"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-fileupload.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       #:tests? #f)); Bad encoding
+    (inputs
+     `(("java-classpathx-servletapi" ,java-classpathx-servletapi)
+       ("java-commons-io" ,java-commons-io)
+       ("java-portlet-api" ,java-portlet-api)))
+    (home-page "https://commons.apache.org/proper/commons-fileupload/")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
@@ -5004,8 +5159,7 @@ and it is extensible to others.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "src/main/java"
-       #:tests? #f; TODO: require google-testing
-       #:jdk ,icedtea-8))
+       #:tests? #f)); TODO: require google-testing
     (native-inputs
      `(("java-guava-25" ,java-guava-25)
        ("java-junit" ,java-junit)
@@ -5032,7 +5186,6 @@ and it is extensible to others.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "value/src/main/java:common/src/main/java:service/src/main/java"
-       #:jdk ,icedtea-8
        #:tests? #f))
     (inputs
      `(("java-guava" ,java-guava)
@@ -5130,7 +5283,6 @@ and it is extensible to others.")
 ;    (version (package-version java-error-prone))
 ;    (arguments
 ;     `(#:tests? #f
-;       #:jdk ,icedtea-8
 ;       #:jar-name (string-append ,name "-" ,version ".jar")
 ;       #:source-dir "check_api/src/main/java"))
 ;    (propagated-inputs
@@ -5149,7 +5301,6 @@ and it is extensible to others.")
 ;    (version (package-version java-error-prone))
 ;    (arguments
 ;     `(#:tests? #f
-;       #:jdk ,icedtea-8
 ;       #:jar-name (string-append ,name "-" ,version ".jar")
 ;       #:source-dir "core/src/main/java"))
 ;    (propagated-inputs
@@ -5286,7 +5437,6 @@ and it is extensible to others.")
      `(#:tests? #f                      ; no tests included
        #:jar-name "guava.jar"
        #:source-dir "guava/src"
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-after 'unpack 'trim-sources
@@ -5430,7 +5580,6 @@ and it is extensible to others.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "commons-bcel.jar"
-       ;#:jdk ,icedtea-8
        #:source-dir "src/main/java"
        ;; FIXME: requires org.openjdk.jmh.* and com.sun.jna.platform.win32 for tests
        #:tests? #f))
@@ -5585,8 +5734,7 @@ and it is extensible to others.")
                    #t))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:test-target "test"
+     `(#:test-target "test"
        #:phases
        (modify-phases %standard-phases
          (replace 'install
@@ -5637,8 +5785,7 @@ and it is extensible to others.")
     (inherit java-cup-runtime)
     (name "java-cup")
     (arguments
-     `(#:jdk ,icedtea-8
-       #:build-target "dist"
+     `(#:build-target "dist"
        #:tests? #f; no test target
        #:phases
        (modify-phases %standard-phases
@@ -5681,7 +5828,6 @@ and it is extensible to others.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "xalan.jar"
-       #:jdk ,icedtea-8
        #:tests? #f)); no tests
     (inputs
      `(("java-commons-bcel" ,java-commons-bcel)
@@ -5909,7 +6055,6 @@ and it is extensible to others.")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:jdk ,icedtea-8
        #:tests? #f; no tests
        #:source-dir "src"
        #:phases
@@ -5945,7 +6090,6 @@ and it is extensible to others.")
     (arguments
      `(#:jar-name (string-append ,name "-" ,version ".jar")
        #:source-dir "runtime/Java/src:tool/src"
-       #:jdk ,icedtea-8
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
@@ -6031,8 +6175,7 @@ and it is extensible to others.")
     (arguments
      `(#:jar-name "java-antlr4-runtime.jar"
        #:source-dir "runtime/Java/src/org"
-       #:tests? #f
-       #:jdk ,icedtea-8))
+       #:tests? #f))
     (native-inputs '())))
 ;
 ;;; Requires gradle.
@@ -6484,8 +6627,7 @@ import java.util.Collection;")
                 "0j4mgmrivpkk8id0h9sshm58igaaj555bzp5pjcz8kdcma67kq27"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jdk ,icedtea-8
-       #:phases
+     `(#:phases
        (modify-phases %standard-phases
          (add-before 'unpack 'subdir
            (lambda _
@@ -6520,7 +6662,6 @@ import java.util.Collection;")
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "procyon.jar"
-       #:jdk ,icedtea-8
        #:source-dir
        (string-append "Procyon.CompilerTools/src/main/java:"
                       "Procyon.Core/src/main/java:"
@@ -6549,7 +6690,6 @@ import java.util.Collection;")
        #:source-dir "modello-plugins/modello-plugin-xsd/src/main/java"
        #:test-dir "modello-plugins/modello-plugin-xsd/src/test"
        #:tests? #f; Require some test classes from java-modello
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
@@ -6671,7 +6811,6 @@ be able to validate XML content.")))
        #:test-dir "src/test"
        #:source-dir "src/main/java"
        #:jar-name "log4j-core.jar"
-       #:jdk ,icedtea-8
        #:make-flags
        (list (string-append "-Ddist.dir=" (assoc-ref %outputs "out")
                             "/share/java"))
@@ -6740,7 +6879,7 @@ logging framework for Java.")))
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
-         (add-before 'build 'build-DescriptorProtos.java
+         (add-before 'build 'build-protos
            (lambda _
              (for-each
                (lambda (proto)
@@ -6754,11 +6893,44 @@ logging framework for Java.")))
     (inputs
      `(("java-guava" ,java-guava)))
     (native-inputs
-     `(("protobuf" ,protobuf)))
+     `(("java-junit" ,java-junit)
+       ("protobuf" ,protobuf)))
     (home-page (package-home-page protobuf))
     (synopsis "")
     (description "")
     (license license:bsd-3)))
+
+(define-public java-protobuf-nano
+  (package
+    (inherit java-protobuf)
+    (name "java-protobuf-nano")
+    (version "3.5.2")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/protocolbuffers/protobuf")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "14gq6rnv03zvcb5hym240z4yqiphrmd5y4zx9a77n37rwvfgx5qy"))))
+    (arguments
+     `(#:jar-name "protobuf.jar"
+       #:source-dir "javanano/src/main/java"
+       #:tests? #f))));; difficult to generate sources))))
+       ;#:test-dir "javanano/src/test"
+       ;#:phases
+       ;(modify-phases %standard-phases
+       ;  (add-after 'build 'build-protos
+       ;    (lambda _
+       ;      (mkdir-p "build/classes")
+       ;      (apply invoke "protoc" "--javanano_out=build/generated"
+       ;             "--proto_path=javanano/src/test/java/com"
+       ;             (find-files "javanano/src/test" "unittest_.*"))
+       ;      (invoke "protoc" "--javanano_out=build/generated"
+       ;              "--proto_path=javanano/src/test/java/com"
+       ;              "javanano/src/test/java/com/google/protobuf/nano/map_test.proto")
+       ;      #t)))))))
 
 (define-public java-jzlib
   (package
@@ -6780,6 +6952,133 @@ logging framework for Java.")))
     (synopsis "")
     (description "")
     (license license:bsd-3)))
+
+(define-public java-conscrypt
+  (package
+    (name "java-conscrypt")
+    (version "1.4.2")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/google/conscrypt.git")
+                     (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1wfcc7gspvxxhm4vwb0yfidpsjj6kcdqnfwj2qsr4zfppn01gv7f"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "conscrypt.jar"
+       #:source-dir "openjdk/src/main/java:common/src/main/java"
+       #:test-dir "openjdk/src/test"
+       #:tests? #f; conscrypt-testing require libcore from android
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'build-library
+           (lambda* (#:key inputs #:allow-other-keys)
+             (mkdir-p "build/classes/META-INF/native")
+             (let ((jni-include (string-append "-I" (assoc-ref inputs "jdk")
+                                               "/include/linux")))
+               (for-each
+                 (lambda (cpp-file)
+                   (invoke "g++" "-c" cpp-file "-o" (string-append cpp-file ".o")
+                           "-std=c++11" "-fPIC" "-O2" "-Icommon/src/jni/main/include"
+                           "-Icommon/src/jni/unbundled/include" jni-include))
+                 (find-files "common/src/jni/main/cpp" ".*.cc$")))
+             (apply invoke "gcc" "-o"
+                    "build/classes/META-INF/native/libconscrypt.so"
+                    "-shared"
+                    (find-files "common/src/jni/main/cpp" ".*.o$"))
+             #t))
+         (add-before 'build 'generate-constants
+           (lambda _
+             (invoke "g++" "-std=c++11" "-O2" "-o" "gen_constants"
+                     "constants/src/gen/cpp/generate_constants.cc")
+             (with-output-to-file "common/src/main/java/org/conscrypt/NativeConstants.java"
+               (lambda _
+                 (invoke "./gen_constants")))
+             #t))
+         ;(add-before 'build 'build-testing
+         ;  (lambda _
+         ;    (mkdir-p "build/testing-classes")
+         ;    (apply invoke "javac" "-d" "build/testing-classes"
+         ;           "-cp" (getenv "CLASSPATH")
+         ;           (find-files "testing/src/main/java" ".*.java$"))
+         ;    #t))
+         (add-before 'check 'set-classpath
+           (lambda _
+             (setenv "CLASSPATH"
+                     (string-append (getenv "CLASSPATH") ":build/testing-classes"))
+             #t)))))
+    (inputs
+     `(("boringssl" ,boringssl)))
+    ;(native-inputs
+    ; `(("java-bouncycastle" ,java-bouncycastle)
+    ;   ("java-mockito-1" ,java-mockito-1)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-netty-tcnative-boringssl
+  (package
+    (name "java-netty-tcnative-boringssl")
+    (version "2.0.20")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/netty/netty-tcnative.git")
+                     (commit (string-append "netty-tcnative-parent-"
+                                            version ".Final"))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1kdgnk5133bw821iwhli8vj5kf8sb8vxav5wpdsv6vhrgrrm8nrl"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "netty-tcnative-boringssl.jar"
+       #:source-dir "openssl-dynamic/src/main/java"
+       #:test-dir "openssl-dynamic/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'build-native
+           (lambda* (#:key inputs system #:allow-other-keys)
+             (let ((native-dir (string-append
+                                 "build/classes/META-INF/native/linux"
+                                 (if (or (string-prefix? "x86_64" system)
+                                         (string-prefix? "aarch64" system))
+                                   "64" "32")))
+                   (apr-include (string-append "-I" (assoc-ref inputs "apr")
+                                               "/include/apr-1"))
+                   (jni-include (string-append "-I" (assoc-ref inputs "jdk")
+                                               "/include/linux")))
+               (mkdir-p native-dir)
+               (for-each
+                 (lambda (source)
+                   (invoke "gcc" "-c" source "-o" (string-append source ".o")
+                           "-fPIC" "-O2" jni-include apr-include))
+                 (find-files "openssl-dynamic/src/main/c" ".*.c$"))
+               (apply invoke "gcc" "-o"
+                      (string-append native-dir "/libnetty_tcnative.so")
+                      "-shared" "-lssl" "-lapr-1" "-lcrypto"
+                      (find-files "openssl-dynamic/src/main/c" ".*.o$")))
+               #t))
+           (add-before 'check 'copy-lib
+             (lambda _
+               (mkdir-p "build/test-classes")
+               (copy-recursively "build/classes/META-INF"
+                                 "build/test-classes/META-INF")
+               #t)))))
+    (inputs
+     `(("apr" ,apr)
+       ("boringssl" ,boringssl)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
 
 (define-public java-netty-common
   (package
@@ -6870,15 +7169,34 @@ logging framework for Java.")))
     (arguments
      `(#:jar-name "netty-codec.jar"
        #:source-dir "codec/src/main/java"
-       #:test-dir "codec/src/test"))
+       #:test-dir "codec/src/test"
+       #:test-exclude
+       (list "**/Abstract*.java" "**/Base64Test.java" "**/ZlibTest.java"
+             "**/marshalling/*.java")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'fix-tests
+           (lambda _
+             (with-directory-excursion "codec/src/test/java/io/netty/handler"
+               (substitute* "codec/ByteToMessageCodecTest.java"
+                 (("Equals\\(1, ") "Equals((int) 1, (int)")))
+             #t)))))
     (inputs
-     `(("java-netty-buffer" ,java-netty-buffer)
+     `(("java-jboss-marshalling" ,java-jboss-marshalling)
+       ("java-jzlib" ,java-jzlib)
+       ("java-lz4" ,java-lz4)
+       ("java-lzma" ,java-lzma)
+       ("java-netty-buffer" ,java-netty-buffer)
        ("java-netty-common" ,java-netty-common)
        ("java-netty-transport" ,java-netty-transport)
-       ("java-lz4" ,java-lz4)
-       ("java-jzlib" ,java-jzlib)
+       ("java-ning-compress" ,java-ning-compress)
        ("java-protobuf" ,java-protobuf)
-       ,@(package-inputs java-netty-common)))))
+       ("java-protobuf-nano" ,java-protobuf-nano)
+       ,@(package-inputs java-netty-common)))
+    (native-inputs
+     `(("java-commons-compress" ,java-commons-compress)
+       ("java-netty-resolver" ,java-netty-resolver)
+       ,@(package-native-inputs java-netty-common)))))
 
 (define-public java-netty-handler
   (package
@@ -6887,13 +7205,24 @@ logging framework for Java.")))
     (arguments
      `(#:jar-name "netty-handler.jar"
        #:source-dir "handler/src/main/java"
-       #:test-dir "handler/src/test"))
+       #:test-dir "handler/src/test"
+       ;; Reference to assertEquals is ambiguous
+       #:tests? #f))
     (inputs
-     `(("java-netty-buffer" ,java-netty-buffer)
+     `(("java-bouncycastle" ,java-bouncycastle)
+       ("java-conscrypt" ,java-conscrypt)
+       ("java-eclipse-jetty-alpn-api" ,java-eclipse-jetty-alpn-api)
+       ("java-eclipse-jetty-npn-api" ,java-eclipse-jetty-npn-api)
+       ("java-netty-buffer" ,java-netty-buffer)
+       ("java-netty-codec" ,java-netty-codec)
        ("java-netty-common" ,java-netty-common)
+       ("java-netty-tcnative-boringssl" ,java-netty-tcnative-boringssl)
        ("java-netty-transport" ,java-netty-transport)
-       ("java-bouncycastle" ,java-bouncycastle)
-       ,@(package-inputs java-netty-common)))))
+       ,@(package-inputs java-netty-common)))
+    (native-inputs
+     `(("java-logback-classic" ,java-logback-classic)
+       ("java-logback-core" ,java-logback-core)
+       ,@(package-native-inputs java-netty-common)))))
 
 (define-public java-conversantmedia-disruptor
   (package
