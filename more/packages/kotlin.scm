@@ -53,7 +53,12 @@
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1lm1rvj1vf4z8nzpffqcdwcydnlf24ls07z0r0nc4by3hjxzs3sv"))))
+                "1lm1rvj1vf4z8nzpffqcdwcydnlf24ls07z0r0nc4by3hjxzs3sv"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar$"))
+                   #t))))
     (build-system ant-build-system)
     (arguments
      `(#:phases
