@@ -330,20 +330,20 @@ while keeping it all Pythonic and cross-platform.")
 (define-public python-neovim
   (package
     (name "python-neovim")
-    (version "0.2.6")
+    (version "0.3.2")
     (source (origin
               (method url-fetch)
-              (uri (pypi-uri "neovim" version))
+              (uri (pypi-uri "pynvim" version))
               (sha256
                (base32
-                "0xlj54w9bnmq4vidk6r08hwa6az7drahi08w1qf4j9q45rs8mrbc"))))
+                "01dybk4vs452pljn1q3il5z2sd313ki0lgiglc0xmjc6wp290r6g"))))
     (build-system python-build-system)
     (propagated-inputs
      `(("python-greenlet" ,python-greenlet)
        ("python-msgpack" ,python-msgpack)))
     (arguments
      `(#:tests? #f))
-    (home-page "https://github.com/neovim/python-client")
+    (home-page "https://github.com/neovim/pynvim")
     (synopsis "")
     (description "")
     (license license:asl2.0)))

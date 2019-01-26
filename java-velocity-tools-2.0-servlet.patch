@@ -1,0 +1,38 @@
+diff -Nru velocity-tools-2.0-src/src/main/java/org/apache/velocity/tools/view/ImportSupport.java velocity-tools-2.0-src.servlet/src/main/java/org/apache/velocity/tools/view/ImportSupport.java
+--- velocity-tools-2.0-src/src/main/java/org/apache/velocity/tools/view/ImportSupport.java	2007-12-12 18:04:38.000000000 +0100
++++ velocity-tools-2.0-src.servlet/src/main/java/org/apache/velocity/tools/view/ImportSupport.java	2015-06-19 15:50:41.054584752 +0200
+@@ -36,6 +36,7 @@
+ import javax.servlet.RequestDispatcher;
+ import javax.servlet.ServletContext;
+ import javax.servlet.ServletOutputStream;
++import javax.servlet.WriteListener;
+ import javax.servlet.http.HttpServletRequest;
+ import javax.servlet.http.HttpServletResponse;
+ import javax.servlet.http.HttpServletResponseWrapper;
+@@ -510,6 +511,14 @@
+                     {
+                         bos.write(b);
+                     }
++
++                    public void setWriteListener(WriteListener listener) {
++                        throw new UnsupportedOperationException("Not implemented yet.");
++                    }
++
++                    public boolean isReady() {
++                        return false;
++                    }
+                 };
+             return sos;
+         }
+diff -Nru velocity-tools-2.0-src/src/main/java/org/apache/velocity/tools/view/ParameterTool.java velocity-tools-2.0-src.servlet/src/main/java/org/apache/velocity/tools/view/ParameterTool.java
+--- velocity-tools-2.0-src/src/main/java/org/apache/velocity/tools/view/ParameterTool.java	2009-05-12 00:24:53.000000000 +0200
++++ velocity-tools-2.0-src.servlet/src/main/java/org/apache/velocity/tools/view/ParameterTool.java	2015-06-19 15:45:11.950303234 +0200
+@@ -174,7 +174,7 @@
+         Map source = super.getSource();
+         if (source == null)
+         {
+-            source = expandSingletonArrays(getRequest().getParameterMap());
++            source = expandSingletonArrays((Map<String,Object>)(Object)getRequest().getParameterMap());
+             super.setSource(source);
+         }
+         return source;

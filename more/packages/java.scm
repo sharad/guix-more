@@ -3978,10 +3978,49 @@ import org.objenesis.ObjenesisException;"))
        (modify-phases %standard-phases
          (add-before 'build 'copy-resource
            (lambda _
-             (copy-recursively "src/main/resources" "build/classes")))
-         (add-before 'test 'copy-test-resource
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'check 'copy-test-resource
            (lambda _
-             (copy-recursively "src/test/resources" "build/test-classes"))))))
+             (copy-recursively "src/test/resources" "build/test-classes")
+             #t)))))
+    (inputs
+     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-cglib" ,java-cglib)
+       ("java-commons-beanutils", java-commons-beanutils)))
+    (native-inputs
+     `(("java-junit" ,java-junit)
+       ("java-hamcrest-core" ,java-hamcrest-core)))
+    (home-page "https://commons.apache.org/proper/commons-digester/")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-digester-2
+  (package
+    (name "java-commons-digester-2")
+    (version "2.1")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/commons/digester/source/"
+                                  "commons-digester-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0gsli0qbi8h795ps7dpiccd3xfaqwrqcl7qzv59y5iyyd9xg04r7"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "commons-digester.jar"
+       #:source-dir "src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resource
+           (lambda _
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'check 'copy-test-resource
+           (lambda _
+             (copy-recursively "src/test/resources" "build/test-classes")
+             #t)))))
     (inputs
      `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-cglib" ,java-cglib)
@@ -4023,45 +4062,142 @@ import org.objenesis.ObjenesisException;"))
        (modify-phases %standard-phases
          (add-before 'build 'copy-resource
            (lambda _
-             (copy-recursively "src/main/resources" "build/classes")))
-         (add-before 'test 'copy-test-resource
+             (copy-recursively "src/main/resources" "build/classes")
+             #t))
+         (add-before 'check 'copy-test-resource
            (lambda _
-             (copy-recursively "src/test/resources" "build/test-classes")))
-         (add-before 'build 'fix-digester
-           (lambda _
-             ;; Port from digester 1 to digester 3.
-             (substitute* (find-files "src/main/java" ".*\\.java")
-               (("commons.digester") "commons.digester3")
-               (("org.apache.commons.digester3.xmlrules.DigesterLoader")
-                "org.apache.commons.digester3.binder.DigesterLoader"))
-             ;; digester is private in this class, so we use the getter
-             (substitute* "src/main/java/org/apache/commons/validator/FormSetFactory.java"
-               (("digester.peek") "getDigester().peek"))
-             (substitute* "src/main/java/org/apache/commons/validator/ValidatorResources.java"
-               (("// DEPRECATED")
-                "// DEPRECATED\nimport org.apache.commons.digester3.xmlrules.FromXmlRulesModule;")
-               (("private Digester initDigester")
-                (string-append
-                  "private FromXmlRulesModule rulesModule(final URL url) {\n"
-                  "  return new FromXmlRulesModule() {\n"
-                  "    @Override\n"
-                  "    protected void loadRules() {\n"
-                  "      loadXMLRules(url);"
-                  "    }\n"
-                  "  };\n"
-                  "}\n"
-                  "private Digester initDigester"))
-               ;; Copied from digester tests
-               (("createDigester\\(rulesUrl\\)")
-                "newLoader(rulesModule(rulesUrl)).newDigester()")))))))
+             (copy-recursively "src/test/resources" "build/test-classes")
+             #t)))))
+         ;(add-before 'build 'fix-digester
+         ;  (lambda _
+         ;    ;; Port from digester 1 to digester 3.
+         ;    (substitute* (find-files "src/main/java" ".*\\.java")
+         ;      (("commons.digester") "commons.digester3")
+         ;      (("org.apache.commons.digester3.xmlrules.DigesterLoader")
+         ;       "org.apache.commons.digester3.binder.DigesterLoader"))
+         ;    ;; digester is private in this class, so we use the getter
+         ;    (substitute* "src/main/java/org/apache/commons/validator/FormSetFactory.java"
+         ;      (("digester.peek") "getDigester().peek"))
+         ;    (substitute* "src/main/java/org/apache/commons/validator/ValidatorResources.java"
+         ;      (("// DEPRECATED")
+         ;       "// DEPRECATED\nimport org.apache.commons.digester3.xmlrules.FromXmlRulesModule;")
+         ;      (("private Digester initDigester")
+         ;       (string-append
+         ;         "private FromXmlRulesModule rulesModule(final URL url) {\n"
+         ;         "  return new FromXmlRulesModule() {\n"
+         ;         "    @Override\n"
+         ;         "    protected void loadRules() {\n"
+         ;         "      loadXMLRules(url);"
+         ;         "    }\n"
+         ;         "  };\n"
+         ;         "}\n"
+         ;         "private Digester initDigester"))
+         ;      ;; Copied from digester tests
+         ;      (("createDigester\\(rulesUrl\\)")
+         ;       "newLoader(rulesModule(rulesUrl)).newDigester()")))))))
     (inputs
-     `(("java-commons-digester" ,java-commons-digester)
+     `(("java-commons-digester-2" ,java-commons-digester-2)
        ("java-commons-beanutils" ,java-commons-beanutils)
        ("java-commons-collections" ,java-commons-collections)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)))
     (native-inputs
      `(("java-junit" ,java-junit)))
     (home-page "https://commons.apache.org/proper/commons-validator")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-myfaces-api
+  (package
+    (name "java-myfaces-api")
+    (version "2.3.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/myfaces/source/"
+                                  "myfaces-core-assembly-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0nixl958pi7f61vgnaj0nshdpifdg4m0rlxb9ckdmabr6x2fsnvc"))))
+              ; version 2.3.1:
+              ;(method svn-fetch)
+              ;(uri (svn-reference
+              ;       (url (string-append "http://svn.apache.org/repos/asf/"
+              ;                           "myfaces/core/tags/myfaces-core-module-"
+              ;                           version))
+              ;       (revision 1830627)))
+              ;(file-name (string-append name "-" version))
+              ;(sha256
+              ; (base32
+              ;  "1wag19756ahys8cms4snsqbqifkpfy578x3zkjkr5ba0424v5yvz"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "myfaces-api.jar"
+       #:source-dir "api/src/main/java"
+       #:test-dir "api/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'double-unpack
+           (lambda _
+             (chdir "src")
+             (invoke "unzip" (car (find-files "." "source-release")))
+             (chdir (car (find-files "." "core-module" #:directories? #t)))
+             ;; Require a maven-2 plugin :/
+             (delete-file-recursively "api/src/main/java/javax/faces/component")
+             #t)))))
+    (inputs
+     `(("java-javax-inject" ,java-javax-inject)
+       ;; for javax-el (el-api)
+       ("java-tomcat" ,java-tomcat)))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "https://commons.apache.org/proper/commons-chain")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-commons-chain
+  (package
+    (name "java-commons-chain")
+    (version "1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache//commons/chain/source/"
+                                  "commons-chain-" version "-src.tar.gz"))
+              (sha256
+               (base32
+                "0lgib3dpkympp8ajlgpfavbzfal9bv685gfa9ygyv091ja772rsd"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:test-target "test"
+       ;; TODO: incompatibilities with current versions of portlet
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'prepare
+           (lambda* (#:key inputs #:allow-other-keys)
+         ;    ;; Replace digester with digester3
+         ;    (substitute* (find-files "src" ".*\\.java")
+         ;      (("commons.digester") "commons.digester3"))
+             (with-directory-excursion "src/java/org/apache/commons/chain"
+         ;      ;; Remove a dependency to myfaces
+               (delete-file-recursively "web/faces"))
+         ;      ;; digester is now private: use a public accessor
+         ;      (substitute* '("config/ConfigCatalogRule.java"
+         ;                     "config/ConfigDefineRule.java"
+         ;                     "config/ConfigRegisterRule.java")
+         ;        (("digester\\.") "getDigester().")))
+             #t))
+         (replace 'install
+           (install-jars ".")))))
+    (inputs
+     `(("java-classpathx-servletapi" ,java-classpathx-servletapi)
+       ("java-commons-beanutils" ,java-commons-beanutils)
+       ("java-commons-digester-2" ,java-commons-digester-2)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-portlet-api" ,java-portlet-api)))
+    ;(native-inputs
+    ; `(("java-junit" ,java-junit)))
+    (home-page "https://commons.apache.org/proper/commons-chain")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
@@ -4128,25 +4264,33 @@ import org.objenesis.ObjenesisException;"))
     (arguments
      `(#:jar-name "apache-struts.jar"
        #:source-dir "src/core/src/main/java"
-       #:test-dir "src/core/src/test"
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'copy-required-classes
-           (lambda* (#:key inputs #:allow-other-keys)
-             (let ((tools (assoc-ref inputs "java-velocity-tools"))
-                   (velocity-dir "build/velocity")
-                   (tools-dir (string-append "build/velocity/velocity-tool-"
-                                             ,(package-version java-velocity-tools)
-                                             "-src")))
-               (mkdir-p velocity-dir)
-               (with-directory-excursion velocity-dir
-                 (invoke "tar" "xf" tools))
-               (with-directory-excursion tools-dir
-                 (for-each
-                   (lambda (file)
-                     (install-file file (string-append "../../src/core/" file)))
-                   (append (find-files "." "ServletToolboxManager.java")))))
-             #t)))))
+       #:test-dir "src/core/src/test"))
+       ;#:phases
+       ;(modify-phases %standard-phases
+       ;  (add-before 'build 'copy-required-classes
+       ;    (lambda* (#:key inputs #:allow-other-keys)
+       ;      (let ((tools (assoc-ref inputs "java-velocity-tools"))
+       ;            (velocity-dir "build/velocity")
+       ;            (tools-dir (string-append "build/velocity/velocity-tools-"
+       ;                                      ,(package-version java-velocity-tools)
+       ;                                      "-src")))
+       ;        (mkdir-p velocity-dir)
+       ;        (with-directory-excursion velocity-dir
+       ;          (invoke "tar" "xf" tools))
+       ;        (with-directory-excursion tools-dir
+       ;          (for-each
+       ;            (lambda (file)
+       ;              (install-file file (string-append "../../../src/core/"
+       ;                                                (dirname file))))
+       ;            (find-files "." "."))))
+       ;              ;(find-files "." "ToolboxManager.java$")
+       ;              ;(find-files "." "^ToolInfo.java$")
+       ;              ;(find-files "." "^ServletUtils.java$")
+       ;              ;(find-files "." "^SkipSetters.java$")
+       ;              ;(find-files "." "^ViewToolContext.java$")
+       ;              ;(find-files "." "^ViewContext.java$")
+       ;              ;(find-files "." "^ChainedContext.java$")))))
+       ;      #t)))))
     (inputs
      `(("java-apache-freemarker" ,java-apache-freemarker)
        ("java-log4j-api" ,java-log4j-api)
@@ -4160,7 +4304,7 @@ import org.objenesis.ObjenesisException;"))
        ("java-spring-framework-beans" ,java-spring-framework-beans)
        ("java-spring-framework-context" ,java-spring-framework-context)
        ("java-spring-framework-core" ,java-spring-framework-core)
-       ;("java-spring-framework-web" ,java-spring-framework-web)
+       ("java-spring-framework-web" ,java-spring-framework-web)
        ("java-velocity" ,java-velocity)
        ("java-velocity-tools" ,(package-source java-velocity-tools))
        ("java-testng" ,java-testng)))
@@ -4171,6 +4315,73 @@ import org.objenesis.ObjenesisException;"))
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-apache-struts-1
+  (package
+    (name "java-apache-struts-1")
+    (version "1.3.10")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/struts/"
+                                  version "/struts-" version "-src.zip"))
+              (sha256
+               (base32
+                "05mxari6m8vrirz3i7rdvjpc637s11fjl6qk9hpvl1yyy7bigmn1"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "struts.jar"
+       #:source-dir "src/core/src/main/java"
+       #:test-dir "src/core/src/test"
+       #:tests? #f; require deleted files
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'prepare
+           (lambda* (#:key inputs #:allow-other-keys)
+             (with-directory-excursion "src/core/src/main/java"
+               (for-each delete-file (find-files "." "^Test"))
+               (delete-file-recursively "org/apache/struts/mock"))
+             #t)))))
+    (inputs
+     `(("antlr2" ,antlr2)
+       ("java-classpathx-servletapi" ,java-classpathx-servletapi)
+       ("java-commons-beanutils" ,java-commons-beanutils)
+       ("java-commons-chain" ,java-commons-chain)
+       ("java-commons-digester-2" ,java-commons-digester-2)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-commons-fileupload" ,java-commons-fileupload)
+       ("java-commons-validator" ,java-commons-validator)))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-apache-struts-taglib-1
+  (package
+    (inherit java-apache-struts-1)
+    (name "java-apache-struts-taglib-1")
+    (arguments
+     `(#:jar-name "struts.jar"
+       #:source-dir "src/taglib/src/main/java"
+       #:tests? #f; require deleted files
+       #:test-dir "src/taglib/src/test"))
+    (inputs
+     `(("java-apache-struts-1" ,java-apache-struts-1)
+       ,@(package-inputs java-apache-struts-1)))))
+
+(define-public java-apache-struts-tiles-1
+  (package
+    (inherit java-apache-struts-1)
+    (name "java-apache-struts-tiles-1")
+    (arguments
+     `(#:jar-name "struts.jar"
+       #:source-dir "src/tiles/src/main/java"
+       #:tests? #f; require deleted files
+       #:test-dir "src/tiles/src/test"))
+    (inputs
+     `(("java-apache-struts-1" ,java-apache-struts-1)
+       ,@(package-inputs java-apache-struts-1)))))
 
 (define-public java-velocity
   (package
@@ -4279,6 +4490,41 @@ import org.objenesis.ObjenesisException;"))
        ("java-commons-lang" ,java-commons-lang3)
        ("java-slf4j-api" ,java-slf4j-api)))))
 
+(define-public java-sslext
+  (package
+    (name "java-sslext")
+    (version "1.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/sslext/sslext%20for%20"
+                                  "Struts%201.2/Release%200/"
+                                  "sslext-struts1.2-src.tar.gz"))
+              (sha256
+               (base32
+                "1a2axpq719smfc37lnj1flprpdhi8m1rmkdp90z2fv13rdg2dlq5"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "sslext.jar"
+       #:source-dir "."
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-enum
+           (lambda _
+             (substitute* "build.xml"
+               (("<javac") "<javac source=\"1.4\"")))))))
+    (inputs
+     `(("java-commons-digester-2" ,java-commons-digester-2)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-apache-struts-1" ,java-apache-struts-1)
+       ("java-apache-struts-taglib-1" ,java-apache-struts-taglib-1)
+       ("java-apache-struts-tiles-1" ,java-apache-struts-tiles-1)
+       ("java-tomcat" ,java-tomcat)))
+    (home-page "https://velocity.apache.org/tools/devel")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-velocity-tools
   (package
     (name "java-velocity-tools")
@@ -4289,7 +4535,11 @@ import org.objenesis.ObjenesisException;"))
                                   "/velocity-tools-" version "-src.tar.gz"))
               (sha256
                (base32
-                "0d93v8nj95jfdgx7n72axaavdq2h800vxyi4vx35rdphndy1xg51"))))
+                "0d93v8nj95jfdgx7n72axaavdq2h800vxyi4vx35rdphndy1xg51"))
+              (patches
+                (search-patches
+                  "java-velocity-tools-2.0-servlet.patch"
+                  "java-velocity-tools-2.0-port-to-dom4j-2.0.patch"))))
     (build-system ant-build-system)
     (arguments
      `(#:test-target "test-main"
@@ -4301,20 +4551,52 @@ import org.objenesis.ObjenesisException;"))
              ;; Don't download anything
              (substitute* "build.xml"
                ((".*download.xml.*") ""))
-             ;; Replace digester with digester3
-             (substitute* (find-files "src/main/java" ".*\\.java")
-               (("commons.digester") "commons.digester3"))
              #t))
          (replace 'install
-           (install-jars "../bin")))))
+           (install-jars "dist")))))
     (inputs
-     ;`(("java-apache-struts" ,java-apache-struts)))
-     `(("java-commons-digester" ,java-commons-digester)
+     `(("java-apache-struts-1" ,java-apache-struts-1)
+       ("java-apache-struts-taglib-1" ,java-apache-struts-taglib-1)
+       ("java-apache-struts-tiles-1" ,java-apache-struts-tiles-1)
+       ("java-commons-digester-2" ,java-commons-digester-2)
        ("java-commons-validator" ,java-commons-validator)
        ("java-commons-beanutils", java-commons-beanutils)
        ("java-dom4j" ,java-dom4j)
+       ("java-sslext" ,java-sslext)
        ("java-velocity" ,java-velocity)))
     (home-page "https://velocity.apache.org/tools/devel")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-plexus-i18n
+  (package
+    (name "java-plexus-i18n")
+    (version "1.0-beta12")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/codehaus-plexus/plexus-i18n.git")
+                     (commit "e5b25dd280af2db4d91742a0d93571335e09c46a")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1nkq3c6ba8hv01qi30k50lwa18iswnl9q6i6lrcxdvyzq015jqcl"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "java-plexus-i18n.jar"
+       #:source-dir "src/main/java"))
+    (inputs
+     `(("java-plexus-classworlds" ,java-plexus-classworlds)
+       ("java-plexus-component-annotations" ,java-plexus-component-annotations)
+       ("java-plexus-container-default" ,java-plexus-container-default)
+       ("java-plexus-utils" ,java-plexus-utils)))
+    (native-inputs
+     `(("java-commons-collections" ,java-commons-collections)
+       ("java-geronimo-xbean-reflect" ,java-geronimo-xbean-reflect)
+       ("java-guava" ,java-guava)
+       ("java-junit" ,java-junit)))
+    (home-page "https://codehaus-plexus.github.io/plexus-i18n/")
     (synopsis "")
     (description "")
     (license license:asl2.0)))

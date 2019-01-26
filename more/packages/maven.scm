@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2017 Julien Lepiller <julien@lepiller.eu>
+;;; Copyright © 2017, 2019 Julien Lepiller <julien@lepiller.eu>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -21,6 +21,7 @@
   #:use-module (gnu packages)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix git-download)
   #:use-module (guix utils)
   #:use-module (guix build-system ant)
   #:use-module (guix build-system trivial)
@@ -50,7 +51,6 @@
      `(#:jar-name "maven-polyglot-common.jar"
        #:source-dir "polyglot-common/src/main/java"
        #:tests? #f; No test
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
@@ -107,7 +107,6 @@
      `(#:jar-name "maven-polyglot-java.jar"
        #:source-dir "polyglot-java/src/main/java"
        #:tests? #f; No test
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
@@ -143,7 +142,6 @@
      `(#:jar-name "maven-polyglot-groovy.jar"
        #:source-dir "polyglot-groovy/src/main/java:polyglot-groovy/src/main/groovy"
        #:tests? #f; No test
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'use-groovy
@@ -197,8 +195,7 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))
     (arguments
      `(#:jar-name "maven-slf4j-provider.jar"
        #:source-dir "maven-slf4j-provider/src/main/java"
-       #:tests? #f; no tests
-       #:jdk ,icedtea-8))
+       #:tests? #f)); no tests
     (inputs
      `(("maven-shared-utils" ,maven-shared-utils)
        ("java-slf4j-api" ,java-slf4j-api)
@@ -212,29 +209,28 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))
     (name "maven-filtering")
     (version "3.1.1")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://archive.apache.org/dist/maven/"
-				  "shared/maven-filtering-" version
-				  "-source-release.zip"))
-	      (sha256
-	       (base32
-		"09wrdhchnszd2l6h4z30ra0bv1a19qyjgac9z8zf1pn0m4nw05yz"))))
+              (method url-fetch)
+              (uri (string-append "https://archive.apache.org/dist/maven/"
+                                  "shared/maven-filtering-" version
+                                  "-source-release.zip"))
+              (sha256
+               (base32
+                "09wrdhchnszd2l6h4z30ra0bv1a19qyjgac9z8zf1pn0m4nw05yz"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-filtering.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:tests? #f; tests fail for now...
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'remove-failing-test
-	   (lambda _
-	     (delete-file "src/test/java/org/apache/maven/shared/filtering/IncrementalResourceFilteringTest.java")
-	     (substitute* "src/test/java/org/apache/maven/shared/filtering/StubMavenSession.java"
-	       (("org.sonatype.aether.RepositorySystemSession")
-		"org.eclipse.aether.RepositorySystemSession"))
-	     #t)))))
+         (add-before 'build 'remove-failing-test
+           (lambda _
+             (delete-file "src/test/java/org/apache/maven/shared/filtering/IncrementalResourceFilteringTest.java")
+             (substitute* "src/test/java/org/apache/maven/shared/filtering/StubMavenSession.java"
+               (("org.sonatype.aether.RepositorySystemSession")
+                "org.eclipse.aether.RepositorySystemSession"))
+             #t)))))
     (inputs
      `(("java-jsr305" ,java-jsr305)
        ("java-plexus-component-annotations" ,java-plexus-component-annotations)
@@ -265,18 +261,17 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))
     (name "maven-plugin-testing")
     (version "3.3.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/apache/maven-plugin-testing/"
-				  "archive/maven-plugin-testing-" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"010jp44vq75fk6260zvqz41ai3l1sqrjz56yyzv9pgshx27vpshy"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/maven-plugin-testing/"
+                                  "archive/maven-plugin-testing-" version ".tar.gz"))
+              (sha256
+               (base32
+                "010jp44vq75fk6260zvqz41ai3l1sqrjz56yyzv9pgshx27vpshy"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-plugin-testing.jar"
        #:source-dir "maven-plugin-testing-harness/src/main/java"
-       #:test-dir "maven-plugin-testing-harness/src/test"
-       #:jdk ,icedtea-8))
+       #:test-dir "maven-plugin-testing-harness/src/test"))
     (inputs
      `(("java-commons-io" ,java-commons-io)
        ("java-guice" ,java-guice)
@@ -305,18 +300,17 @@ classname=\"org.codehaus.groovy.ant.Groovyc\" />"))
     (name "maven-doxia-logging-api")
     (version "1.8")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/apache/maven-doxia/"
-				  "archive/doxia-" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"07qckb1fsycnz5b08xbm8b1hjz8295ri6xi47s47rlwxg53hvf4s"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/maven-doxia/"
+                                  "archive/doxia-" version ".tar.gz"))
+              (sha256
+               (base32
+                "07qckb1fsycnz5b08xbm8b1hjz8295ri6xi47s47rlwxg53hvf4s"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-doxia-logging-api.jar"
        #:source-dir "doxia-logging-api/src/main/java"
-       #:tests? #f; No tests
-       #:jdk ,icedtea-8))
+       #:tests? #f)); No tests
     (inputs
      `(("java-plexus-component-annotations" ,java-plexus-component-annotations)
        ("java-plexus-container-default" ,java-plexus-container-default)))
@@ -333,8 +327,7 @@ and dynamic content, that supports a variety of markup languages.")
     (arguments
      `(#:jar-name "maven-doxia-sink-api.jar"
        #:source-dir "doxia-sink-api/src/main/java"
-       #:tests? #f; No tests
-       #:jdk ,icedtea-8))
+       #:tests? #f)); No tests
     (inputs
      `(("java-plexus-component-annotations" ,java-plexus-component-annotations)
        ("java-plexus-container-default" ,java-plexus-container-default)
@@ -351,17 +344,16 @@ and dynamic content, that supports a variety of markup languages.")
        #:test-exclude
        ;; test fails for unknown reason
        (list "**/SnippetMacroTest.java"
-	     ;; requires network
-	     "**/XmlValidatorTest.java"
-	     "**/Abstract*Test.java")
-       #:jdk ,icedtea-8
+             ;; requires network
+             "**/XmlValidatorTest.java"
+             "**/Abstract*Test.java")
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'copy-resources
-	   (lambda _
-	     (copy-recursively "doxia-core/src/main/resources"
-			       "build/classes")
-	     #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "doxia-core/src/main/resources"
+                               "build/classes")
+             #t))
          (add-before 'build 'generate-models
            (lambda* (#:key inputs #:allow-other-keys)
              (define (modello-single-mode file version mode)
@@ -439,23 +431,22 @@ and dynamic content, that supports a variety of markup languages.")
        #:test-exclude
        ;; test fails for unknown reason
        (list "**/SnippetMacroTest.java"
-	     ;; requires network
-	     "**/XmlValidatorTest.java"
-	     "**/Abstract*Test.java")
-       #:jdk ,icedtea-8
+             ;; requires network
+             "**/XmlValidatorTest.java"
+             "**/Abstract*Test.java")
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'copy-test-classes
-	   (lambda _
-	     (copy-recursively "doxia-core/src/test/java" "doxia-modules/doxia-module-xhtml/src/test/java")
-	     (copy-file "doxia-core/src/test/java/org/apache/maven/doxia/module/AbstractIdentityTest.java"
-			"doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/module/AbstractIdentityTest.java")
-	     (copy-file "doxia-core/src/test/java/org/apache/maven/doxia/AbstractModuleTest.java"
-			"doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/AbstractModuleTest.java")
-	     (mkdir-p "doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/sink/impl")
-	     (copy-file "doxia-core/src/test/java/org/apache/maven/doxia/sink/impl/SinkTestDocument.java"
-			"doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/sink/impl/SinkTestDocument.java")
-	     #t))
+         (add-before 'build 'copy-test-classes
+           (lambda _
+             (copy-recursively "doxia-core/src/test/java" "doxia-modules/doxia-module-xhtml/src/test/java")
+             (copy-file "doxia-core/src/test/java/org/apache/maven/doxia/module/AbstractIdentityTest.java"
+                        "doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/module/AbstractIdentityTest.java")
+             (copy-file "doxia-core/src/test/java/org/apache/maven/doxia/AbstractModuleTest.java"
+                        "doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/AbstractModuleTest.java")
+             (mkdir-p "doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/sink/impl")
+             (copy-file "doxia-core/src/test/java/org/apache/maven/doxia/sink/impl/SinkTestDocument.java"
+                        "doxia-modules/doxia-module-xhtml/src/test/java/org/apache/maven/doxia/sink/impl/SinkTestDocument.java")
+             #t))
          (add-after 'build 'generate-metadata
            (lambda _
              (invoke "java" "-cp" (string-append (getenv "CLASSPATH") ":build/classes")
@@ -502,18 +493,19 @@ and dynamic content, that supports a variety of markup languages.")
     (name "maven-doxia-skin-model")
     (version "1.8.1")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/apache/maven-doxia-sitetools/"
-				  "archive/doxia-sitetools-" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"02dgblm6n07jwr7r90wzc8ax9vz3ax7rh5w12wmvfyd5aybh691w"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/maven-doxia-sitetools/"
+                                  "archive/doxia-sitetools-" version ".tar.gz"))
+              (sha256
+               (base32
+                "02dgblm6n07jwr7r90wzc8ax9vz3ax7rh5w12wmvfyd5aybh691w"))
+              (patches
+                (search-patches "maven-doxia-sitetools-fix-plexus-utils.patch"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-doxia-skin-model.jar"
        #:source-dir "doxia-skin-model/src/main/java"
        #:tests? #f; no tests
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-models
@@ -563,7 +555,6 @@ and dynamic content, that supports a variety of markup languages.")
      `(#:jar-name "maven-doxia-decoration-model.jar"
        #:source-dir "doxia-decoration-model/src/main/java"
        #:test-dir "doxia-decoration-model/src/test"
-       #:jdk ,icedtea-8
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'generate-models
@@ -591,18 +582,19 @@ and dynamic content, that supports a variety of markup languages.")
      `(#:jar-name "maven-doxia-site-renderer.jar"
        #:source-dir "doxia-site-renderer/src/main/java"
        #:test-dir "doxia-site-renderer/src/test"
-       #:jdk ,icedtea-8
+       #:tests? #f; require gargoylesoftware-htmlunit
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-resources
            (lambda _
-	     (copy-recursively "doxia-site-renderer/src/main/resources"
-			       "build/classes")
+             (copy-recursively "doxia-site-renderer/src/main/resources"
+                               "build/classes")
              #t)))))
     (inputs
      `(("java-commons-lang3" ,java-commons-lang3)
        ("java-plexus-container-default" ,java-plexus-container-default)
        ("java-plexus-component-annotations" ,java-plexus-component-annotations)
+       ("java-plexus-i18n" ,java-plexus-i18n)
        ("java-plexus-utils" ,java-plexus-utils)
        ("java-plexus-velocity-component" ,java-plexus-velocity-component)
        ("java-velocity" ,java-velocity)
@@ -611,6 +603,7 @@ and dynamic content, that supports a variety of markup languages.")
        ("maven-doxia-core" ,maven-doxia-core)
        ("maven-doxia-decoration-model" ,maven-doxia-decoration-model)
        ("maven-doxia-logging-api" ,maven-doxia-logging-api)
+       ("maven-doxia-module-xhtml" ,maven-doxia-module-xhtml)
        ("maven-doxia-skin-model" ,maven-doxia-skin-model)
        ("maven-doxia-sink-api" ,maven-doxia-sink-api)))
     (native-inputs
@@ -622,18 +615,17 @@ and dynamic content, that supports a variety of markup languages.")
     (name "maven-reporting-api")
     (version "3.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/apache/maven-reporting-api/"
-				  "archive/maven-reporting-api-" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"1dc94n7czax7vrniv4xyqlza2mjqdlzzvq6wh6cmcqnnmgggya91"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/maven-reporting-api/"
+                                  "archive/maven-reporting-api-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1dc94n7czax7vrniv4xyqlza2mjqdlzzvq6wh6cmcqnnmgggya91"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-reporting-api.jar"
        #:source-dir "src/main/java"
-       #:tests? #f; no tests
-       #:jdk ,icedtea-8))
+       #:tests? #f)); no tests
     (inputs
      `(("maven-doxia-sink-api" ,maven-doxia-sink-api)))
     (native-inputs
@@ -643,24 +635,63 @@ and dynamic content, that supports a variety of markup languages.")
     (description "")
     (license license:asl2.0)))
 
+(define-public maven-reporting-impl
+  (package
+    (name "maven-reporting-impl")
+    (version "3.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/apache/maven-reporting-impl.git")
+                     (commit "ff10bba47b9ecf728a0f16e096fb410b74711a5d")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "02da8pqa17lmkwjhqyq39ygf4lfa483bbdvhbvjginmpw3ydkbw5"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "maven-reporting-impl.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"
+       ;; Require junitx.util.PrivateAccessor (?)
+       #:tests? #f))
+    (inputs
+     `(("java-plexus-utils" ,java-plexus-utils)
+       ("maven-core" ,maven-core)
+       ("maven-doxia-core" ,maven-doxia-core)
+       ("maven-doxia-decoration-model" ,maven-doxia-decoration-model)
+       ("maven-doxia-logging-api" ,maven-doxia-logging-api)
+       ("maven-doxia-module-xhtml" ,maven-doxia-module-xhtml)
+       ("maven-doxia-sink-api" ,maven-doxia-sink-api)
+       ("maven-doxia-site-renderer" ,maven-doxia-site-renderer)
+       ("maven-plugin-annotations" ,maven-plugin-annotations)
+       ("maven-plugin-api" ,maven-plugin-api)
+       ("maven-reporting-api" ,maven-reporting-api)
+       ("maven-shared-utils" ,maven-shared-utils)))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public maven-plugin-tools-api
   (package
     (name "maven-plugin-tools-api")
-    (version "3.5.2")
+    (version "3.6.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/apache/maven-plugin-tools/"
-				  "archive/maven-plugin-tools-" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"12va9d3zf5va1a4nvcij49k4h4z36s3mlj1fx500i5qxsjpwsydi"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/maven-plugin-tools/"
+                                  "archive/maven-plugin-tools-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1miq87ywh48v0hwl3a4q95rxbgg58zpk59v6z34bl715hcawbv80"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-plugin-tools-api.jar"
        #:source-dir "maven-plugin-tools-api/src/main/java"
        #:test-dir "maven-plugin-tools-api/src/test"
-       #:tests? #f; disabled for now. Require maven-plugin-testing that doesn't build yet
-       #:jdk ,icedtea-8))
+       #:tests? #f)); disabled for now. Require maven-plugin-testing that doesn't build yet
     (inputs
      `(("java-plexus-component-annotations" ,java-plexus-component-annotations)
        ("java-plexus-container-default" ,java-plexus-container-default)
@@ -676,6 +707,18 @@ and dynamic content, that supports a variety of markup languages.")
     (description "")
     (license license:asl2.0)))
 
+(define-public maven-plugin-annotations
+  (package
+    (inherit maven-plugin-tools-api)
+    (name "maven-plugin-annotations")
+    (arguments
+     `(#:jar-name "maven-plugin-annotations.jar"
+       #:tests? #f; no tests
+       #:source-dir "maven-plugin-annotations/src/main/java"))
+    (inputs
+     `(("maven-artifact" ,maven-artifact)))
+    (description "")))
+
 (define-public maven-plugin-tools-generators
   (package
     (inherit maven-plugin-tools-api)
@@ -684,15 +727,14 @@ and dynamic content, that supports a variety of markup languages.")
      `(#:jar-name "maven-plugin-tools-generators.jar"
        #:source-dir "maven-plugin-tools-generators/src/main/java"
        #:test-dir "maven-plugin-tools-generators/src/test"
-       #:jdk ,icedtea-8
        #:tests? #f; require maven-plugin-testing
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'fix-exception
-	   (lambda _
-	     (substitute* "maven-plugin-tools-generators/src/main/java/org/apache/maven/tools/plugin/generator/PluginHelpGenerator.java"
-	       (("Properties properties = PropertyUtils.*")
-		"Properties properties;
+        (add-before 'build 'fix-exception
+          (lambda _
+            (substitute* "maven-plugin-tools-generators/src/main/java/org/apache/maven/tools/plugin/generator/PluginHelpGenerator.java"
+              (("Properties properties = PropertyUtils.*")
+               "Properties properties;
 try {
 properties = PropertyUtils.loadProperties( tmpPropertiesFile );
 } catch(IOException e) {
@@ -700,7 +742,7 @@ e.printStackTrace();
 return;
 }
 "))
-	     #t)))))
+            #t)))))
     (inputs
      `(("java-asm" ,java-asm)
        ("java-jtidy" ,java-jtidy)
@@ -725,8 +767,24 @@ return;
      `(#:jar-name "maven-plugin-plugin.jar"
        #:source-dir "maven-plugin-plugin/src/main/java"
        #:test-dir "maven-plugin-plugin/src/test"
-       #:jdk ,icedtea-8
-       #:tests? #f)); no tests
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "maven-plugin-plugin/src/main/resources"
+                               "build/classes")
+             (copy-recursively "maven-plugin-plugin/src/main/filtered-resources"
+                               "build/classes")
+             #t))
+         (add-before 'build 'generate-models
+           (lambda* (#:key inputs #:allow-other-keys)
+             (define (modello-single-mode file version mode)
+               (invoke "java" "org.codehaus.modello.ModelloCli"
+                       file mode "maven-plugin-plugin/src/main/java" version
+                       "false" "true"))
+             (modello-single-mode "maven-plugin-plugin/src/main/mdo/pluginRequirements.mdo"
+                                  "1.0.0" "java"))))))
     (inputs
      `(("java-plexus-component-annotations" ,java-plexus-component-annotations)
        ("java-plexus-container-default" ,java-plexus-container-default)
@@ -739,13 +797,31 @@ return;
        ("maven-doxia-sink-api" ,maven-doxia-sink-api)
        ("maven-doxia-site-renderer" ,maven-doxia-site-renderer)
        ("maven-doxia-core" ,maven-doxia-core)
+       ("maven-doxia-logging-api" ,maven-doxia-logging-api)
        ("maven-model" ,maven-model)
-       ("maven-reporting-api" ,maven-reporting-api)
-       ("maven-repository-metadata" ,maven-repository-metadata)
        ("maven-plugin-annotations" ,maven-plugin-annotations)
        ("maven-plugin-api" ,maven-plugin-api)
        ("maven-plugin-tools-api" ,maven-plugin-tools-api)
-       ("maven-plugin-tools-generators" ,maven-plugin-tools-generators)))
+       ("maven-plugin-tools-generators" ,maven-plugin-tools-generators)
+       ("maven-reporting-api" ,maven-reporting-api)
+       ("maven-reporting-impl" ,maven-reporting-impl)
+       ("maven-repository-metadata" ,maven-repository-metadata)))
+    (native-inputs
+     `(("java-modello-core" ,java-modello-core)
+       ;; for modello:
+       ("java-asm" ,java-asm)
+       ("java-cglib" ,java-cglib)
+       ("java-eclipse-sisu-inject" ,java-eclipse-sisu-inject)
+       ("java-eclipse-sisu-plexus" ,java-eclipse-sisu-plexus)
+       ("java-geronimo-xbean-reflect" ,java-geronimo-xbean-reflect)
+       ("java-guava" ,java-guava)
+       ("java-guice" ,java-guice)
+       ("java-javax-inject" ,java-javax-inject)
+       ("java-plexus-classworlds" ,java-plexus-classworlds)
+       ("java-plexus-component-annotations" ,java-plexus-component-annotations)
+       ("java-sisu-build-api" ,java-sisu-build-api)
+       ;; modello plugins:
+       ("java-modello-plugins-java" ,java-modello-plugins-java)))
     (description "")))
 
 (define-public maven-resources-plugin
@@ -753,30 +829,30 @@ return;
     (name "maven-resources-plugin")
     (version "3.1.0")
     (source (origin
-	      (method url-fetch)
-	      (uri (string-append "https://github.com/apache/"
-				  "maven-resources-plugin/archive/"
-				  "maven-resources-plugin-" version ".tar.gz"))
-	      (sha256
-	       (base32
-		"1f5gnjg2xmqfxml6k0ydyd1sxxwzgnb24qn6avcc4mijwd8a84pl"))))
+              (method url-fetch)
+              (uri (string-append "https://github.com/apache/"
+                                  "maven-resources-plugin/archive/"
+                                  "maven-resources-plugin-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1f5gnjg2xmqfxml6k0ydyd1sxxwzgnb24qn6avcc4mijwd8a84pl"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "maven-resources-plugin.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:tests? #f; test depends on maven-plugin-test-harness
-       #:jdk ,icedtea-8
        ;; Need maven-plugin-tools and a corresponding phase
        #:phases
        (modify-phases %standard-phases
-	 (add-before 'build 'copy-pom
-	   (lambda _
-	     (mkdir-p "build/classes/META-INF/maven")
-	     (copy-file "pom.xml" "build/classes/META-INF/pom.xml")))
-	 (add-after 'install 'install-pom
-	   (lambda* (#:key outputs #:allow-other-keys)
-	     (install-file "pom.xml" (string-append (assoc-ref outputs "out") "/share/pom.xml")))))))
+         (add-before 'build 'copy-pom
+           (lambda _
+             (mkdir-p "build/classes/META-INF/maven")
+             (copy-file "pom.xml" "build/classes/META-INF/pom.xml")))
+         (add-after 'install 'install-pom
+           (lambda* (#:key outputs #:allow-other-keys)
+             (install-file "pom.xml" (string-append (assoc-ref outputs "out")
+                                     "/share/pom.xml")))))))
     (inputs
      `(("java-plexus-component-annotations" ,java-plexus-component-annotations)
        ("java-plexus-container-default" ,java-plexus-container-default)

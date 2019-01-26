@@ -1,0 +1,25 @@
+From 453940a997ef72f389a55de3e9a3c8f8428ae3d6 Mon Sep 17 00:00:00 2001
+From: Michael Simacek <msimacek@redhat.com>
+Date: Fri, 31 Mar 2017 13:00:10 +0200
+Subject: [PATCH] Port to dom4j 2.0
+
+---
+ src/main/java/org/apache/velocity/tools/generic/XmlTool.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/main/java/org/apache/velocity/tools/generic/XmlTool.java b/src/main/java/org/apache/velocity/tools/generic/XmlTool.java
+index 4ab748c..3d5feab 100644
+--- a/src/main/java/org/apache/velocity/tools/generic/XmlTool.java
++++ b/src/main/java/org/apache/velocity/tools/generic/XmlTool.java
+@@ -572,7 +572,7 @@ public class XmlTool extends SafeConfig
+         {
+             if (n instanceof Element)
+             {
+-                kids.addAll((List<Node>)((Element)n).elements());
++                kids.addAll(((Element)n).elements());
+             }
+         }
+         return new XmlTool(kids);
+-- 
+2.9.3
+
