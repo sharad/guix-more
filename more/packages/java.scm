@@ -1587,7 +1587,7 @@ import org.junit.Assert.*;"))
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "14460")
+    (version "14760")
     (source (origin
               (method svn-fetch)
               (uri (svn-reference
@@ -1595,7 +1595,7 @@ import org.junit.Assert.*;"))
                     (revision (string->number version))))
               (sha256
                (base32
-                "123jb1xq18gmgfvxnsmja6zban969fa53jir4rjfwinbsx7aw6ss"))
+                "1g5pb24bjanfmajvg5l4xp5iqy7rpary8b27489xfkyfi04kskcz"))
               (file-name (string-append name "-" version))
               (modules '((guix build utils)))
               (snippet
