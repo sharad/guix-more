@@ -239,6 +239,23 @@ provers.")
                (invoke "make"))
              #t)))))))
 
+(define-public coq-8.9
+  (package
+    (inherit coq)
+    (name "coq")
+    (version "8.9.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/coq/coq/archive/V"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1w0g0w2ps3v17g0nkf9zrnlhzrfvvzxyp248kgqnvybrinyf5mlb"))))
+    (native-inputs
+     `(("ocaml-ounit" ,ocaml-ounit)
+       ,@(package-native-inputs coq)))))
+
 (define-public coq-bignums-8.7
   (package
     (inherit coq-bignums)
