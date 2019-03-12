@@ -43,6 +43,7 @@
   #:use-module (gnu packages pkg-config)
   #:use-module (gnu packages protobuf)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-xyz)
   #:use-module (gnu packages tex)
   #:use-module (gnu packages texinfo)
   #:use-module (more packages smt)

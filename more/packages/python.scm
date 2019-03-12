@@ -30,6 +30,7 @@
   #:use-module (gnu packages maths)
   #:use-module (gnu packages networking)
   #:use-module (gnu packages python)
+  #:use-module (gnu packages python-compression)
   #:use-module (gnu packages python-crypto)
   #:use-module (gnu packages python-web)
   #:use-module (gnu packages python-xyz)
