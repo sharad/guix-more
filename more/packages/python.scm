@@ -37,6 +37,7 @@
   #:use-module (gnu packages serialization)
   #:use-module (gnu packages time)
   #:use-module (gnu packages tls)
+  #:use-module (gnu packages version-control)
   #:use-module (gnu packages web)
   #:use-module (guix packages)
   #:use-module (guix download)
@@ -1140,3 +1141,123 @@ navigated in, similar to a file or stream.")
     (description
       "Securely transfer data between computers")
     (license license:expat)))
+
+(define-public python-pathlib2
+  (package
+    (name "python-pathlib2")
+    (version "2.3.3")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "pathlib2" version))
+        (sha256
+          (base32
+            "0hpp92vqqgcd8h92msm9slv161b1q160igjwnkf2ag6cx0c96695"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(("python-scandir" ,python-scandir)))
+    (native-inputs
+      `(("python-six" ,python-six)))
+    (home-page
+      "https://pypi.python.org/pypi/pathlib2/")
+    (synopsis "Object-oriented filesystem paths")
+    (description "Object-oriented filesystem paths")
+    (license license:expat)))
+
+(define-public python-check-manifest
+  (package
+    (name "python-check-manifest")
+    (version "0.37")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "check-manifest" version))
+        (sha256
+          (base32
+            "0lk45ifdv2cpkl6ayfyix7jwmnxa1rha7xvb0ih5999k115wzqs4"))))
+    (build-system python-build-system)
+    (native-inputs
+      `(("python-mock" ,python-mock)
+        ("git" ,git)))
+    (home-page
+      "https://github.com/mgedmin/check-manifest")
+    (synopsis
+      "Check MANIFEST.in in a Python source package for completeness")
+    (description
+      "Check MANIFEST.in in a Python source package for completeness")
+    (license license:expat)))
+
+(define-public python-codacy-coverage
+  (package
+    (name "python-codacy-coverage")
+    (version "1.3.11")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "codacy-coverage" version))
+        (sha256
+          (base32
+            "1g0c0w56xdkmqb8slacyw5qhzrkp814ng3ddh2lkiij58y9m2imr"))))
+    (build-system python-build-system)
+    (arguments
+     ;; No tests
+     `(#:tests? #f))
+    (propagated-inputs
+      `(("python-check-manifest" ,python-check-manifest)))
+    (home-page
+      "https://github.com/codacy/python-codacy-coverage")
+    (synopsis "Codacy coverage reporter for Python")
+    (description
+      "Codacy coverage reporter for Python")
+    (license license:expat)))
+
+(define-public python-translation-finder
+  (package
+    (name "python-translation-finder")
+    (version "1.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "translation-finder" version))
+        (sha256
+          (base32
+            "1bldziyp0kn93g9gg0wjibpcjwg6xcp8zqwch7bnplg0zwxs1y8b"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(("python-chardet" ,python-chardet)
+        ("python-pathlib2;" ,python-pathlib2)
+        ("python-six" ,python-six)))
+    (native-inputs
+     `(("python-codecov" ,python-codecov)
+       ("python-codacy-coverage" ,python-codacy-coverage)
+       ("python-pytest-cov" ,python-pytest-cov)
+       ("python-pytest-runner" ,python-pytest-runner)
+       ("python-twine" ,python-twine)))
+    (home-page "https://weblate.org/")
+    (synopsis
+      "A translation file finder for Weblate, translation tool with tight version control integration")
+    (description
+      "A translation file finder for Weblate, translation tool with tight version control integration")
+    (license license:gpl3+)))
+
+(define-public python-translate-toolkit
+  (package
+    (name "python-translate-toolkit")
+    (version "2.3.1")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "translate-toolkit" version))
+        (sha256
+          (base32
+            "1fsfhqyhdwjbb0ljmkzaibjr3s7q7ipg776rwk14l9c7chvnn58x"))))
+    (build-system python-build-system)
+    (home-page "http://toolkit.translatehouse.org/")
+    (arguments
+     ;; Require old versions
+     `(#:tests? #f))
+    (synopsis
+      "Tools and API for translation and localization engineering.")
+    (description
+      "Tools and API for translation and localization engineering.")
+    (license license:gpl2+)))
