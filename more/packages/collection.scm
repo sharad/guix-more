@@ -31,6 +31,22 @@
   #:use-module (gnu packages xml)
   #:use-module (more packages perl))
 
+(define-public unrar
+  (package
+    (name "unrar")
+    (version "0.0.1")
+    (source (origin
+              (method url-fetch)
+              (uri "http://deb.debian.org/debian/pool/main/u/unrar-free/unrar-free_0.0.1+cvs20140707.orig.tar.gz")
+              (sha256
+               (base32
+                "18yvsa6k3pc0axl7j089jf5d8hya1zb68s2igm5z3xxbcagrzfih"))))
+    (build-system gnu-build-system)
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl2+)))
+
 (define-public gcstar
   (package
     (name "gcstar")
