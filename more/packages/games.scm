@@ -329,3 +329,25 @@ you have.")
     (synopsis "Game engine")
     (description "")
     (license license:expat)))
+
+(define-public actor-framework
+  (package
+    (name "actor-framework")
+    (version "0.16.3")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/actor-framework/actor-framework.git")
+                     (commit version)))
+              (sha256
+               (base32
+                "0nqw1cv7wxbcn2qwm08qffb6k4n3kgvdiaphks5gjgm305jk4vnx"))))
+    (build-system cmake-build-system)
+    (arguments
+     `(#:configure-flags (list "-DCAF_NO_EXAMPLES=yes")))
+    (home-page "http://actor-framework.org/")
+    (synopsis "Concurrency library implementing the actor model")
+    (description "CAF is a C++11 actor model implementation featuring
+lightweight & fast actor implementations, pattern matching for messages,
+network transparent messaging, and more.")
+    (license (list license:boost1.0 license:bsd-3))))
