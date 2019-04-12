@@ -1,5 +1,5 @@
 ;;; GNU Guix --- Functional package management for GNU
-;;; Copyright © 2017 Julien Lepiller <julien@lepiller.eu>
+;;; Copyright © 2017-2019 Julien Lepiller <julien@lepiller.eu>
 ;;;
 ;;; This file is part of GNU Guix.
 ;;;
@@ -21,6 +21,7 @@
   #:use-module (guix download)
   #:use-module (guix git-download)
   #:use-module (guix utils)
+  #:use-module (guix build-system dune)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system ocaml)
   #:use-module ((guix licenses) #:prefix license:)
@@ -31,6 +32,7 @@
   #:use-module (gnu packages bison)
   #:use-module (gnu packages boost)
   #:use-module (gnu packages check)
+  #:use-module (gnu packages compression)
   #:use-module (gnu packages coq)
   #:use-module (gnu packages emacs)
   #:use-module (gnu packages flex)
@@ -561,3 +563,213 @@ package is not free software!")
     (synopsis "")
     (description "")
     (license license:lgpl2.1+)))
+
+(define-public ocaml-optint
+  (package
+    (name "ocaml-optint")
+    (version "0.0.2")
+    (source
+      (origin
+        (method url-fetch)
+        (uri "https://github.com/dinosaure/optint/releases/download/v0.0.2/optint-v0.0.2.tbz")
+        (sha256
+          (base32
+            "1lmb7nycmkr05y93slqi98i1lcs1w4kcngjzjwz7i230qqjpw9w1"))))
+    (build-system dune-build-system)
+    (arguments
+     `(#:test-target "."))
+    (home-page "https://github.com/dinosaure/optint")
+    (synopsis
+      "Abstract type on integer between x64 and x86 architecture")
+    (description
+      "This library provide one module `Optint` which use internally an `int` if you
+are in a x64 architecture or an `int32` (boxed value) if you are in a x86
+architecture. This module is __really__ unsafe and does not care some details
+(like the sign bit) for any cast.
+
+## Goal
+
+The main difference between an `int` and an `int32` is the second is boxed.
+About performance this is not the best. However, you can not ensure to be in an
+x64 architecture where you can use directly an `int` instead an `int32` (and
+improve performance).
+
+So, this library provide an abstraction about a real `int32`. In a x64
+architecture, internally, we use a `int` and in a x86 architure, we use a
+`int32`. By this way, we ensure to have in any platform 32 free bits in
+`Optint.t`.")
+    (license #f)))
+
+(define-public ocaml-checkseum
+  (package
+    (name "ocaml-checkseum")
+    (version "0.0.3")
+    (source
+      (origin
+        (method url-fetch)
+        (uri "https://github.com/dinosaure/checkseum/releases/download/v0.0.3/checkseum-v0.0.3.tbz")
+        (sha256
+          (base32
+            "12j45zsvil1ynwx1x8fbddhqacc8r1zf7f6h576y3f3yvbg7l1fm"))))
+    (build-system dune-build-system)
+    (propagated-inputs
+      `(("ocaml-optint" ,ocaml-optint)
+        ("ocaml-fmt" ,ocaml-fmt)
+        ("ocaml-rresult" ,ocaml-rresult)
+        ("ocaml-cmdliner" ,ocaml-cmdliner)))
+    (native-inputs
+      `(("ocaml-alcotest" ,ocaml-alcotest)))
+    (home-page
+      "https://github.com/dinosaure/checkseum")
+    (synopsis
+      "Adler-32, CRC32 and CRC32-C implementation in C and OCaml")
+    (description
+      "Checkseum is a library to provide implementation of Adler-32, CRC32 and CRC32-C in C and OCaml.
+
+This library use the linking trick to choose between the C implementation (checkseum.c) or the OCaml implementation (checkseum.ocaml).
+This library is on top of optint to get the best representation of an int32.
+")
+    (license #f)))
+
+; not the latest but imagelib requires 0.7
+(define-public ocaml-decompress
+  (package
+    (name "ocaml-decompress")
+    (version "0.7")
+    (source
+      (origin
+        (method url-fetch)
+        (uri "https://github.com/mirage/decompress/releases/download/v0.7/decompress-0.7.tbz")
+        (sha256
+          (base32
+            "1q96q4bhrlz13c33jj82qn6706m8dbn4azc6yja8lbavpy4q5zpy"))))
+    (build-system ocaml-build-system)
+    (arguments
+     ;; Tets need some path modification
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'build
+           (lambda _
+             (invoke "ocaml" "pkg/pkg.ml" "build")))
+         (add-before 'build 'set-topfind
+           (lambda* (#:key inputs #:allow-other-keys)
+             ;; add the line #directory ".." at the top of each file
+             ;; using #use "topfind";; to be able to find topfind
+             (let* ((findlib-path (assoc-ref inputs "findlib"))
+                    (findlib-libdir
+                     (string-append findlib-path "/lib/ocaml/site-lib")))
+               (substitute* '("pkg/pkg.ml")
+                 (("#use       \"topfind\";;" all)
+                  (string-append "#directory \"" findlib-libdir "\"\n"
+                                 all))))
+             #t)))))
+    (propagated-inputs
+     `(("ocaml-optint" ,ocaml-optint)
+        ("ocaml-checkseum" ,ocaml-checkseum)
+        ("ocaml-cmdliner" ,ocaml-cmdliner)))
+    (native-inputs
+      `(("camlzip" ,camlzip)
+        ("ocaml-re" ,ocaml-re)
+        ("ocaml-topkg" ,ocaml-topkg)
+        ("ocamlbuild" ,ocamlbuild)
+        ("ocaml-alcotest" ,ocaml-alcotest)
+        ("opam" ,opam)))
+    (inputs
+     `(("zlib" ,zlib)))
+    (home-page
+      "https://github.com/mirage/decompress")
+    (synopsis "Implementation of Zlib in OCaml")
+    (description
+      "Decompress is an implementation of Zlib in OCaml
+
+It provides a pure non-blocking interface to inflate and deflate data flow.
+")
+    (license #f)))
+
+(define-public ocaml-imagelib
+  (package
+    (name "ocaml-imagelib")
+    (version "20180522")
+    (source
+      (origin
+        (method url-fetch)
+        (uri "https://github.com/rlepigre/ocaml-imagelib/archive/ocaml-imagelib_20180522.tar.gz")
+        (sha256
+          (base32
+            "06l724fj8yirp5jbf782r2xl3lrcff2i1b3c3pf80kbgngw6kakg"))))
+    (build-system ocaml-build-system)
+    (arguments
+     `(#:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'build
+           (lambda _
+             (invoke "make")))
+         (replace 'install
+           (lambda _
+             (invoke "make" "install"))))))
+    (propagated-inputs
+      `(("ocaml-decompress" ,ocaml-decompress)
+        ("which" ,which)))
+    (native-inputs
+      `(("ocamlbuild" ,ocamlbuild)))
+    (home-page "http://lepigre.fr")
+    (synopsis
+      "The imagelib library implements image formats such as PNG and PPM")
+    (description
+      "The imagelib library implements image formats such as PNG and PPM in
+OCaml, relying on only one external dependency: 'decompress'.
+
+Supported image formats:
+ - PNG (full implementation of RFC 2083),
+ - PPM, PGM, PBM, ... (fully supported),
+ - JPG (only image size natively, conversion to PNG otherwise),
+ - GIF (only image size natively, conversion to PNG otherwise),
+ - XCF (only image size natively, conversion to PNG otherwise),
+ - Other formats rely on 'convert' (imagemagick).
+
+As imagelib only requires 'decompress', it can be used together with
+js_of_ocaml to compile projects to Javascript. Note that some of the
+features of imagelib require the convert binary  (and thus cannot be
+used from Javascript).")
+    (license #f)))
+
+
+(define-public patoline
+  (package
+    (name "patoline")
+    (version "0.2")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/patoline/patoline/archive/"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1qlxcf8k83lcyamyg19838j3f1js068skxgab94axv2gv4ylhhfb"))))
+    (build-system dune-build-system)
+    (arguments
+     `(#:test-target "."
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'set-dirs
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((out (assoc-ref outputs "out")))
+               (substitute* '("unicodelib/config.ml"
+                              "patconfig/patDefault.ml")
+                 (("/usr/local/share") (string-append out "/share"))))
+             #t)))))
+    (propagated-inputs
+     `(("camlzip" ,camlzip)
+       ("ocaml-earley" ,ocaml-earley)
+       ("ocaml-imagelib" ,ocaml-imagelib)
+       ("ocaml-sqlite3" ,ocaml-sqlite3)))
+    (inputs
+     `(("zlib" ,zlib)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:gpl2+)))
