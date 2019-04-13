@@ -1587,23 +1587,27 @@ import org.junit.Assert.*;"))
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "14760")
+    (version "14824")
     (source (origin
-              (method svn-fetch)
-              (uri (svn-reference
-                    (url "https://svn.openstreetmap.org/applications/editors/josm")
-                    (revision (string->number version))))
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/openstreetmap/josm.git")
+                     (commit "4b30f7f925343c90f40d02a350645c890eb7af9e")))
+              ;(method svn-fetch)
+              ;(uri (svn-reference
+              ;      (url "https://svn.openstreetmap.org/applications/editors/josm")
+              ;      (revision (string->number version))))
               (sha256
                (base32
-                "1g5pb24bjanfmajvg5l4xp5iqy7rpary8b27489xfkyfi04kskcz"))
-              (file-name (string-append name "-" version))
+                "0psjf9xjvhn1zz8d6sp0jhdzcxk3nwvj16bz6lkyknb8zwc22xds"))
+              (file-name (git-file-name name version))
               (modules '((guix build utils)))
               (snippet
                 `(begin
                    (for-each delete-file (find-files "." ".*.jar"))
-                   (with-directory-excursion "core"
-                     (delete-file-recursively "test/lib")
-                     (delete-file-recursively "windows"))
+                   ;(with-directory-excursion "core"
+                   ;  (delete-file-recursively "test/lib")
+                   ;  (delete-file-recursively "windows"))
                    #t))))
     (build-system ant-build-system)
     (native-inputs
@@ -1631,11 +1635,11 @@ import org.junit.Assert.*;"))
        #:jar-name "josm.jar"
        #:phases
        (modify-phases %standard-phases
-         (add-after 'unpack 'chdir
-           (lambda _
-             (chdir "core")
-             #t))
-         (add-after 'chdir 'rm-build.xml
+         ;(add-after 'unpack 'chdir
+         ;  (lambda _
+         ;    (chdir "core")
+         ;    #t))
+         (add-after 'unpack 'rm-build.xml
            (lambda* _
              (delete-file "build.xml")
              #t))
