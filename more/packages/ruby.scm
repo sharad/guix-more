@@ -552,3 +552,72 @@ documentation
 ")
     (home-page "http://www.rubocop.org/")
     (license license:expat)))
+
+(define-public ruby-trollop
+  (package
+    (name "ruby-trollop")
+    (version "2.9.9")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (rubygems-uri "trollop" version))
+        (sha256
+          (base32
+            "074h7lns72kg1dl5gvz5apl3xz1i0axbnbc01pf2kbw4q0lkpnp4"))))
+    (build-system ruby-build-system)
+    (arguments
+     `(#:tests? #f))
+    (synopsis
+      "Trollop is a commandline option parser for Ruby that just gets out of your way.")
+    (description
+      "Trollop is a commandline option parser for Ruby that just gets out of your way.")
+    (home-page "")
+    (license license:expat)))
+
+(define-public ruby-htmlentities
+  (package
+    (name "ruby-htmlentities")
+    (version "4.3.4")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (rubygems-uri "htmlentities" version))
+        (sha256
+          (base32
+            "1nkklqsn8ir8wizzlakncfv42i32wc0w9hxp00hvdlgjr7376nhj"))))
+    (build-system ruby-build-system)
+    (arguments
+     `(#:tests? #f))
+    (synopsis
+      "A module for encoding and decoding (X)HTML entities.")
+    (description
+      "This package provides a module for encoding and decoding (X)HTML entities.")
+    (home-page
+      "https://github.com/threedaymonk/htmlentities")
+    (license license:expat)))
+
+(define-public ruby-wp2txt
+  (package
+    (name "ruby-wp2txt")
+    (version "0.9.1")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (rubygems-uri "wp2txt" version))
+        (sha256
+          (base32
+            "01l0r83ma3fp9zb94km4lqasvxpml2azd4dj36qzpm71c2pyhng4"))))
+    (build-system ruby-build-system)
+    (arguments
+     `(#:tests? #f))
+    (propagated-inputs
+      `(("ruby-htmlentities" ,ruby-htmlentities)
+        ("ruby-nokogiri" ,ruby-nokogiri)
+        ("ruby-parallel" ,ruby-parallel)
+        ("ruby-trollop" ,ruby-trollop)))
+    (synopsis
+      "WP2TXT extracts plain text data from Wikipedia dump file (encoded in XML/compressed with Bzip2) stripping all the MediaWiki markups and other metadata.")
+    (description
+      "WP2TXT extracts plain text data from Wikipedia dump file (encoded in XML/compressed with Bzip2) stripping all the MediaWiki markups and other metadata.")
+    (home-page "http://github.com/yohasebe/wp2txt")
+    (license #f)))

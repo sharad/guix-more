@@ -353,3 +353,80 @@ you have.")
 lightweight & fast actor implementations, pattern matching for messages,
 network transparent messaging, and more.")
     (license (list license:boost1.0 license:bsd-3))))
+
+(define-public mecab
+  (package
+    (name "mecab")
+    (version "0.996")
+    (source (origin
+              (method url-fetch)
+              (uri "https://drive.google.com/uc?export=download&id=0B4y35FiV1wh7cENtOXlicTFaRUE")
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0ncwlqxl1hdn1x4v4kr2sn1sbbcgnhdphp0lcvk74nqkhdbk4wz0"))
+              (patches
+                (search-patches
+                  "mecab-variable-param.patch"))))
+    (build-system gnu-build-system)
+    (search-paths
+      (list (search-path-specification
+              (variable "MECAB_DICDIR")
+              (separator #f)
+              (files '("lib/mecab/dic")))))
+    (arguments
+     `(#:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'add-mecab-dicdir-variable
+           (lambda _
+             (substitute* "mecabrc.in"
+               (("dicdir = .*")
+                "dicdir = $MECAB_DICDIR"))
+             (substitute* "mecab-config.in"
+               (("echo @libdir@/mecab/dic")
+                "if [ -z \"$MECAB_DICDIR\" ]; then
+  echo @libdir@/mecab/dic
+else
+  echo \"$MECAB_DICDIR\"
+fi"))
+             #t)))))
+    (inputs
+     `(("libiconv" ,libiconv)))
+    (home-page "https://taku910.github.io/mecab")
+    (synopsis "Morphological analysis engine for texts")
+    (description "Mecab is a morphological analysis engine developped as a
+collaboration between the Kyoto university and Nippon Telegraph and Telephone
+Corporation.  The engine is independent of any language, dictionary or corpus.
+")
+    (license (list license:gpl2+ license:lgpl2.1+ license:bsd-3))))
+
+(define-public mecab-ipadic
+  (package
+    (name "mecab-ipadic")
+    (version "2.7.0")
+    (source (origin
+              (method url-fetch)
+              (uri "https://drive.google.com/uc?export=download&id=0B4y35FiV1wh7MWVlSDBCSXZMTXM")
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "08rmkvj0f0x6jq0axrjw2y5nam0mavv6x77dp9v4al0wi1ym4bxn"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:configure-flags
+       (list (string-append "--with-dicdir=" (assoc-ref %outputs "out")
+                            "/lib/mecab/dic")
+             "--with-charset=utf8")
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'configure 'set-mecab-dir
+           (lambda* (#:key outputs #:allow-other-keys)
+             (setenv "MECAB_DICDIR" (string-append (assoc-ref outputs "out")
+                                                   "/lib/mecab/dic"))
+             #t)))))
+    (native-inputs
+     `(("mecab" ,mecab))); for mecab-config
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license (license:non-copyleft "COPYING"))))
