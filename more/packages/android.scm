@@ -35,11 +35,11 @@
               (method git-fetch)
               (uri (git-reference
                      (url "https://gitlab.com/fdroid/fdroidserver.git")
-                     (commit "ff578dae30dfa83330862a01a6cbd603330b71e0")))
-              (file-name (string-append name "-" version "-source"))
+                     (commit "7272689cedb4b5f0d9211f1e5b808a655e26cd5c")))
+              (file-name (git-file-name name version))
               (sha256
                (base32
-                "1ar41806wy0y8szrsv963mj9bkf5jlnwlk75xl9x0mykpnj279j7"))))
+                "155vfxhm0r82l5n5zq2087wjrhkppay705sg9lwh3hv5rflz1ycp"))))
     (arguments
      (substitute-keyword-arguments (package-arguments fdroidserver)
        ((#:phases phases)
@@ -51,7 +51,7 @@
            (add-after 'install 'install-scripts
              (lambda* (#:key outputs #:allow-other-keys)
                (let* ((out (assoc-ref outputs "out"))
-                      (site (string-append out "/lib/python3.6/site-packages")))
+                      (site (string-append out "/lib/python3.7/site-packages")))
                  (for-each
                    (lambda (script)
                      (install-file script site))
