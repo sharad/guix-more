@@ -1726,39 +1726,6 @@ import org.junit.Assert.*;"))
     (description "OSM editor.")
     (license license:gpl2+)))
 
-;; As of 2010-09-01, the ORO project is retired
-(define-public java-jakarta-regexp
-  (package
-    (name "java-jakarta-regexp")
-    (version "1.5")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://archive.apache.org/dist/jakarta/regexp/"
-                                  "jakarta-regexp-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0zg9rmyif48dck0cv6ynpxv23mmcsx265am1fnnxss7brgw0ms3r"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:build-target "jar"
-       #:tests? #f; tests are run as part of the build process
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'remove-bin
-           (lambda _
-             (delete-file (string-append "jakarta-regexp-" ,version ".jar"))))
-         (replace 'install
-           (install-jars "build")))))
-    (home-page "https://jakarta.apache.org/oro/")
-    (synopsis "Text-processing for Java")
-    (description "The Jakarta-ORO Java classes are a set of text-processing
-Java classes that provide Perl5 compatible regular expressions, AWK-like
-regular expressions, glob expressions, and utility classes for performing
-substitutions, splits, filtering filenames, etc.  This library is the successor
-of the OROMatcher, AwkTools, PerlTools, and TextTools libraries originally
-from ORO, Inc.")
-    (license license:asl2.0)))
-
 (define-public java-jboss-annotations-api-spec
   (package
     (name "java-jboss-annotations-api-spec")
@@ -2061,6 +2028,32 @@ from ORO, Inc.")
                (mkdir-p jar-dir)
                (install-file "build/jdom.jar" jar-dir)
                #t))))))))
+
+(define-public java-jdom-for-intellij
+  (package
+    (inherit java-jdom)
+    (version "2.0.6-intellij")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/JetBrains/intellij-deps-jdom")
+                     (commit "da8644efbf3b50b1fd427953298c0a8cb330f54c")))
+              (file-name (git-file-name "java-jdom" version))
+              (sha256
+               (base32
+                "0kwzg8flrn6qb9jbcriiqx56chb6j6pjk19xqa6rarf42zad88rc"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar$"))
+                   (delete-file "build.xml")
+                   #t))))
+    (arguments
+     `(#:jar-name "jdom.jar"
+       #:tests? #f
+       #:source-dir "core/src/java"))
+    (inputs
+     `(("java-jaxen" ,java-jaxen)))))
 
 (define-public java-apache-freemarker
   (package
@@ -5879,6 +5872,118 @@ and it is extensible to others.")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-trove4j
+  (package
+    (name "java-trove4j")
+    (version "3.0.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://bitbucket.org/trove4j/trove/downloads/"
+                                  "trove-" version ".tar.gz"))
+              (sha256
+               (base32
+                "1hlvhaivyw880bld5l8cf2z0s33vn9bb84w0m5n025c7g8fdwhk2"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   #t))))
+    (build-system ant-build-system)
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (arguments
+     `(#:test-target "test"
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (install-jars ".")))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1+)))
+
+(define-public java-trove4j-2
+  (package
+    (inherit java-trove4j)
+    (version "2.1.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://sourceforge.net/projects/trove4j/"
+                                  "files/trove/" version "/trove-" version ".tar.gz"))
+              (sha256
+               (base32
+                "0vkbgq20xina558vymq6gxwjw5svhxsncizh3p3wdq5fjcgrx4m5"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   #t))))))
+
+(define-public java-trove4j-intellij
+  (package
+    (inherit java-trove4j)
+    (version "1.0-20191502")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/JetBrains/intellij-deps-trove4j")
+                     (commit "5967df06f16dacca5a37493ae464f14696dc6f9d")))
+              (file-name (git-file-name "java-trove4j" version))
+              (sha256
+               (base32
+                "00swjb2yq85k6sh5hq1nfixv20hjnza4hd1b8frr3fb53ibsry4s"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   ;; Delete bundled jar archives.
+                   (for-each delete-file (find-files "." ".*\\.jar"))
+                   #t))))
+    (arguments
+     `(#:jar-name "trove.jar"
+       #:tests? #f
+       #:source-dir "core/src/main/java"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'generate
+           (lambda _
+             (with-directory-excursion "generator/src/main/java"
+               (invoke "javac" "gnu/trove/generate/Generate.java"))
+             (invoke "java" "-cp" "generator/src/main/java"
+                     "gnu.trove.generate.Generate"
+                     "core/src/main/templates" "core/src/main/java")))
+         (add-before 'build 'utf-to-iso
+           (lambda _
+             (substitute* "build.xml"
+               (("<javac ") "<javac encoding=\"iso-8859-1\" "))
+             #t)))))))
+
+(define-public java-imagescalr
+  (package
+    (name "java-imagescalr")
+    (version "4.2")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/rkalla/imgscalr")
+                     (commit (string-append version "-release"))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1vbfx2wa9lavagmg2pgy5jq4m7msp1dkc4pwr7vv5a746fx24pg9"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install
+           (install-jars ".")))))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-jlex
   (package
     (name "java-jlex")
@@ -7944,6 +8049,111 @@ logging framework for Java.")))
     (native-inputs
      `(("java-hamcrest-all" ,java-hamcrest-all)
        ("java-testng" ,java-testng)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-paranamer
+  (package
+    (name "java-paranamer")
+    (version "2.8")
+    (source (origin
+              (method git-fetch)
+              ;; This repository is a mirror of the svn directory that disappeared
+              ;; along with codehaus.org
+              (uri (git-reference
+                     (url "https://github.com/paul-hammant/paranamer")
+                     (commit (string-append "paranamer-parent-" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1jfick1sfjmqdxak72h5sx7xcyq0njwsg64jp4xaz06365ghbiz9"))
+              (modules '((guix build utils)))
+              (snippet
+                `(for-each delete-file (find-files "." ".*.jar")))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "paranamer.jar"
+       #:source-dir "paranamer/src/java"
+       #:tests? #f))
+    (inputs
+     `(("java-javax-inject" ,java-javax-inject)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-picocontainer
+  (package
+    (name "java-picocontainer")
+    (version "2.15")
+    (source (origin
+              (method git-fetch)
+              ;; This repository is a mirror of the svn directory that disappeared
+              ;; along with codehaus.org
+              (uri (git-reference
+                     (url "https://github.com/codehaus/picocontainer")
+                     (commit "7be6b8b0eb33421dc7a755817628e06b79bd879d")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "06ygwa1wkk70lb9abc0shh1lzyysjaciqb5917qxsyn4rx43sjdg"))
+              (modules '((guix build utils)))
+              (snippet
+                `(for-each delete-file (find-files "." ".*.jar")))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "picocontainer.jar"
+       #:source-dir "container/src/java"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _
+             (chdir "java/2.x/tags/picocontainer-2.15")
+             #t)))))
+    (inputs
+     `(("java-paranamer" ,java-paranamer)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-picocontainer-1
+  (package
+    (inherit java-picocontainer)
+    (version "1.3")
+    (arguments
+     `(#:jar-name "picocontainer.jar"
+       #:source-dir "container/src/java"
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _
+             (chdir "java/1.x/picocontainer/tags/picocontainer-1_3")
+             #t)))))))
+
+(define-public java-automaton
+  (package
+    (name "java-automaton")
+    (version "1.12.2")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/cs-au-dk/dk.brics.automaton")
+                     (commit "328cf493ec2537af9d2bbce0eb4b4ef118b66547")))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1vjcz8m8wlqx6j1cymww7mfh9ckxfwcfm63dvg3bg394l8qzbxg3"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (replace 'install (install-jars ".")))))
     (home-page "")
     (synopsis "")
     (description "")
