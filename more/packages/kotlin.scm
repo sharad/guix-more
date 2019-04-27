@@ -85,7 +85,8 @@
                      "java-intellij-platform-util-rt"
                      "java-javax-inject"
                      "java-jsr305"
-                     "java-jetbrains-annotations"))))
+                     "java-jetbrains-annotations"
+                     "java-trove4j-intellij"))))
              #t))
          (add-before 'build 'fix-asm
            (lambda _
@@ -95,6 +96,7 @@
     (inputs
      `(("java-asm" ,java-asm)
        ("java-asm-commons" ,java-asm-commons-7)
+       ("java-guava" ,java-guava)
        ("java-intellij-java-psi-api" ,java-intellij-java-psi-api)
        ("java-intellij-java-psi-impl" ,java-intellij-java-psi-impl)
        ("java-intellij-platform-core-api" ,java-intellij-platform-core-api)
@@ -105,7 +107,7 @@
        ("java-javax-inject" ,java-javax-inject)
        ("java-jsr305" ,java-jsr305)
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
-       ("java-guava" ,java-guava)))
+       ("java-trove4j-intellij" ,java-trove4j-intellij)))
     (home-page "")
     (synopsis "")
     (description "")
