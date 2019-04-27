@@ -7774,6 +7774,30 @@ logging framework for Java.")))
     (description "")
     (license license:asl2.0)))
 
+(define-public java-streamex
+  (package
+    (name "java-streamex")
+    (version "0.6.8")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/amaembo/streamex/archive/streamex-"
+                                  version ".tar.gz"))
+              (sha256
+               (base32
+                "069a7q7m7srshv7nxvvw5i338k0kmsbazqhfsbqsgd6bklfh4r7h"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "streamex.jar"
+       #:source-dir "src/main/java"
+       #:test-dir "src/test"))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 (define-public java-picocli
   (package
     (name "java-picocli")

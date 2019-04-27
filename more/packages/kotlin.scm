@@ -77,9 +77,11 @@
                    '("java-asm" "java-asm-commons"
                      "java-guava"
                      "java-intellij-java-psi-api"
+                     "java-intellij-java-psi-impl"
                      "java-intellij-platform-core-api"
                      "java-intellij-platform-core-impl"
                      "java-intellij-platform-util"
+                     "java-intellij-platform-util-rt"
                      "java-javax-inject"
                      "java-jsr305"
                      "java-jetbrains-annotations"))))
@@ -93,9 +95,11 @@
      `(("java-asm" ,java-asm)
        ("java-asm-commons" ,java-asm-commons-7)
        ("java-intellij-java-psi-api" ,java-intellij-java-psi-api)
+       ("java-intellij-java-psi-impl" ,java-intellij-java-psi-impl)
        ("java-intellij-platform-core-api" ,java-intellij-platform-core-api)
        ("java-intellij-platform-core-impl" ,java-intellij-platform-core-impl)
        ("java-intellij-platform-util" ,java-intellij-platform-util)
+       ("java-intellij-platform-util-rt" ,java-intellij-platform-util-rt)
        ("java-javax-inject" ,java-javax-inject)
        ("java-jsr305" ,java-jsr305)
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)

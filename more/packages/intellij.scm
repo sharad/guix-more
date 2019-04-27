@@ -264,6 +264,41 @@
     (description "")
     (license license:asl2.0)))
 
+(define-public java-intellij-java-psi-impl
+  (package
+    (name "java-intellij-java-psi-impl")
+    (version intellij-community-version)
+    (source (intellij-community-source intellij-community-commit version))
+    (build-system ant-build-system)
+    (arguments
+      ;; TODO: remove these auto-generated files and generate them with
+      ;; java-flex from the same-named file in src, with .flex extension
+      ;; (_JavaLexer, _JavaDocLexer)
+     `(#:source-dir "java/java-psi-impl/src:java/java-psi-impl/gen"
+       #:jar-name "intellij.java.psi-impl.jar"
+       ;; No test
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'fix-asm
+           (lambda _
+             (with-fluids ((%default-port-encoding "ISO-8859-1"))
+               (substitute* (find-files "java/java-psi-impl/src" ".*\\.java$")
+                 (("org.jetbrains.org.objectweb") "org.objectweb")
+                 ;; As in build/asm/3_api_version.patch
+                 (("API_VERSION") "ASM6")))
+             #t)))))
+    (propagated-inputs
+     `(("java-asm" ,java-asm)
+       ("java-intellij-java-psi-api" ,java-intellij-java-psi-api)
+       ("java-intellij-platform-core-impl" ,java-intellij-platform-core-impl)
+       ("java-jetbrains-annotations" ,java-jetbrains-annotations)
+       ("java-streamex" ,java-streamex)))
+    (home-page "https://github.com/JetBrains/intellij-community")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
 ;; Newer versions are not free software anymore
 ;; latest free versions are 1.8.1 and 1.8.0. We require something older for
 ;; intellij though.
