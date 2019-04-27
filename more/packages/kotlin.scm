@@ -80,6 +80,7 @@
                      "java-intellij-java-psi-impl"
                      "java-intellij-platform-core-api"
                      "java-intellij-platform-core-impl"
+                     "java-intellij-platform-extensions"
                      "java-intellij-platform-util"
                      "java-intellij-platform-util-rt"
                      "java-javax-inject"
@@ -98,6 +99,7 @@
        ("java-intellij-java-psi-impl" ,java-intellij-java-psi-impl)
        ("java-intellij-platform-core-api" ,java-intellij-platform-core-api)
        ("java-intellij-platform-core-impl" ,java-intellij-platform-core-impl)
+       ("java-intellij-platform-extensions" ,java-intellij-platform-extensions)
        ("java-intellij-platform-util" ,java-intellij-platform-util)
        ("java-intellij-platform-util-rt" ,java-intellij-platform-util-rt)
        ("java-javax-inject" ,java-javax-inject)
