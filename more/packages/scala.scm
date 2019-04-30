@@ -640,7 +640,7 @@ logging framework for Java.")))
 (define-public scala-ssl-config
   (package
     (name "scala-ssl-config")
-    (version "0.3.7")
+    (version "0.4.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://github.com/lightbend/ssl-config/archive/v"
@@ -648,7 +648,7 @@ logging framework for Java.")))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "0sg477705flhcdnhjyl8v9jkhx1xfsnc73md8iva1agylpj5546f"))))
+                "0gqglz1a43f75giz0ibvk0jvr7dlpjyk5575sidalmhllhnpd631"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f
