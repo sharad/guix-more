@@ -612,7 +612,7 @@ It can also be used as a library.")
     (inputs
      `(("java-guava" ,java-guava)
        ("java-jboss-javassist" ,java-jboss-javassist)
-       ("java-jsonp" ,java-jsonp)))
+       ("java-jsonp-api" ,java-jsonp-api)))
     (native-inputs
      `(("javacc" ,javacc)
        ("java-hamcrest-core" ,java-hamcrest-core)
@@ -1584,61 +1584,209 @@ import org.junit.Assert.*;"))
     (description "")
     (license license:bsd-2)))
 
+(define-public java-xmp
+  (package
+    (name "java-xmp")
+    (version "5.1.3")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "http://download.macromedia.com/pub/developer"
+                                  "/xmp/sdk/XMPCoreJava-" version ".zip"))
+              (sha256
+               (base32
+                "14nai2mmsg7l5ya2y5mx4w4lr1az3sk2fjz6hiy4zdrsavgvl1g7"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:build-target "build"
+       #:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _
+             (chdir "XMPCore")
+             #t))
+         (replace 'install
+           (install-jars "."))
+         (add-after 'install 'install-doc
+           (lambda* (#:key outputs #:allow-other-keys)
+             (copy-recursively
+               "docs"
+               (string-append (assoc-ref outputs "out") "/share/doc/java-xmp"))
+             #t)))))
+    (native-inputs
+     `(("unzip" ,unzip)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3)))
+
+(define-public java-metadata-extractor
+  (package
+    (name "java-metadata-extractor")
+    (version "2.11.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/drewnoakes/metadata-extractor")
+                     (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "06yrq0swrl1r40yjbk5kqzjxr04jlkq9lfi711jvfgjf5kp2qinj"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "metadata-extractor.jar"
+       #:source-dir "Source"
+       #:test-dir "Tests"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'fix-test-dir
+           (lambda _
+             (substitute* "build.xml"
+               (("/java\">") "\">"))
+             #t)))))
+    (propagated-inputs
+     `(("java-xmp" ,java-xmp)))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "https://github.com/drewnoakes/metadata-extractor")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-signpost-core
+  (package
+    (name "java-signpost-core")
+    (version "1.2.1.2")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/mttkay/signpost")
+                     (commit version)))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1l04yj2znch3hpyw90c4g4jan453w7d88l84bgl0c72i2kbb8z7h"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "signpost-core.jar"
+       #:source-dir "signpost-core/src/main/java"
+       #:test-dir "signpost-core/src/test"
+       ;; Tests all fail with InstantiationException from mockito
+       #:tests? #f))
+    (propagated-inputs
+     `(("java-commons-codec" ,java-commons-codec)))
+    ;(native-inputs
+    ; `(("java-cglib" ,java-cglib)
+    ;   ("java-hamcrest-core" ,java-hamcrest-core)
+    ;   ("java-junit" ,java-junit)
+    ;   ("java-mockito-1" ,java-mockito-1)))
+    (home-page "https://github.com/mttkay/signpost")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-svg-salamander
+  (package
+    (name "java-svg-salamander")
+    (version "1.1.2")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/blackears/svgSalamander")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1zv3kjdkf6iqf02x6ln76254y634j2ji448y706a65lsbfjmmicf"))
+              (modules '((guix build utils)))
+              (snippet
+                `(for-each delete-file (find-files "." ".*.jar")))
+              (patches
+                (search-patches "java-svg-salamander-Fix-non-det.patch"))))
+    (build-system ant-build-system)
+    ;(arguments
+    ; `(#:jar-name "svg-core.jar"
+    ;   #:source-dir "svg-core/src/main/java"
+    ;   #:tests? #f; no tests
+    ;   #:phases
+    ;   (modify-phases %standard-phases
+    ;     (add-before 'build 'copy-res
+    ;       (lambda _
+    ;         (copy-recursively "src/main/res" "build/classes")
+    ;         #t)))))
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'unpack 'chdir
+           (lambda _
+             (chdir "svg-core")
+             #t))
+         (add-before 'build 'copy-jars
+           (lambda* (#:key inputs #:allow-other-keys)
+             (copy-file (car (find-files (assoc-ref inputs "java-javacc") "\\.jar$"))
+                        "../libraries/javacc.jar")
+             (copy-file (car (find-files (assoc-ref inputs "ant") "ant\\.jar$"))
+                        "../libraries/ant.jar")
+             #t))
+         (replace 'install
+           (install-jars "dist")))))
+    (native-inputs
+     `(("java-javacc" ,java-javacc)))
+    (home-page "https://github.com/blackears/svgSalamander")
+    (synopsis "")
+    (description "")
+    (license license:bsd-2)))
+
 (define-public java-josm
   (package
     (name "java-josm")
-    (version "14824")
+    (version "15031")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                      (url "https://github.com/openstreetmap/josm.git")
-                     (commit "4b30f7f925343c90f40d02a350645c890eb7af9e")))
-              ;(method svn-fetch)
-              ;(uri (svn-reference
-              ;      (url "https://svn.openstreetmap.org/applications/editors/josm")
-              ;      (revision (string->number version))))
+                     (commit "04d4c64b1b5698c0f9af40938f32194bc25bf75f")))
               (sha256
                (base32
-                "0psjf9xjvhn1zz8d6sp0jhdzcxk3nwvj16bz6lkyknb8zwc22xds"))
+                "0dgxa0yqh2sxl6nvpzw9507y5rdfxvmy54bhk2gfk1hxh3hvgmxh"))
               (file-name (git-file-name name version))
               (modules '((guix build utils)))
               (snippet
                 `(begin
                    (for-each delete-file (find-files "." ".*.jar"))
-                   ;(with-directory-excursion "core"
-                   ;  (delete-file-recursively "test/lib")
-                   ;  (delete-file-recursively "windows"))
+                   (for-each delete-file-recursively
+                     '("src/org/apache"
+                       "src/org/glassfish"
+                       "src/org/tukaani"
+                       "src/javax"
+                       "src/oauth"
+                       "src/com"))
                    #t))))
     (build-system ant-build-system)
     (native-inputs
      `(("java-javacc" ,java-javacc)))
-    (propagated-inputs
-     `(("java-jmapviewer" ,java-jmapviewer)
-       ("java-tomcat" ,java-tomcat)
-       ("java-brotli-dec" ,java-brotli-dec)
-       ("java-xz" ,java-xz)
-       ("java-velocity" ,java-velocity)
+    (inputs
+     `(("java-commons-jcs" ,java-commons-jcs)
+       ("java-commons-compress" ,java-commons-compress-latest)
+       ("java-jmapviewer" ,java-jmapviewer)
+       ("java-jsonp-api" ,java-jsonp-api)
+       ("java-jsonp-impl" ,java-jsonp-impl); runtime dependency
+       ("java-metadata-extractor" ,java-metadata-extractor)
        ("java-openjfx" ,java-openjfx)
        ("java-openjfx-base" ,java-openjfx-base)
        ("java-openjfx-media" ,java-openjfx-media)
        ("java-openjfx-graphics" ,java-openjfx-graphics)
-       ("java-avalon-framework-api" ,java-avalon-framework-api)
-       ("java-httpcomponents-httpclient" ,java-httpcomponents-httpclient)
-       ("java-httpcomponents-httpcore" ,java-httpcomponents-httpcore)
-       ("java-commons-jcs" ,java-commons-jcs)
-       ("java-commons-collections" ,java-commons-collections)
-       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
-       ("java-commons-compress" ,java-commons-compress-latest)
+       ("java-signpost-core" ,java-signpost-core)
+       ("java-svg-salamander" ,java-svg-salamander)
        ("java-zstd" ,java-zstd)))
     (arguments
      `(#:tests? #f
        #:jar-name "josm.jar"
        #:phases
        (modify-phases %standard-phases
-         ;(add-after 'unpack 'chdir
-         ;  (lambda _
-         ;    (chdir "core")
-         ;    #t))
          (add-after 'unpack 'rm-build.xml
            (lambda* _
              (delete-file "build.xml")
@@ -2854,7 +3002,7 @@ import javax.el.ELContext;"))
              #t)))))
     (inputs
      `(("java-jboss-modules" ,java-jboss-modules)
-       ("java-jsonp" ,java-jsonp)))
+       ("java-jsonp-api" ,java-jsonp-api)))
        ;("java-wildfly-common" ,java-wildfly-common)))
     (home-page "")
     (synopsis "")
@@ -2876,7 +3024,7 @@ import javax.el.ELContext;"))
              #t)))))
     (inputs
      `(("java-jboss-modules" ,java-jboss-modules)
-       ("java-jsonp" ,java-jsonp)
+       ("java-jsonp-api" ,java-jsonp-api)
        ("java-wildfly-common" ,java-wildfly-common)))))
 
 (define-public java-jboss-logging
@@ -4663,25 +4811,19 @@ import org.objenesis.ObjenesisException;"))
 (define-public java-commons-pool2
   (package
     (name "java-commons-pool2")
-    (version "2.4.2")
+    (version "2.6.2")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/commons/pool/source/"
                                   "commons-pool2-" version "-src.tar.gz"))
               (sha256
                (base32
-                "11hbkh9djzm2v486ypykmawf92li7z20xazpk5dp9zsl937s024f"))))
+                "1fi1hgqmq01bs6azbj3sfswxzadp2r8sjjfiq6ryilz1m50kvrv6"))))
     (arguments
-     `(#:build-target "build-jar"
-       #:test-target "test"
-       #:phases
-       (modify-phases %standard-phases
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((target (string-append (assoc-ref outputs "out")
-                                          "/share/java")))
-               (install-file (string-append "dist/commons-pool2-" ,version ".jar")
-                             target)))))))
+     `(#:jar-name "common-pool.jar"
+       #:source-dir "src/main/java"
+       #:test-exclude
+       (list "**/PerformanceTest.java")))
     (build-system ant-build-system)
     (inputs
      `(("java-cglib" ,java-cglib)))
@@ -4698,14 +4840,14 @@ import org.objenesis.ObjenesisException;"))
 (define-public java-commons-dbcp2
   (package
     (name "java-commons-dbcp2")
-    (version "2.1")
+    (version "2.6.0")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/commons/dbcp/source/"
                                   "commons-dbcp2-" version "-src.tar.gz"))
               (sha256
                (base32
-                "023p6qlwyj8i75gcycxqi6i9b3rxpzq5pim0l37i8lrsvhhm19z1"))))
+                "0axbvcbnf2l70fc3ybrlp3siw2w4ka9mia2pnx4py8gz54cpw3rc"))))
     (arguments
      `(#:source-dir "src/main/java"
        #:jar-name "java-commons-dbcp.jar"
@@ -4748,14 +4890,14 @@ import org.objenesis.ObjenesisException;"))
 (define-public java-commons-jcs
   (package
     (name "java-commons-jcs")
-    (version "2.1")
+    (version "2.2.1")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/commons/jcs/source/"
                                   "commons-jcs-dist-" version "-src.tar.gz"))
               (sha256
                (base32
-                "17l78mpxx1qkgp213b91sl69wawv6xzgllr479mygbg76ygwpffv"))))
+                "0syhq2npjbrl0azqfjm0gvash1qd5qjy4qmysxcrqjsk0nf9fa1q"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "commons-jcs.jar"
@@ -4769,13 +4911,14 @@ import org.objenesis.ObjenesisException;"))
              (substitute* "commons-jcs-core/src/main/java/org/apache/commons/jcs/auxiliary/disk/jdbc/dsfactory/SharedPoolDataSourceFactory.java"
                 (("commons.dbcp") "commons.dbcp2")
                 ((".*\\.setMaxActive.*") ""))
-             ;; Remove dependency on velocity-tools
-             (delete-file "commons-jcs-core/src/main/java/org/apache/commons/jcs/admin/servlet/JCSAdminServlet.java"))))))
+             ;;; Remove dependency on velocity-tools
+             (delete-file "commons-jcs-core/src/main/java/org/apache/commons/jcs/admin/servlet/JCSAdminServlet.java")
+             #t)))))
     (propagated-inputs
-     `(("java-commons-logging-minimal" ,java-commons-logging-minimal)
+     `(("java-classpathx-servletapi" ,java-classpathx-servletapi)
+       ("java-commons-logging-minimal" ,java-commons-logging-minimal)
        ("java-commons-httpclient" ,java-commons-httpclient)
-       ("java-commons-dbcp" ,java-commons-dbcp2)
-       ("java-velocity" ,java-velocity)))
+       ("java-commons-dbcp" ,java-commons-dbcp2)))
     (native-inputs
      `(("java-junit" ,java-junit)))
     (home-page "https://commons.apache.org/proper/commons-jcs/")
@@ -6230,9 +6373,9 @@ and it is extensible to others.")
     (description "")
     (license license:bsd-2)))
 
-(define-public java-jsonp
+(define-public java-jsonp-api
   (package
-    (name "java-jsonp")
+    (name "java-jsonp-api")
     (version "1.1.3")
     (source (origin
               (method url-fetch)
@@ -6244,7 +6387,7 @@ and it is extensible to others.")
                 "15d7rp4xb482h8r0j3j83wa34bmz84q89s9n8ydfgz6l492syfhc"))))
     (build-system ant-build-system)
     (arguments
-     `(#:jar-name "jsonp.jar"
+     `(#:jar-name "jsonp-api.jar"
        #:tests? #f
        #:source-dir "api/src/main/java"
        #:test-dir "api/src/test"))
@@ -6253,6 +6396,18 @@ and it is extensible to others.")
     (description "")
     (license (list license:gpl2
                    license:epl2.0))))
+
+(define-public java-jsonp-impl
+  (package
+    (inherit java-jsonp-api)
+    (name "java-jsonp-impl")
+    (arguments
+     `(#:jar-name "jsonp-impl.jar"
+       #:tests? #f
+       #:source-dir "impl/src/main/java"
+       #:test-dir "impl/src/test"))
+    (propagated-inputs
+     `(("java-jsonp-api" ,java-jsonp-api)))))
 
 (define-public ant-junit
   (package
