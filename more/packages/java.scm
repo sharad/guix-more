@@ -1723,7 +1723,7 @@ an independent project by the JOSM team.")
              #t))
          (add-before 'build 'copy-jars
            (lambda* (#:key inputs #:allow-other-keys)
-             (copy-file (car (find-files (assoc-ref inputs "java-javacc") "\\.jar$"))
+             (copy-file (car (find-files (assoc-ref inputs "javacc") "\\.jar$"))
                         "../libraries/javacc.jar")
              (copy-file (car (find-files (assoc-ref inputs "ant") "ant\\.jar$"))
                         "../libraries/ant.jar")
@@ -1731,7 +1731,7 @@ an independent project by the JOSM team.")
          (replace 'install
            (install-jars "dist")))))
     (native-inputs
-     `(("java-javacc" ,java-javacc)))
+     `(("javacc" ,javacc)))
     (home-page "https://github.com/blackears/svgSalamander")
     (synopsis "")
     (description "")
@@ -1764,7 +1764,7 @@ an independent project by the JOSM team.")
                    #t))))
     (build-system ant-build-system)
     (native-inputs
-     `(("java-javacc" ,java-javacc)))
+     `(("javacc" ,javacc)))
     (inputs
      `(("java-commons-jcs" ,java-commons-jcs)
        ("java-commons-compress" ,java-commons-compress-latest)
@@ -4561,7 +4561,7 @@ import org.objenesis.ObjenesisException;"))
                           (string-append dir "/velocity-1.7.jar")))
              #t)))))
     (native-inputs
-     `(("javacc" ,java-javacc)
+     `(("javacc" ,javacc)
        ("antlr" ,antlr2)))
     (propagated-inputs
      `(("java-commons-collections" ,java-commons-collections)
@@ -4976,57 +4976,10 @@ import org.objenesis.ObjenesisException;"))
     (description "")
     (license license:asl2.0)))
 
-(define-public java-javacc
-  (package
-    (name "java-javacc")
-    (version "7.0.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/javacc/javacc/archive/release_"
-                                  (string-map (lambda (x) (if (eq? x #\.) #\_ x)) version)
-                                  ".tar.gz"))
-              (sha256
-               (base32
-                "0yf93993nlsk5kijazddi5621x4y2bwq3vl46j8h8f7di2z9jv2h"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:test-target "unittest"
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'remove-binaries
-           (lambda* _
-             ;; Note: we cannot remove bootstrap/javacc.jar because no version of javacc comes with no bootstrap
-             (delete-file-recursively "lib")))
-         (replace 'install
-           (lambda* (#:key outputs inputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (dir (string-append out "/share/java"))
-                    (bin (string-append out "/bin")))
-               (mkdir-p dir)
-               (mkdir-p bin)
-               (copy-file "target/javacc.jar" (string-append dir "/javacc.jar"))
-               (with-output-to-file (string-append bin "/javacc")
-                 (lambda _
-                   (display
-                     (string-append "#!/bin/sh\n"
-                                    (assoc-ref inputs "jdk") "/bin/java"
-                                    " -cp " dir "/javacc.jar" " `basename $0`" " $*"))))
-               (chmod (string-append bin "/javacc") #o755)
-               (symlink (string-append bin "/javacc")
-                        (string-append bin "/jjdoc"))
-               (symlink (string-append bin "/javacc")
-                        (string-append bin "/jjtree"))))))))
-    (native-inputs
-     `(("java-junit" ,java-junit)))
-    (home-page "https://javacc.org")
-    (synopsis "")
-    (description "")
-    (license license:bsd-3)))
-
 ;; This version is required by velocity 2.0
 (define-public java-javacc-5
   (package
-    (inherit java-javacc)
+    (inherit javacc)
     (version "5.0")
     (source (origin
               (method url-fetch)
@@ -5035,7 +4988,7 @@ import org.objenesis.ObjenesisException;"))
                (base32
                 "0w3kl5zal9g0gwpcnlii6spgvb2yi3dpj1vz592ly18h6yfswv3n"))))
     (arguments
-      (substitute-keyword-arguments (package-arguments java-javacc)
+      (substitute-keyword-arguments (package-arguments javacc)
         ((#:phases phases)
          `(modify-phases ,phases
             ;; This phase renames the generated jar so it can be handled by
