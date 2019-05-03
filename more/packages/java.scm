@@ -1312,15 +1312,15 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
   (package
     (name "java-openjfx")
     ;; This is the last version that can be built for java8
-    (version "8u141-b14")
+    (version "8.202")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://hg.openjdk.java.net/openjfx/8u-dev/rt"
-                                  "/archive/d6db71e77bb1.tar.gz"))
+                                  "/archive/85d09981ae0d.tar.gz"))
               (file-name (string-append name "-" version ".tar.gz"))
               (sha256
                (base32
-                "1qjmwrrkk5z3nzz08ihy0qww8y0922wiil95pz2na0d4ql3cx625"))))
+                "038yg2c9swmckw5ch8cvzxf5hw0fdvxa3wljnw5yhbhqgvawpz3a"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "java-openjfx.jar"
@@ -1338,7 +1338,7 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
     (native-inputs
      `(("java-junit" ,java-junit)
        ("java-hamcrest-core" ,java-hamcrest-core)))
-    (home-page "http://openjdk.java.net/projects/openjfx/")
+    (home-page "https://openjfx.io")
     (synopsis "")
     (description "")
     (license license:gpl2)));with classpath exception
@@ -1531,14 +1531,14 @@ import org.junit.Assert.*;"))
 (define-public java-jmapviewer
   (package
     (name "java-jmapviewer")
-    (version "2.8")
+    (version "2.9")
     (source (origin
               (method url-fetch)
               (uri (string-append "https://svn.openstreetmap.org/applications/viewer/jmapviewer/releases/"
                                   version "/JMapViewer-" version "-Source.zip"))
               (sha256
                (base32
-                "1y4sgk9d7ii89w1vdjj9128fnzn81l6gm7wgc9r5j9f34iq871y7"))))
+                "06jilhvsx662raix58g8ccl56d1pmirwlys9px0mdg7j46wixk6l"))))
     (build-system ant-build-system)
     (native-inputs
      `(("unzip" ,unzip)))
@@ -1556,8 +1556,10 @@ import org.junit.Assert.*;"))
                (mkdir-p dir)
                (copy-file "JMapViewer.jar" (string-append dir "JMapViewer.jar"))))))))
     (home-page "https://wiki.openstreetmap.org/wiki/JMapViewer")
-    (synopsis "")
-    (description "")
+    (synopsis "OSM map integration in Java")
+    (description "JMapViewer is a Java component which allows to easily
+integrate an OSM map view into your Java application.  It is maintained as
+an independent project by the JOSM team.")
     (license license:gpl2)))
 
 (define-public java-zstd
@@ -1677,11 +1679,6 @@ import org.junit.Assert.*;"))
        #:tests? #f))
     (propagated-inputs
      `(("java-commons-codec" ,java-commons-codec)))
-    ;(native-inputs
-    ; `(("java-cglib" ,java-cglib)
-    ;   ("java-hamcrest-core" ,java-hamcrest-core)
-    ;   ("java-junit" ,java-junit)
-    ;   ("java-mockito-1" ,java-mockito-1)))
     (home-page "https://github.com/mttkay/signpost")
     (synopsis "")
     (description "")
