@@ -1780,8 +1780,7 @@ import org.junit.Assert.*;"))
        ("java-openjfx-media" ,java-openjfx-media)
        ("java-openjfx-graphics" ,java-openjfx-graphics)
        ("java-signpost-core" ,java-signpost-core)
-       ("java-svg-salamander" ,java-svg-salamander)
-       ("java-zstd" ,java-zstd)))
+       ("java-svg-salamander" ,java-svg-salamander)))
     (arguments
      `(#:tests? #f
        #:jar-name "josm.jar"
