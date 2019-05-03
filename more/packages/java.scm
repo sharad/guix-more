@@ -6658,7 +6658,7 @@ and it is extensible to others.")
                                                   ".*\\.jar"))
                                           '("antlr3" "java-stringtemplate"
                                             "java-antlr4-runtime" "java-treelayout"
-                                            "java-json" "java-icu4j")))
+                                            "java-jsonp-api" "java-icu4j")))
                                       ":")
                                     " org.antlr.v4.Tool $*"))))
                (chmod (string-append bin "/antlr4") #o755))))
@@ -6704,7 +6704,7 @@ and it is extensible to others.")
     (inputs
      `(("antlr3" ,antlr3)
        ("java-icu4j" ,java-icu4j)
-       ("java-json" ,java-json)
+       ("java-jsonp-api" ,java-jsonp-api)
        ("java-treelayout" ,java-treelayout)
        ("java-stringtemplate" ,java-stringtemplate)))
     (native-inputs
