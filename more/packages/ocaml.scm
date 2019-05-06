@@ -324,14 +324,14 @@ provers.")
 (define-public compcert
   (package
     (name "compcert")
-    (version "3.3")
+    (version "3.5")
     (source (origin
               (method url-fetch)
               (uri (string-append "http://compcert.inria.fr/release/compcert-"
                                   version ".tgz"))
               (sha256
                (base32
-                "16xrqcwak1v1fk5ndx6jf1yvxv3adsr7p7z34gfm2mpggxnq0xwn"))))
+                "02dmd4iw6b5i38svaycjsywlpmg0kaypc01vxi6ndyywx6giz80y"))))
     (build-system gnu-build-system)
     (arguments
      `(#:phases
@@ -360,7 +360,8 @@ provers.")
        #:tests? #f))
     (native-inputs
      `(("ocaml" ,ocaml)
-       ("coq" ,coq-8.7)))
+       ("ocaml-findlib" ,ocaml-findlib); for menhir --suggest-menhirlib
+       ("coq" ,coq)))
     (inputs
      `(("menhir" ,ocaml-menhir)))
     (home-page "http://compcert.inria.fr")
