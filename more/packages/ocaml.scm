@@ -138,12 +138,6 @@ assistant to write formal mathematical proofs using a variety of theorem
 provers.")
     (license license:gpl2+)))
 
-(define-public ocaml4.02-camlp5
-  (package
-    (inherit camlp5)
-    (inputs
-     `(("ocaml" ,ocaml-4.02)))))
-
 (define-public coq-8.6
   (package
     (inherit coq)
@@ -158,10 +152,24 @@ provers.")
                (base32
                 "02nm5sn79hrb9fdmkhyclk80jydadf4jcafmr3idwr5h4z56qbms"))))
     (arguments
-     `(#:ocaml ,ocaml-4.02
-       #:findlib ,ocaml4.02-findlib
-       #:phases
+     `(#:phases
        (modify-phases %standard-phases
+         (add-before 'configure 'fix-latest-ocaml
+           (lambda* (#:key inputs #:allow-other-keys)
+             (substitute* "Makefile.build"
+               (("MLINCLUDES=") (string-append
+                                  "MLINCLUDES=-I "
+                                  (assoc-ref inputs "ocaml-num")
+                                  "/lib/ocaml/site-lib ")))
+             (substitute* "configure.ml"
+               (("CAMLFLAGS=") "CAMLFLAGS=-unsafe-string -package num "))
+             (substitute* "ide/ideutils.ml"
+               (("String.blit") "Bytes.blit"))
+             (substitute* "tools/coqmktop.ml"
+               (("nums") (string-append (assoc-ref inputs "ocaml-num")
+                                        "/lib/ocaml/site-lib/nums"))
+               (("\"-linkall\"") "\"-linkall\" :: \"-package\" :: \"num\""))
+             #t))
          (replace 'configure
            (lambda* (#:key outputs #:allow-other-keys)
              (let* ((out (assoc-ref outputs "out"))
@@ -187,9 +195,10 @@ provers.")
              #t)))))
     (native-inputs '())
     (inputs
-     `(("lablgtk" ,ocaml4.02-lablgtk)
+     `(("lablgtk" ,lablgtk)
        ("python" ,python-2)
-       ("camlp5" ,ocaml4.02-camlp5)))))
+       ("camlp5" ,camlp5)
+       ("ocaml-num" ,ocaml-num)))))
 
 (define-public coq-8.7
   (package
