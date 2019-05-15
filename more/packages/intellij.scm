@@ -158,6 +158,10 @@
        #:tests? #f
        #:phases
        (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "platform/util/resources" "build/classes")
+             #t))
          (add-before 'build 'remove-apple
            (lambda _
              (delete-file "platform/util/src/com/intellij/util/AppleHiDPIScaledImage.java")
@@ -217,7 +221,9 @@
     (propagated-inputs
      `(("java-automaton" ,java-automaton)
        ("java-intellij-platform-extensions" ,java-intellij-platform-extensions)
+       ("java-intellij-platform-resources" ,java-intellij-platform-resources)
        ("java-intellij-platform-util" ,java-intellij-platform-util)
+       ("java-intellij-resources" ,java-intellij-resources)
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
        ("java-trove4j-intellij" ,java-trove4j-intellij)))
     (home-page "https://github.com/JetBrains/intellij-community")
@@ -254,7 +260,14 @@
      `(#:source-dir "java/java-psi-api/src"
        #:jar-name "intellij.java.psi-api.jar"
        ;; No test
-       #:tests? #f))
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "java/java-psi-api/src/messages"
+                               "build/classes/messages")
+             #t)))))
     (propagated-inputs
      `(("java-intellij-platform-core-api" ,java-intellij-platform-core-api)
        ("java-intellij-platform-util" ,java-intellij-platform-util)
@@ -287,6 +300,13 @@
                  (("org.jetbrains.org.objectweb") "org.objectweb")
                  ;; As in build/asm/3_api_version.patch
                  (("API_VERSION") "ASM6")))
+             #t))
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "java/java-psi-impl/src/META-INF"
+                               "build/classes/META-INF")
+             (copy-recursively "java/java-psi-impl/src/messages"
+                               "build/classes/intellij/java/resources/en")
              #t)))))
     (propagated-inputs
      `(("java-asm" ,java-asm)
@@ -294,6 +314,63 @@
        ("java-intellij-platform-core-impl" ,java-intellij-platform-core-impl)
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
        ("java-streamex" ,java-streamex)))
+    (home-page "https://github.com/JetBrains/intellij-community")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-intellij-platform-resources
+  (package
+    (name "java-intellij-platform-resources")
+    (version intellij-community-version)
+    (source (intellij-community-source intellij-community-commit version))
+    (build-system ant-build-system)
+    (arguments
+      ;; TODO: remove these auto-generated files and generate them with
+      ;; java-flex from the same-named file in src, with .flex extension
+      ;; (_JavaLexer, _JavaDocLexer)
+     `(#:source-dir "platform/platform-resources"
+       #:jar-name "intellij.platform.resources.jar"
+       ;; No test
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "platform/platform-resources/src"
+                               "build/classes")
+             #t)))))
+    (propagated-inputs '())
+    (native-inputs '())
+    (inputs '())
+    (home-page "https://github.com/JetBrains/intellij-community")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-intellij-resources
+  (package
+    (name "java-intellij-resources")
+    (version intellij-community-version)
+    (source (intellij-community-source intellij-community-commit version))
+    (build-system ant-build-system)
+    (arguments
+      ;; TODO: remove these auto-generated files and generate them with
+      ;; java-flex from the same-named file in src, with .flex extension
+      ;; (_JavaLexer, _JavaDocLexer)
+     `(#:source-dir "resources"
+       #:jar-name "intellij.resources.jar"
+       ;; No test
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "resources/src" "build/classes")
+             #t)))))
+    (propagated-inputs '())
+    (native-inputs '())
+    (inputs '())
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")

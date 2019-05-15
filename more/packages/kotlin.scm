@@ -41,6 +41,33 @@
   #:use-module (more packages intellij)
   #:use-module (more packages java))
 
+(define-public java-former-dart-ast
+  (let ((commit "845189ca287c96b864bd1442fe31e591a9c6f883"))
+    (package
+      (name "java-former-dart-ast")
+      (version (git-version "0.0.0" "1" commit))
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                       (url "https://github.com/develar/former-dast-ast")
+                       (commit commit)))
+                (file-name (git-file-name name version))
+                (sha256
+                 (base32
+                  "0hl3rij3kdl0c8l6avwg1ibscjpymdqg6irwbqric6sl5fawlhwz"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "dart-ast.jar"
+       ;; No tests
+       #:tests? #f))
+    (propagated-inputs
+     `(("java-intellij-platform-util" ,java-intellij-platform-util)
+       ("java-jetbrains-annotations" ,java-jetbrains-annotations)))
+    (home-page "https://github.com/develar/former-dast-ast")
+    (synopsis "")
+    (description "")
+    (license license:bsd-3))))
+
 (define-public kotlin-0
   (package
     (name "kotlin")
@@ -49,21 +76,29 @@
               (method git-fetch)
               (uri (git-reference
                      (url "https://github.com/JetBrains/kotlin")
+                     ;; build-0.4.424
                      (commit "2f47e30a1a12347759dbb8707f5137178de65696")))
               (file-name (git-file-name name version))
               (sha256
                (base32
                 "0f60v3swyrkh41c4lhha64njivvsnr7p6yz7i1vjmvs697pjvqg2"))
+              (patches
+                (search-patches "kotlin-Update-for-dependencies.patch"))
               (modules '((guix build utils)))
               (snippet
                 `(begin
                    (for-each delete-file (find-files "." ".*.jar$"))
-                   (mkdir "ideaSDK")
+                   ;; TODO: Remove these files, but they are needed by the
+                   ;; process that generate them...
+                   ;(for-each delete-file (find-files "." ".*Generated.java$"))
+                   (mkdir-p "ideaSDK/core")
+                   (mkdir "ideaSDK/lib")
                    (mkdir "dependencies")
                    #t))))
     (build-system ant-build-system)
     (arguments
      `(#:build-target "dist"
+       #:make-flags (list "-Dshrink=false")
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-jars
@@ -75,6 +110,7 @@
                  (map (lambda (input)
                         (find-files (assoc-ref inputs input) ".*.jar$"))
                    '("java-asm" "java-asm-commons"
+                     "java-former-dart-ast"
                      "java-guava"
                      "java-intellij-java-psi-api"
                      "java-intellij-java-psi-impl"
@@ -84,9 +120,24 @@
                      "java-intellij-platform-util"
                      "java-intellij-platform-util-rt"
                      "java-javax-inject"
+                     "java-jline-2"
                      "java-jsr305"
                      "java-jetbrains-annotations"
-                     "java-trove4j-intellij"))))
+                     "java-spullara-cli-parser"
+                     "java-trove4j-intellij"
+                     ;; propagated inputs
+                     "java-intellij-platform-resources"
+                     "java-intellij-resources"
+                     "java-picocontainer-1"
+                     ;; implicit input
+                     "ant"))))
+             #t))
+         (add-before 'build 'fix-write-permission
+           (lambda _
+             (with-directory-excursion "compiler/frontend.java/src/org/jetbrains/jet"
+               (chmod
+                 "lang/resolve/java/JavaToKotlinMethodMapGenerated.java"
+                 #o644))
              #t))
          (add-before 'build 'fix-asm
            (lambda _
@@ -96,6 +147,7 @@
     (inputs
      `(("java-asm" ,java-asm)
        ("java-asm-commons" ,java-asm-commons-7)
+       ("java-former-dart-ast" ,java-former-dart-ast)
        ("java-guava" ,java-guava)
        ("java-intellij-java-psi-api" ,java-intellij-java-psi-api)
        ("java-intellij-java-psi-impl" ,java-intellij-java-psi-impl)
@@ -105,9 +157,13 @@
        ("java-intellij-platform-util" ,java-intellij-platform-util)
        ("java-intellij-platform-util-rt" ,java-intellij-platform-util-rt)
        ("java-javax-inject" ,java-javax-inject)
+       ("java-jline-2" ,java-jline-2)
        ("java-jsr305" ,java-jsr305)
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
+       ("java-spullara-cli-parser" ,java-spullara-cli-parser)
        ("java-trove4j-intellij" ,java-trove4j-intellij)))
+    (native-inputs
+     `(("java-jarjar" ,java-jarjar)))
     (home-page "")
     (synopsis "")
     (description "")

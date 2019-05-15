@@ -1,0 +1,382 @@
+From 0a2f04444a7cf9e23c8d54ca06f56975e04682d4 Mon Sep 17 00:00:00 2001
+From: LEPILLER Julien <julien.lepiller@irisa.fr>
+Date: Wed, 15 May 2019 13:21:32 +0200
+Subject: [PATCH] Update for newer dependencies.
+
+---
+ build.xml                                     | 181 ++++--------------
+ .../cli/jvm/compiler/JetCoreEnvironment.java  |  24 ++-
+ .../resolve/lazy/IdentitySmartPointer.java    |   5 +
+ .../JetCodeBlockModificationListener.java     |   2 +-
+ .../asJava/KotlinJavaFileStubProvider.java    |   5 +-
+ ...otlinLightClassForExplicitDeclaration.java |   2 +-
+ .../jet/asJava/StubClassBuilder.java          |   4 +-
+ .../java/util/concurrent/annotations.xml      |  10 -
+ 8 files changed, 71 insertions(+), 162 deletions(-)
+
+diff --git a/build.xml b/build.xml
+index b71942d..1d5f46b 100644
+--- a/build.xml
++++ b/build.xml
+@@ -108,52 +108,46 @@
+     </target>
+ 
+     <target name="compilerSources">
+-        <if>
+-            <istrue value="${generate.javadoc}"/>
++        <jar jarfile="${output}/kotlin-compiler-sources.jar">
++            <!-- TODO How to convert it from pathset or dirset ? -->
++            <fileset dir="compiler/frontend/src"/>
++            <fileset dir="compiler/frontend.java/src"/>
++            <fileset dir="compiler/backend/src"/>
++            <fileset dir="compiler/cli/src"/>
++            <fileset dir="j2k/src"/>
++            <fileset dir="compiler/util/src"/>
++            <fileset dir="compiler/jet.as.java.psi/src"/>
++            <fileset dir="runtime/src"/>
++            <fileset dir="js/js.translator/src"/>
++            <zipfileset file="${kotlin-home}/build.txt" prefix="META-INF"/>
+ 
+-            <then>
+-                <jar jarfile="${output}/kotlin-compiler-sources.jar">
+-                    <!-- TODO How to convert it from pathset or dirset ? -->
+-                    <fileset dir="compiler/frontend/src"/>
+-                    <fileset dir="compiler/frontend.java/src"/>
+-                    <fileset dir="compiler/backend/src"/>
+-                    <fileset dir="compiler/cli/src"/>
+-                    <fileset dir="j2k/src"/>
+-                    <fileset dir="compiler/util/src"/>
+-                    <fileset dir="compiler/jet.as.java.psi/src"/>
+-                    <fileset dir="runtime/src"/>
+-                    <fileset dir="js/js.translator/src"/>
+-                    <zipfileset file="${kotlin-home}/build.txt" prefix="META-INF"/>
++            <manifest>
++                <attribute name="Built-By" value="JetBrains"/>
+ 
+-                    <manifest>
+-                        <attribute name="Built-By" value="JetBrains"/>
++                <attribute name="Implementation-Vendor" value="JetBrains"/>
++                <attribute name="Implementation-Title" value="Kotlin Compiler Sources"/>
++                <attribute name="Implementation-Version" value="${build.number}"/>
++            </manifest>
++        </jar>
+ 
+-                        <attribute name="Implementation-Vendor" value="JetBrains"/>
+-                        <attribute name="Implementation-Title" value="Kotlin Compiler Sources"/>
+-                        <attribute name="Implementation-Version" value="${build.number}"/>
+-                    </manifest>
+-                </jar>
++        <delete dir="${output}/kotlin-compiler-javadoc" failonerror="false" />
++        <javadoc destdir="${output}/kotlin-compiler-javadoc"
++                 sourcepathref="compilerSources.path"
++                 classpathref="classpath"
++                 linksource="yes"
++                 windowtitle="Kotlin Compiler"/>
++        <jar jarfile="${output}/kotlin-compiler-javadoc.jar">
++            <fileset dir="${output}/kotlin-compiler-javadoc"/>
++            <zipfileset file="${kotlin-home}/build.txt" prefix="META-INF"/>
+ 
+-                <delete dir="${output}/kotlin-compiler-javadoc" failonerror="false" />
+-                <javadoc destdir="${output}/kotlin-compiler-javadoc"
+-                         sourcepathref="compilerSources.path"
+-                         classpathref="classpath"
+-                         linksource="yes"
+-                         windowtitle="Kotlin Compiler"/>
+-                <jar jarfile="${output}/kotlin-compiler-javadoc.jar">
+-                    <fileset dir="${output}/kotlin-compiler-javadoc"/>
+-                    <zipfileset file="${kotlin-home}/build.txt" prefix="META-INF"/>
++            <manifest>
++                <attribute name="Built-By" value="JetBrains"/>
+ 
+-                    <manifest>
+-                        <attribute name="Built-By" value="JetBrains"/>
+-
+-                        <attribute name="Implementation-Vendor" value="JetBrains"/>
+-                        <attribute name="Implementation-Title" value="Kotlin Compiler Javadoc"/>
+-                        <attribute name="Implementation-Version" value="${build.number}"/>
+-                    </manifest>
+-                </jar>
+-            </then>
+-        </if>
++                <attribute name="Implementation-Vendor" value="JetBrains"/>
++                <attribute name="Implementation-Title" value="Kotlin Compiler Javadoc"/>
++                <attribute name="Implementation-Version" value="${build.number}"/>
++            </manifest>
++        </jar>
+     </target>
+ 
+   <target name="jslib">
+@@ -278,109 +272,8 @@
+ 
+         <delete file="${kotlin-home}/lib/kotlin-compiler.jar" failonerror="false"/>
+ 
+-        <if>
+-            <isfalse value="${shrink}"/>
+-
+-            <then>
+-                <copy file="${output}/kotlin-compiler-jarjar.jar"
+-                      tofile="${kotlin-home}/lib/kotlin-compiler.jar"/>
+-            </then>
+-
+-            <else>
+-                <cleandir dir="${output}/kotlin-compiler.exploded"/>
+-                <unzip src="${output}/kotlin-compiler-jarjar.jar" dest="${output}/kotlin-compiler.exploded"/>
+-
+-                <!-- Clean JarJar result -->
+-                <jar jarfile="${output}/kotlin-compiler-before-proguard.jar"
+-                     manifest="${output}/kotlin-compiler.exploded/META-INF/MANIFEST.MF">
+-
+-                    <fileset dir="${output}/kotlin-compiler.exploded">
+-                        <include name="**/*.class"/>
+-                        <include name="**/*.properties"/>
+-                        <include name="**/*.jet"/>
+-                        <include name="**/*.kt"/>
+-                        <include name="META-INF/services/**"/>
+-                        <include name="META-INF/native/**"/>
+-                        <include name="messages/**"/>
+-                    </fileset>
+-                    <zipfileset file="${kotlin-home}/build.txt" prefix="META-INF"/>
+-                </jar>
+-                <delete dir="${output}/kotlin-compiler.exploded"/>
+-
+-                <available property="rtjar" value="${java.home}/lib/rt.jar" file="${java.home}/lib/rt.jar"/>
+-                <available property="rtjar" value="${java.home}/../Classes/classes.jar" file="${java.home}/../Classes/classes.jar"/>
+-
+-                <proguard><![CDATA[
+-                    -injars '${output}/kotlin-compiler-before-proguard.jar'
+-                    -outjars '${kotlin-home}/lib/kotlin-compiler.jar'
+-
+-                    -dontwarn org.jetbrains.jet.internal.com.intellij.util.**
+-                    -dontwarn org.jetbrains.jet.internal.com.intellij.codeInsight.**
+-                    -dontwarn org.jetbrains.jet.internal.com.thoughtworks.xstream.**
+-                    -dontwarn org.fusesource.**
+-
+-                    -libraryjars '${rtjar}'
+-
+-                    -target 1.6
+-                    -dontoptimize
+-                    -dontobfuscate
+-
+-                    -keep class org.fusesource.** { *; }
+-
+-                    -keepclasseswithmembers public class * {
+-                        public static void main(java.lang.String[]);
+-                    }
+-
+-                    -keep class org.jetbrains.annotations.** {
+-                        public protected *;
+-                    }
+-
+-                    -keep class org.jetbrains.k2js.** {
+-                        public protected *;
+-                    }
+-
+-                    -keep class org.jetbrains.jet.** {
+-                        public protected *;
+-                    }
+-
+-                    -keep class jet.** {
+-                        public protected *;
+-                    }
+-
+-                    -keepclasseswithmembers class * { void start(); }
+-
+-                    -keepclasseswithmembers class * { void stop(); }
+-                    -keepclasseswithmembers class * { void dispose(); }
+-
+-                    -keepclasseswithmembers class * { ** getFileSystem(); }
+-                    -keepclasseswithmembers class * { ** isVarArgs(); }
+-                    -keepclasseswithmembers class * { ** getApplication(); }
+-                    -keepclasseswithmembers class * { ** finalizeReferent(); }
+-                    -keepclasseswithmembers class * { ** newBuilder(); }
+-                    -keepclasseswithmembers class * { ** startFinalizer(java.lang.Class,java.lang.Object); }
+-                    -keepclasseswithmembers class * { ** executeOnPooledThread(java.lang.Runnable); }
+-                    -keepclasseswithmembers class * { ** getUserData(java.lang.String); }
+-                    -keepclasseswithmembers class * { int getBooleanAttributes(java.io.File); }
+-
+-                    -keepclasseswithmembers class * { ** project(); }
+-
+-                    -keepclasseswithmembers class * { ** TYPE; }
+-                    -keepclasseswithmembers class * { ** ourInstance; }
+-
+-                    -keepclasseswithmembers class * { <init>(kotlinc.internal.com.intellij.lang.ASTNode); }
+-
+-                    -keepclassmembers enum * {
+-                        public static **[] values();
+-                        public static ** valueOf(java.lang.String);
+-                    }
+-
+-                    -keepclassmembers class * {
+-                        ** toString();
+-                        ** hashCode();
+-                    }
+-                ]]></proguard>
+-            </else>
+-        </if>
++        <copy file="${output}/kotlin-compiler-jarjar.jar"
++            tofile="${kotlin-home}/lib/kotlin-compiler.jar" />
+     </target>
+ 
+     <target name="antTools">
+diff --git a/compiler/cli/src/org/jetbrains/jet/cli/jvm/compiler/JetCoreEnvironment.java b/compiler/cli/src/org/jetbrains/jet/cli/jvm/compiler/JetCoreEnvironment.java
+index 880a288..c786c7b 100644
+--- a/compiler/cli/src/org/jetbrains/jet/cli/jvm/compiler/JetCoreEnvironment.java
++++ b/compiler/cli/src/org/jetbrains/jet/cli/jvm/compiler/JetCoreEnvironment.java
+@@ -16,6 +16,12 @@
+ 
+ package org.jetbrains.jet.cli.jvm.compiler;
+ 
++import com.intellij.openapi.fileTypes.PlainTextFileType;
++import com.intellij.psi.augment.PsiAugmentProvider;
++import com.intellij.psi.compiled.ClassFileDecompilers;
++import com.intellij.codeInsight.ContainerProvider;
++import com.intellij.lang.jvm.facade.JvmElementProvider;
++import com.intellij.psi.PsiElementFinder;
+ import com.intellij.codeInsight.ExternalAnnotationsManager;
+ import com.intellij.core.CoreApplicationEnvironment;
+ import com.intellij.core.CoreJavaFileManager;
+@@ -72,7 +78,15 @@ public class JetCoreEnvironment {
+         this.configuration = configuration.copy();
+         this.configuration.setReadOnly(true);
+ 
++        CoreApplicationEnvironment.registerExtensionPoint(Extensions.getRootArea(), ContainerProvider.EP_NAME,
++                                                          ContainerProvider.class);
++        CoreApplicationEnvironment.registerExtensionPoint(Extensions.getRootArea(), ClassFileDecompilers.EP_NAME,
++                                                          ClassFileDecompilers.Decompiler.class);
++        CoreApplicationEnvironment.registerExtensionPoint(Extensions.getRootArea(), PsiAugmentProvider.EP_NAME,
++                                                          PsiAugmentProvider.class);
++
+         this.applicationEnvironment = new JavaCoreApplicationEnvironment(parentDisposable);
++        applicationEnvironment.registerFileType(PlainTextFileType.INSTANCE, "xml");
+         applicationEnvironment.registerFileType(JetFileType.INSTANCE, "kt");
+         applicationEnvironment.registerFileType(JetFileType.INSTANCE, "kts");
+         applicationEnvironment.registerFileType(JetFileType.INSTANCE, "ktm");
+@@ -81,7 +95,15 @@ public class JetCoreEnvironment {
+         applicationEnvironment.registerParserDefinition(new JavaParserDefinition());
+         applicationEnvironment.registerParserDefinition(new JetParserDefinition());
+ 
+-        projectEnvironment = new JavaCoreProjectEnvironment(parentDisposable, applicationEnvironment);
++        projectEnvironment = new JavaCoreProjectEnvironment(parentDisposable, applicationEnvironment) {
++            @Override
++            protected void preregisterServices() {
++                CoreApplicationEnvironment.registerExtensionPoint(Extensions.getArea(myProject),
++                        JvmElementProvider.EP_NAME, JvmElementProvider.class);
++                CoreApplicationEnvironment.registerExtensionPoint(Extensions.getArea(myProject),
++                        PsiElementFinder.EP_NAME, PsiElementFinder.class);
++            }
++        };
+ 
+         MockProject project = projectEnvironment.getProject();
+         project.registerService(JetScriptDefinitionProvider.class, new JetScriptDefinitionProvider());
+diff --git a/compiler/frontend/src/org/jetbrains/jet/lang/resolve/lazy/IdentitySmartPointer.java b/compiler/frontend/src/org/jetbrains/jet/lang/resolve/lazy/IdentitySmartPointer.java
+index dca7927..e5310b3 100644
+--- a/compiler/frontend/src/org/jetbrains/jet/lang/resolve/lazy/IdentitySmartPointer.java
++++ b/compiler/frontend/src/org/jetbrains/jet/lang/resolve/lazy/IdentitySmartPointer.java
+@@ -56,4 +56,9 @@ public class IdentitySmartPointer<E extends PsiElement> implements SmartPsiEleme
+     public Segment getRange() {
+         return element.getTextRange();
+     }
++
++    @Override
++    public Segment getPsiRange() {
++        return element.getTextRange();
++    }
+ }
+diff --git a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/JetCodeBlockModificationListener.java b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/JetCodeBlockModificationListener.java
+index 863ebfd..1d99aaa 100644
+--- a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/JetCodeBlockModificationListener.java
++++ b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/JetCodeBlockModificationListener.java
+@@ -55,7 +55,7 @@ public class JetCodeBlockModificationListener implements PsiTreeChangePreprocess
+ 
+             case CHILDREN_CHANGED:
+                 // general childrenChanged() event after each change
+-                if (!event.isGenericChildrenChange()) {
++                if (!event.isGenericChange()) {
+                     processChange(event.getParent(), event.getParent(), null);
+                 }
+                 break;
+diff --git a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinJavaFileStubProvider.java b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinJavaFileStubProvider.java
+index 73ef03d..1b80776 100644
+--- a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinJavaFileStubProvider.java
++++ b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinJavaFileStubProvider.java
+@@ -167,7 +167,7 @@ public class KotlinJavaFileStubProvider implements CachedValueProvider<PsiJavaFi
+         javaFileStub.setPsiFactory(new ClsWrapperStubPsiFactory());
+ 
+         ClsFileImpl fakeFile =
+-                new ClsFileImpl((PsiManagerImpl) manager, new ClassFileViewProvider(manager, virtualFile)) {
++                new ClsFileImpl(new ClassFileViewProvider(manager, virtualFile)) {
+                     @NotNull
+                     @Override
+                     public PsiClassHolderFileStub getStub() {
+@@ -181,7 +181,6 @@ public class KotlinJavaFileStubProvider implements CachedValueProvider<PsiJavaFi
+                     }
+                 };
+ 
+-        fakeFile.setPhysical(false);
+         javaFileStub.setPsi(fakeFile);
+         return javaFileStub;
+     }
+@@ -243,4 +242,4 @@ public class KotlinJavaFileStubProvider implements CachedValueProvider<PsiJavaFi
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinLightClassForExplicitDeclaration.java b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinLightClassForExplicitDeclaration.java
+index ce76c14..177a0ef 100644
+--- a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinLightClassForExplicitDeclaration.java
++++ b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/KotlinLightClassForExplicitDeclaration.java
+@@ -171,7 +171,7 @@ public class KotlinLightClassForExplicitDeclaration extends AbstractLightClass i
+         protected PsiFile compute() {
+             VirtualFile virtualFile = classOrObject.getContainingFile().getVirtualFile();
+             assert virtualFile != null : "No virtual file for " + classOrObject.getText();
+-            return new ClsFileImpl((PsiManagerImpl) getManager(), new ClassFileViewProvider(getManager(), virtualFile)) {
++            return new ClsFileImpl(new ClassFileViewProvider(getManager(), virtualFile)) {
+                 @NotNull
+                 @Override
+                 public String getPackageName() {
+diff --git a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/StubClassBuilder.java b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/StubClassBuilder.java
+index 5bc1a79..59edee5 100644
+--- a/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/StubClassBuilder.java
++++ b/compiler/jet.as.java.psi/src/org/jetbrains/jet/asJava/StubClassBuilder.java
+@@ -44,7 +44,7 @@ public class StubClassBuilder extends ClassBuilder {
+         }
+ 
+         @Override
+-        public ClassReader readerForInnerClass(Object o) {
++        public void accept(Object o, StubBuildingVisitor<Object> visitor) {
+             throw new UnsupportedOperationException("Shall not be called!");
+         }
+     };
+@@ -67,7 +67,7 @@ public class StubClassBuilder extends ClassBuilder {
+     @Override
+     public void defineClass(PsiElement origin, int version, int access, String name, @Nullable String signature, String superName, String[] interfaces) {
+         assert v == null : "defineClass() called twice?";
+-        v = new StubBuildingVisitor<Object>(null, EMPTY_STRATEGY, parent, access);
++        v = new StubBuildingVisitor<Object>(null, EMPTY_STRATEGY, parent, access, name);
+ 
+         super.defineClass(origin, version, access, name, signature, superName, interfaces);
+ 
+diff --git a/jdk-annotations/java/util/concurrent/annotations.xml b/jdk-annotations/java/util/concurrent/annotations.xml
+index a6681b0..c47e09d 100644
+--- a/jdk-annotations/java/util/concurrent/annotations.xml
++++ b/jdk-annotations/java/util/concurrent/annotations.xml
+@@ -1,14 +1,4 @@
+ <root>
+-  <item name='java.util.concurrent.BlockingQueue int drainTo(java.util.Collection&lt;? super E&gt;, int)'>
+-    <annotation name='jet.runtime.typeinfo.KotlinSignature'>
+-      <val name="value" val="&quot;fun drainTo(c : MutableCollection<in E>, maxElements: Int) : Int&quot;"/>
+-    </annotation>
+-  </item>
+-  <item name='java.util.concurrent.BlockingQueue int drainTo(java.util.Collection&lt;? super E&gt;)'>
+-    <annotation name='jet.runtime.typeinfo.KotlinSignature'>
+-      <val name="value" val="&quot;fun drainTo(c : MutableCollection<in E>) : Int&quot;"/>
+-    </annotation>
+-  </item>
+ 
+     <item name='java.util.concurrent.ConcurrentNavigableMap java.util.concurrent.ConcurrentNavigableMap&lt;K,V&gt; headMap(K, boolean) 0'>
+         <annotation name='org.jetbrains.annotations.NotNull'/>
+-- 
+2.21.0
+

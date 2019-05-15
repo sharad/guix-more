@@ -8333,3 +8333,29 @@ logging framework for Java.")))
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-spullara-cli-parser
+  (package
+    (name "java-spullara-cli-parser")
+    (version "1.1.5")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/spullara/cli-parser")
+                     (commit (string-append "cli-parser-" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1viysb4aws6nsbp4lil1fwwc69rr9s5z66g17iygmbq5lincz35y"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "spullara-cli-parser.jar"
+       #:test-dir "src/test"
+       #:source-dir "src/main/java"))
+    (native-inputs
+     `(("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)))
+    (home-page "https://github.com/spullara/cli-parser")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
