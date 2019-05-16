@@ -2173,6 +2173,36 @@ an independent project by the JOSM team.")
                (install-file "build/jdom.jar" jar-dir)
                #t))))))))
 
+;; One commit before the rename to jdom2
+;; How to find the version that's supposed to be used though?
+(define-public java-jdom1-for-intellij
+  (package
+    (inherit java-jdom)
+    (version "1.1.1-intellij")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/JetBrains/intellij-deps-jdom")
+                     (commit "fac95752180b2e0e27fe6539cad819623d50975a")))
+              (file-name (git-file-name "java-jdom" version))
+              (sha256
+               (base32
+                "1iyqysa71fjhnr5q61cbx1q6brkx4mpbvg33zzrhagjmkslw2axn"))
+              (modules '((guix build utils)))
+              (snippet
+                `(begin
+                   (for-each delete-file (find-files "." ".*.jar$"))
+                   #t))))
+    (arguments
+     `(#:jar-name "jdom.jar"
+       #:tests? #f
+       #:source-dir "core/src/java"))
+    (inputs
+     `(("java-jaxen" ,java-jaxen)))
+    (native-inputs
+      (append (package-native-inputs java-jdom)
+              `(("unzip" ,unzip))))))
+
 (define-public java-jdom-for-intellij
   (package
     (inherit java-jdom)
@@ -6729,6 +6759,39 @@ and it is extensible to others.")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-batik-1.7
+  (package
+    (inherit java-batik)
+    (name "java-batik")
+    (version "1.7")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://apache/xmlgraphics/batik/source/"
+                                  "batik-src-" version ".zip"))
+              (sha256
+               (base32
+                "1zbrffb8xrddb41sn8fzq40wxc5i8177cl9nm0gmd5x78csmkskb"))))
+    (native-inputs
+     (append (package-native-inputs java-batik)
+             `(("unzip" ,unzip))))
+    (arguments
+     `(#:test-target "regard"; FIXME: no test is actually run
+       #:build-target "all-jar"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'check 'remove-failing
+           (lambda _
+             ;; This file looks for w3c.dom.Window, but it has been moved to
+             ;; org.apache.batik.w3c.dom.Window.
+             (delete-file "samples/tests/resources/java/sources/com/untrusted/script/UntrustedScriptHandler.java")
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs #:allow-other-keys)
+             (let ((dir (string-append (assoc-ref outputs "out") "/share/java/")))
+               (mkdir-p dir)
+               (copy-file (string-append "batik-" ,version "/lib/batik-all.jar")
+                          (string-append dir "batik-all.jar"))))))))))
 
 (define-public java-xmlgraphics-commons
   (package

@@ -17,6 +17,8 @@
 ;;; along with GNU Guix.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (more packages intellij)
+  #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (gnu packages)
   #:use-module (guix packages)
@@ -34,25 +36,28 @@
   #:use-module (gnu packages compression)
   #:use-module (gnu packages docbook)
   #:use-module (gnu packages java)
+  #:use-module (gnu packages java-compression)
   #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
   #:use-module (gnu packages xml)
   #:use-module (more packages java))
 
+(define intellij-community-2013-commit "8bc091c3131a888b5400c63a9e51eb0bc7fbe0fb")
+(define intellij-community-2013-version (git-version "0.0.0" "0"
+                                                     intellij-community-2013-commit))
+
 ;; The release page on github is a mess
 (define intellij-community-version "182.5262.8")
 (define intellij-community-commit "e2a5d9273ec0b3b656c0dad0c9b07e5f85bbd61a")
-(define (intellij-community-source commit version)
+(define (get-intellij-community-source commit version hash)
   (origin
     (method git-fetch)
     (uri (git-reference
            (url "https://github.com/JetBrains/intellij-community")
            (commit commit)))
     (file-name (git-file-name "intellij" version))
-    (sha256
-     (base32
-      "17qzhh2kw6sxwkyj7ng7hrpbcf2rjs2xjbsrg1bgkg90r5kb8sm4"))
+    (sha256 (base32 hash))
     (modules '((guix build utils)))
     (snippet
       `(begin
@@ -66,11 +71,59 @@
          (for-each delete-file (find-files "." ".*.jar$"))
          #t))))
 
+(define intellij-community-source (get-intellij-community-source
+                                    intellij-community-commit
+                                    intellij-community-version
+                                    "17qzhh2kw6sxwkyj7ng7hrpbcf2rjs2xjbsrg1bgkg90r5kb8sm4"))
+(define intellij-community-2013-source (get-intellij-community-source
+                                        intellij-community-2013-commit
+                                        intellij-community-2013-version
+                                        "0z5rq713lf7q2x0c0sb0r1ha2pszcyygddh7r12wyzf5p0iiy1im"))
+
+(define (strip-intellij-variant variant-property base)
+  (package
+    (inherit base)
+    (properties (alist-delete variant-property (package-properties base)))))
+
+(define (package-intellij-for-explicit-version version source variant-property base)
+  (define variant
+    (assq-ref (package-properties base) variant-property))
+
+  (define (map-inputs inputs)
+    (map (lambda (input)
+           (match input
+             ((name input)
+              (if (and
+                    (> (string-length name) 13)
+                    (equal? (substring name 0 13) "java-intellij"))
+                  `(,name ,(package-intellij-for-explicit-version
+                             version source variant-property input))
+                  `(,name ,input)))))
+         inputs))
+
+  (cond
+    (variant => force)
+    (else
+      (package
+        (inherit base)
+        (version version)
+        (source source)
+        (propagated-inputs (map-inputs (package-propagated-inputs base)))
+        (inputs (map-inputs (package-inputs base)))))))
+
+(define-public (intellij-2013-package base)
+  (package-intellij-for-explicit-version intellij-community-2013-version
+                                         intellij-community-2013-source
+                                         'intellij-2013-variant
+                                         base))
+(define-public (strip-2013-variant base)
+  (strip-intellij-variant 'intellij-2013-variant base))
+
 (define-public java-intellij-compiler-instrumentation-util
   (package
     (name "java-intellij-compiler-instrumentation-util")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "java/compiler/instrumentation-util/src"
@@ -96,7 +149,7 @@
   (package
     (name "java-intellij-compiler-javac2")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "java/compiler/javac2/src"
@@ -114,7 +167,7 @@
   (package
     (name "java-intellij-platform-forms-rt")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "platform/forms_rt/src"
@@ -130,7 +183,7 @@
   (package
     (name "java-intellij-platform-util-rt")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "platform/util-rt/src"
@@ -149,7 +202,7 @@
   (package
     (name "java-intellij-platform-util")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "platform/util/src"
@@ -168,7 +221,7 @@
              (delete-file "platform/util/src/com/intellij/util/ui/IsRetina.java")
              #t)))))
     (propagated-inputs
-     `(("java-batik" ,java-batik)
+     `(("java-batik-1.7" ,java-batik-1.7)
        ("java-commons-compress" ,java-commons-compress)
        ("java-imagescalr" ,java-imagescalr)
        ("java-intellij-platform-util-rt" ,java-intellij-platform-util-rt)
@@ -182,16 +235,44 @@
        ("java-native-access-platform" ,java-native-access-platform)
        ("java-trove4j-intellij" ,java-trove4j-intellij)
        ("java-w3c-svg" ,java-w3c-svg)))
+    (properties
+     `((intellij-2013-variant . ,(delay java-intellij-platform-util-2013))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
+(define-public java-intellij-platform-util-2013
+  (let ((base (intellij-2013-package (strip-2013-variant java-intellij-platform-util))))
+    (package
+      (inherit base)
+      (propagated-inputs
+       (append (alist-delete "java-jdom-for-intellij" (package-propagated-inputs base))
+               `(("java-batik" ,java-batik)
+                 ("java-iq80-snappy" ,java-iq80-snappy)
+                 ("java-jdom1-for-intellij" ,java-jdom1-for-intellij))))
+      (arguments
+        (substitute-keyword-arguments (package-arguments base)
+          ((#:phases phases)
+           `(modify-phases ,phases
+              (add-before 'build 'fix-implicit-conversions
+                (lambda _
+                  (substitute* "build.xml"
+                    (("<javac") "<javac source=\"1.6\""))))
+              (delete 'remove-apple))))))))
+                ;(lambda _
+                ;  (delete-file "platform/util/src/com/intellij/util/AppleHiDPIScaledImage.java")
+                ;  (delete-file "platform/util/src/com/intellij/util/ui/IsRetina.java")
+                ;  (delete-file "platform/util/src/com/intellij/util/RetinaImage.java")
+                ;  (substitute* "platform/util/src/com/intellij/util/ui/UIUtil.java"
+                ;    (("IsRetina.isRetina\\(\\)") "false"))
+                ;  #t)))))))))
+
 (define-public java-intellij-platform-extensions
   (package
     (name "java-intellij-platform-extensions")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "platform/extensions/src"
@@ -211,7 +292,7 @@
   (package
     (name "java-intellij-platform-core-api")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "platform/core-api/src"
@@ -235,7 +316,7 @@
   (package
     (name "java-intellij-platform-core-impl")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "platform/core-impl/src"
@@ -254,7 +335,7 @@
   (package
     (name "java-intellij-java-psi-api")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "java/java-psi-api/src"
@@ -281,7 +362,7 @@
   (package
     (name "java-intellij-java-psi-impl")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
       ;; TODO: remove these auto-generated files and generate them with
@@ -323,7 +404,7 @@
   (package
     (name "java-intellij-platform-resources")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
       ;; TODO: remove these auto-generated files and generate them with
@@ -352,7 +433,7 @@
   (package
     (name "java-intellij-resources")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
       ;; TODO: remove these auto-generated files and generate them with
@@ -442,7 +523,7 @@
   (package
     (name "java-intellij-compiler-forms-compiler")
     (version intellij-community-version)
-    (source (intellij-community-source intellij-community-commit version))
+    (source intellij-community-source)
     (build-system ant-build-system)
     (arguments
      `(#:source-dir "java/compiler/forms-compiler/src"
