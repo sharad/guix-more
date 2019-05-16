@@ -19,6 +19,7 @@
 (define-module (more packages tex)
   #:use-module (guix packages)
   #:use-module (guix download)
+  #:use-module (guix git-download)
   #:use-module (guix svn-download)
   #:use-module (guix utils)
   #:use-module (guix build-system texlive)
@@ -63,3 +64,21 @@ French in @code{babel}.")
     (synopsis "")
     (description "sauerj, parcolumns")
     (license license:lppl1.3+)))
+
+(define-public biber-old
+  (package
+    (inherit biber)
+    (name (package-name biber))
+    (version "2.11")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                    (url "https://github.com/plk/biber/")
+                    (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              ;; TODO: Patch awaiting inclusion upstream (see:
+              ;; https://github.com/plk/biber/issues/239).
+              (patches (search-patches "biber-fix-encoding-write.patch"))
+              (sha256
+               (base32
+                "0qgkc1k9n36yfmndwz879pak6mjphld0p85lzn9g2ng0vhxsifzz"))))))
