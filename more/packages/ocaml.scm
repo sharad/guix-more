@@ -783,3 +783,44 @@ used from Javascript).")
     (synopsis "")
     (description "")
     (license license:gpl2+)))
+
+(define-public coq-tlc
+  (package
+    (name "coq-tlc")
+    (version "20181116")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://gitlab.inria.fr/charguer/tlc")
+                     (commit version)))
+              (sha256
+               (base32
+                "1fkb4z92m04wdic4im4fd7dypbr1lnz285f06ci52kxgv2w4bkjz"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (add-before 'build 'fix-timestamp
+           (lambda _
+             (substitute* "GNUmakefile"
+               (("\\$\\(shell /bin/date.*") (string-append ,version "\n")))
+             #t))
+         (add-before 'build 'fix-timestamp
+           (lambda _
+             (substitute* "src/Makefile.coq"
+               (("/usr/bin/env bash") (which "bash")))
+             #t))
+         (add-before 'build 'fix-install-dir
+           (lambda* (#:key outputs #:allow-other-keys)
+             (substitute* "src/Makefile"
+               (("TARGET *:=.*") (string-append "TARGET := " (assoc-ref outputs "out")
+                                               "/lib/coq/user-contrib/TLC")))
+             #t)))))
+    (native-inputs
+     `(("coq" ,coq)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license #f)))
