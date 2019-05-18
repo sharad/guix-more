@@ -429,10 +429,27 @@
        ("java-intellij-platform-core-impl" ,java-intellij-platform-core-impl)
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
        ("java-streamex" ,java-streamex)))
+    (properties
+     `((intellij-2013-variant . ,(delay java-intellij-java-psi-impl-2013))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-intellij-java-psi-impl-2013
+  (let ((base (intellij-2013-package
+                (strip-2013-variant java-intellij-java-psi-impl))))
+    (package
+      (inherit base)
+      (arguments
+        (substitute-keyword-arguments (package-arguments base)
+          ((#:phases phases)
+           `(modify-phases ,phases
+              (add-before 'build 'fix-asm
+                (lambda _
+                  (substitute* "java/java-psi-impl/src/com/intellij/psi/impl/compiled/ClsParsingUtil.java"
+                    (("V1_9") "V9"))
+                  #t)))))))))
 
 (define-public java-intellij-platform-resources
   (package
