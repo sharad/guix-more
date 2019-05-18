@@ -145,6 +145,28 @@
     (description "")
     (license license:asl2.0)))
 
+(define-public java-jdom-for-intellij-2013
+  (package
+    (inherit java-jdom)
+    (version "0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/JetBrains/"
+                                  "intellij-community/raw/"
+                                  intellij-community-2013-commit
+                                  "/lib/src/jdom.zip"))
+              (sha256
+               (base32
+                "0yvs1bxxbpa11bnvhdhi11mnps1qbgg3qw7s8zw24s8wabznjn6a"))))
+    (arguments
+     `(#:jar-name "jdom.jar"
+       #:source-dir ".."
+       #:tests? #f))
+    (inputs
+     `(("java-jaxen" ,java-jaxen)))
+    (native-inputs
+     `(("unzip" ,unzip)))))
+
 (define-public java-intellij-compiler-javac2
   (package
     (name "java-intellij-compiler-javac2")
@@ -250,23 +272,14 @@
        (append (alist-delete "java-jdom-for-intellij" (package-propagated-inputs base))
                `(("java-batik" ,java-batik)
                  ("java-iq80-snappy" ,java-iq80-snappy)
-                 ("java-jdom1-for-intellij" ,java-jdom1-for-intellij))))
+                 ("java-jdom" ,java-jdom-for-intellij-2013))))
+      (inputs
+       `(("java-eawtstub" ,java-eawtstub)))
       (arguments
         (substitute-keyword-arguments (package-arguments base)
           ((#:phases phases)
            `(modify-phases ,phases
-              (add-before 'build 'fix-implicit-conversions
-                (lambda _
-                  (substitute* "build.xml"
-                    (("<javac") "<javac source=\"1.6\""))))
               (delete 'remove-apple))))))))
-                ;(lambda _
-                ;  (delete-file "platform/util/src/com/intellij/util/AppleHiDPIScaledImage.java")
-                ;  (delete-file "platform/util/src/com/intellij/util/ui/IsRetina.java")
-                ;  (delete-file "platform/util/src/com/intellij/util/RetinaImage.java")
-                ;  (substitute* "platform/util/src/com/intellij/util/ui/UIUtil.java"
-                ;    (("IsRetina.isRetina\\(\\)") "false"))
-                ;  #t)))))))))
 
 (define-public java-intellij-platform-extensions
   (package

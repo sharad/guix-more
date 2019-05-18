@@ -2173,36 +2173,6 @@ an independent project by the JOSM team.")
                (install-file "build/jdom.jar" jar-dir)
                #t))))))))
 
-;; One commit before the rename to jdom2
-;; How to find the version that's supposed to be used though?
-(define-public java-jdom1-for-intellij
-  (package
-    (inherit java-jdom)
-    (version "1.1.1-intellij")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "https://github.com/JetBrains/intellij-deps-jdom")
-                     (commit "fac95752180b2e0e27fe6539cad819623d50975a")))
-              (file-name (git-file-name "java-jdom" version))
-              (sha256
-               (base32
-                "1iyqysa71fjhnr5q61cbx1q6brkx4mpbvg33zzrhagjmkslw2axn"))
-              (modules '((guix build utils)))
-              (snippet
-                `(begin
-                   (for-each delete-file (find-files "." ".*.jar$"))
-                   #t))))
-    (arguments
-     `(#:jar-name "jdom.jar"
-       #:tests? #f
-       #:source-dir "core/src/java"))
-    (inputs
-     `(("java-jaxen" ,java-jaxen)))
-    (native-inputs
-      (append (package-native-inputs java-jdom)
-              `(("unzip" ,unzip))))))
-
 (define-public java-jdom-for-intellij
   (package
     (inherit java-jdom)
@@ -8375,3 +8345,27 @@ logging framework for Java.")))
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-eawtstub
+  (let ((commit "ae5d21ccbc62754eb0353b5b1d57abf1da954652"))
+    (package
+      (name "java-eawtstub")
+      (version (git-version "0.0.0" "0" commit))
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                       (url "https://github.com/consulo/eawtstub")
+                       (commit commit)))
+                (file-name (git-file-name name version))
+                (sha256
+                 (base32
+                  "0l0xng9qxs3b5l86nb77vr65a924ginxd32sjiqjrb9lbh2yp7ap"))))
+      (build-system ant-build-system)
+      (arguments
+       `(#:jar-name "eawtstub.jar"
+         ;; No tests
+         #:tests? #f))
+      (home-page "")
+      (synopsis "")
+      (description "")
+      (license license:asl2.0))))
