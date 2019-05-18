@@ -243,7 +243,7 @@
              (delete-file "platform/util/src/com/intellij/util/ui/IsRetina.java")
              #t)))))
     (propagated-inputs
-     `(("java-batik-1.7" ,java-batik-1.7)
+     `(("java-batik" ,java-batik)
        ("java-commons-compress" ,java-commons-compress)
        ("java-imagescalr" ,java-imagescalr)
        ("java-intellij-platform-util-rt" ,java-intellij-platform-util-rt)
@@ -270,7 +270,7 @@
       (inherit base)
       (propagated-inputs
        (append (alist-delete "java-jdom-for-intellij" (package-propagated-inputs base))
-               `(("java-batik" ,java-batik)
+               `(("java-batik-1.7" ,java-batik-1.7)
                  ("java-iq80-snappy" ,java-iq80-snappy)
                  ("java-jdom" ,java-jdom-for-intellij-2013))))
       (inputs
@@ -320,10 +320,31 @@
        ("java-intellij-resources" ,java-intellij-resources)
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
        ("java-trove4j-intellij" ,java-trove4j-intellij)))
+    (properties
+     `((intellij-2013-variant . ,(delay java-intellij-platform-core-api-2013))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-intellij-platform-core-api-2013
+  (let ((base (intellij-2013-package
+                (strip-2013-variant java-intellij-platform-core-api))))
+    (package
+      (inherit base)
+      (propagated-inputs
+       (append (package-propagated-inputs base)
+               `(("java-cglib" ,java-cglib))))
+      (arguments
+       (append
+         (package-arguments base)
+         `(#:phases
+           (modify-phases %standard-phases
+             (add-before 'build 'fix-cglib-asm
+               (lambda _
+                 ;; needed for platform-impl, but we don't build it
+                 (delete-file-recursively "platform/core-api/src/net")
+                 #t)))))))))
 
 (define-public java-intellij-platform-core-impl
   (package
