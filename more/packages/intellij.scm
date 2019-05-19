@@ -43,7 +43,9 @@
   #:use-module (gnu packages xml)
   #:use-module (more packages java))
 
-(define intellij-community-2013-commit "8bc091c3131a888b5400c63a9e51eb0bc7fbe0fb")
+;(define intellij-community-2013-commit "8bc091c3131a888b5400c63a9e51eb0bc7fbe0fb")
+;; Take a random old commit that has the right files
+(define intellij-community-2013-commit "f116b27261f9dea1c0f00b90ad09d58c6e2fa2f2")
 (define intellij-community-2013-version (git-version "0.0.0" "0"
                                                      intellij-community-2013-commit))
 
@@ -75,10 +77,14 @@
                                     intellij-community-commit
                                     intellij-community-version
                                     "17qzhh2kw6sxwkyj7ng7hrpbcf2rjs2xjbsrg1bgkg90r5kb8sm4"))
+;(define intellij-community-2013-source (get-intellij-community-source
+;                                        intellij-community-2013-commit
+;                                        intellij-community-2013-version
+;                                        "0z5rq713lf7q2x0c0sb0r1ha2pszcyygddh7r12wyzf5p0iiy1im"))
 (define intellij-community-2013-source (get-intellij-community-source
                                         intellij-community-2013-commit
                                         intellij-community-2013-version
-                                        "0z5rq713lf7q2x0c0sb0r1ha2pszcyygddh7r12wyzf5p0iiy1im"))
+                                        "095xj9kyg5x6gzqpswgv48zqzwcy5ijfkmmifshffkilq0m0sqng"))
 
 (define (strip-intellij-variant variant-property base)
   (package
@@ -166,6 +172,30 @@
      `(("java-jaxen" ,java-jaxen)))
     (native-inputs
      `(("unzip" ,unzip)))))
+
+(define-public java-jsr166e-for-intellij-2013
+  (package
+    (name "java-jsr166e")
+    (version "0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/JetBrains/"
+                                  "intellij-community/raw/"
+                                  intellij-community-2013-commit
+                                  "/lib/src/jsr166e_src.jar"))
+              (sha256
+               (base32
+                "0ifiszqz57c1i90fhhprfll5jribh7s4wq1qnmkl9454pcdawrzp"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jsr166e.jar"
+       #:source-dir ".."
+       #:jdk ,icedtea-7
+       #:tests? #f))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:cc0)))
 
 (define-public java-intellij-compiler-javac2
   (package
@@ -272,14 +302,38 @@
        (append (alist-delete "java-jdom-for-intellij" (package-propagated-inputs base))
                `(("java-batik-1.7" ,java-batik-1.7)
                  ("java-iq80-snappy" ,java-iq80-snappy)
-                 ("java-jdom" ,java-jdom-for-intellij-2013))))
+                 ("java-jdom" ,java-jdom-for-intellij-2013)
+                 ("java-jsr166e-for-intellij-2013" ,java-jsr166e-for-intellij-2013)
+                 ("java-picocontainer-1" ,java-picocontainer-1))))
       (inputs
        `(("java-eawtstub" ,java-eawtstub)))
       (arguments
         (substitute-keyword-arguments (package-arguments base)
           ((#:phases phases)
            `(modify-phases ,phases
-              (delete 'remove-apple))))))))
+              (delete 'remove-apple)
+              (add-before 'build 'fix-newer-jdk
+                (lambda _
+                  (substitute* "platform/util/src/com/intellij/ui/mac/foundation/Foundation.java"
+                    (("public static class NSRect extends Structure implements Structure.ByValue.*")
+                     "public static class NSRect extends Structure implements Structure.ByValue {
+@Override
+protected java.util.List<String> getFieldOrder() {
+  return java.util.Arrays.asList(new String[]{\"origin\", \"size\"});
+}")
+                    (("public static class NSPoint extends Structure implements Structure.ByValue.*")
+                     "public static class NSPoint extends Structure implements Structure.ByValue {
+@Override
+protected java.util.List<String> getFieldOrder() {
+  return java.util.Arrays.asList(new String[]{\"x\", \"y\"});
+}")
+                    (("public static class NSSize extends Structure implements Structure.ByValue.*")
+                     "public static class NSSize extends Structure implements Structure.ByValue {
+@Override
+protected java.util.List<String> getFieldOrder() {
+  return java.util.Arrays.asList(new String[]{\"width\", \"height\"});
+}"))
+                  #t)))))))))
 
 (define-public java-intellij-platform-extensions
   (package
@@ -334,7 +388,8 @@
       (inherit base)
       (propagated-inputs
        (append (package-propagated-inputs base)
-               `(("java-cglib" ,java-cglib))))
+               `(("java-asm" ,java-asm)
+                 ("java-cglib" ,java-cglib))))
       (arguments
        (append
          (package-arguments base)
@@ -345,6 +400,32 @@
                  ;; needed for platform-impl, but we don't build it
                  (delete-file-recursively "platform/core-api/src/net")
                  #t)))))))))
+
+(define-public java-intellij-platform-boot
+  (package
+    (name "java-intellij-platform-boot")
+    (version intellij-community-version)
+    (source intellij-community-source)
+    (build-system ant-build-system)
+    (arguments
+      ;; TODO: remove these auto-generated files and generate them with
+      ;; java-flex from the same-named file in src, with .flex extension
+      ;; (_JavaLexer, _JavaDocLexer)
+     `(#:source-dir "platform/boot/src"
+       #:jar-name "intellij.platform.boot.jar"
+       ;; No test
+       #:tests? #f
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "java/java-psi-impl/src/META-INF"
+                               "build/classes/META-INF")
+             #t)))))
+    (home-page "https://github.com/JetBrains/intellij-community")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
 
 (define-public java-intellij-platform-core-impl
   (package
@@ -359,6 +440,7 @@
        #:tests? #f))
     (propagated-inputs
      `(("java-guava" ,java-guava)
+       ("java-intellij-platform-boot" ,java-intellij-platform-boot)
        ("java-intellij-platform-core-api" ,java-intellij-platform-core-api)))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")

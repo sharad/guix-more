@@ -71,7 +71,7 @@
 (define-public kotlin-0
   (package
     (name "kotlin")
-    (version "0")
+    (version "0.4.424")
     (source (origin
               (method git-fetch)
               (uri (git-reference
@@ -82,8 +82,8 @@
               (sha256
                (base32
                 "0f60v3swyrkh41c4lhha64njivvsnr7p6yz7i1vjmvs697pjvqg2"))
-              (patches
-                (search-patches "kotlin-Update-for-dependencies.patch"))
+              ;(patches
+              ;  (search-patches "kotlin-Update-for-dependencies.patch"))
               (modules '((guix build utils)))
               (snippet
                 `(begin
@@ -98,7 +98,6 @@
     (build-system ant-build-system)
     (arguments
      `(#:build-target "dist"
-       #:make-flags (list "-Dshrink=false")
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-jars
