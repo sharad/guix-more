@@ -45,7 +45,8 @@
 
 ;(define intellij-community-2013-commit "8bc091c3131a888b5400c63a9e51eb0bc7fbe0fb")
 ;; Take a random old commit that has the right files
-(define intellij-community-2013-commit "f116b27261f9dea1c0f00b90ad09d58c6e2fa2f2")
+;(define intellij-community-2013-commit "f116b27261f9dea1c0f00b90ad09d58c6e2fa2f2")
+(define intellij-community-2013-commit "32cf812a36e0efd8d7859378b52c0ea3b1e3e321")
 (define intellij-community-2013-version (git-version "0.0.0" "0"
                                                      intellij-community-2013-commit))
 
@@ -84,7 +85,7 @@
 (define intellij-community-2013-source (get-intellij-community-source
                                         intellij-community-2013-commit
                                         intellij-community-2013-version
-                                        "095xj9kyg5x6gzqpswgv48zqzwcy5ijfkmmifshffkilq0m0sqng"))
+                                        "1r9jrmbc634zlg3gvqmlqlhi0sf2sjgvgnc3an5wfz1w8izbk6ji"))
 
 (define (strip-intellij-variant variant-property base)
   (package
@@ -300,11 +301,14 @@
       (inherit base)
       (propagated-inputs
        (append (alist-delete "java-jdom-for-intellij" (package-propagated-inputs base))
-               `(("java-batik-1.7" ,java-batik-1.7)
+               `(("java-asm" ,java-asm)
+                 ("java-batik-1.7" ,java-batik-1.7)
+                 ("java-cglib" ,java-cglib)
                  ("java-iq80-snappy" ,java-iq80-snappy)
                  ("java-jdom" ,java-jdom-for-intellij-2013)
                  ("java-jsr166e-for-intellij-2013" ,java-jsr166e-for-intellij-2013)
-                 ("java-picocontainer-1" ,java-picocontainer-1))))
+                 ("java-picocontainer-1" ,java-picocontainer-1)
+                 ("java-xstream" ,java-xstream))))
       (inputs
        `(("java-eawtstub" ,java-eawtstub)))
       (arguments
@@ -389,17 +393,7 @@ protected java.util.List<String> getFieldOrder() {
       (propagated-inputs
        (append (package-propagated-inputs base)
                `(("java-asm" ,java-asm)
-                 ("java-cglib" ,java-cglib))))
-      (arguments
-       (append
-         (package-arguments base)
-         `(#:phases
-           (modify-phases %standard-phases
-             (add-before 'build 'fix-cglib-asm
-               (lambda _
-                 ;; needed for platform-impl, but we don't build it
-                 (delete-file-recursively "platform/core-api/src/net")
-                 #t)))))))))
+                 ("java-cglib" ,java-cglib)))))))
 
 (define-public java-intellij-platform-boot
   (package
@@ -442,10 +436,21 @@ protected java.util.List<String> getFieldOrder() {
      `(("java-guava" ,java-guava)
        ("java-intellij-platform-boot" ,java-intellij-platform-boot)
        ("java-intellij-platform-core-api" ,java-intellij-platform-core-api)))
+    (properties
+     `((intellij-2013-variant . ,(delay java-intellij-platform-core-impl-2013))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
+
+(define-public java-intellij-platform-core-impl-2013
+  (let ((base (intellij-2013-package
+                (strip-2013-variant java-intellij-platform-core-impl))))
+    (package
+      (inherit base)
+      (propagated-inputs
+       (append (package-propagated-inputs base)
+               `(("java-snappy" ,java-snappy)))))))
 
 (define-public java-intellij-java-psi-api
   (package
@@ -525,6 +530,8 @@ protected java.util.List<String> getFieldOrder() {
       (inherit base)
       (arguments
         (substitute-keyword-arguments (package-arguments base)
+          ((#:source-dir _)
+           "java/java-psi-impl/src")
           ((#:phases phases)
            `(modify-phases ,phases
               (add-before 'build 'fix-asm
