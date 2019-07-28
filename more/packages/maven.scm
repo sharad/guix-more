@@ -842,13 +842,60 @@ return;
        #:source-dir "src/main/java"
        #:test-dir "src/test"
        #:tests? #f; test depends on maven-plugin-test-harness
+       #:imported-modules
+       ((more build maven pom)
+        (more build maven java)
+        (more build maven plugin)
+        ,@%ant-build-system-modules)
+       #:modules
+       ((more build maven pom)
+        (more build maven java)
+        (more build maven plugin)
+        (sxml simple)
+        (guix build ant-build-system)
+        (guix build java-utils)
+        (guix build utils))
        ;; Need maven-plugin-tools and a corresponding phase
        #:phases
        (modify-phases %standard-phases
          (add-before 'build 'copy-pom
            (lambda _
              (mkdir-p "build/classes/META-INF/maven")
-             (copy-file "pom.xml" "build/classes/META-INF/pom.xml")))
+             (copy-file "pom.xml" "build/classes/META-INF/pom.xml")
+             #t))
+         (add-before 'build 'generate-plugin.xml
+           (lambda _
+             (let* ((pom-content (get-pom "pom.xml"))
+                    (name (pom-name pom-content))
+                    (description (pom-description pom-content))
+                    (dependencies (pom-dependencies pom-content))
+                    (mojos
+                     (with-directory-excursion "src/main/java/org/apache/maven/plugins/resources/"
+                       `(mojos
+                          ,(generate-mojo-from-files maven-convert-type
+                                                     "ResourcesMojo.java"
+                                                     "CopyResourcesMojo.java")
+                          ,(generate-mojo-from-files maven-convert-type
+                                                     "ResourcesMojo.java")
+                          ,(generate-mojo-from-files maven-convert-type
+                                                     "ResourcesMojo.java"
+                                                     "TestResourcesMojo.java")))))
+               (mkdir-p "build/classes/META-INF/maven")
+               (with-output-to-file "build/classes/META-INF/maven/plugin.xml"
+                 (lambda _
+                   (sxml->xml
+                     `(plugin
+                        (name ,name)
+                        (description ,description)
+                        (groupId "org.apache.maven.plugins")
+                        (artifactId "maven-resources-plugin")
+                        (version ,,version)
+                        (goalPrefix "resources")
+                        (isolatedRealm "false")
+                        (inheritedByDefault "true")
+                        ,mojos
+                        (dependencies
+                         ,@dependencies))))))))
          (add-after 'install 'install-pom
            (lambda* (#:key outputs #:allow-other-keys)
              (install-file "pom.xml" (string-append (assoc-ref outputs "out")
