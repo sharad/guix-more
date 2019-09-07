@@ -1271,3 +1271,49 @@ navigated in, similar to a file or stream.")
     (description
       "Tools and API for translation and localization engineering.")
     (license license:gpl2+)))
+
+(define-public python-httmock
+  (package
+    (name "python-httmock")
+    (version "1.3.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "httmock" version))
+        (sha256
+          (base32
+            "1zj1fcm0n6f0wr9mr0hmlqz9430fnr5cdwd5jkcvq9j44bnsrfz0"))))
+    (build-system python-build-system)
+    (arguments
+     ;; Tests can't be run?
+     `(#:tests? #f))
+    (propagated-inputs
+      `(("python-requests" ,python-requests)))
+    (home-page "https://github.com/patrys/httmock")
+    (synopsis "A mocking library for requests.")
+    (description "A mocking library for requests.")
+    (license license:asl2.0)))
+
+(define-public python-gitlab
+  (package
+    (name "python-gitlab")
+    (version "1.10.0")
+    (source
+      (origin
+        (method url-fetch)
+        (uri (pypi-uri "python-gitlab" version))
+        (sha256
+          (base32
+            "0n2s4cmmrhx1yxpfa6xfkncairgrcvcmvhq2sx4k0k65cy9ipsf4"))))
+    (build-system python-build-system)
+    (propagated-inputs
+      `(("python-requests" ,python-requests)
+        ("python-six" ,python-six)))
+    (native-inputs
+     `(("python-httmock" ,python-httmock)
+       ("python-mock" ,python-mock)))
+    (home-page
+      "https://github.com/python-gitlab/python-gitlab")
+    (synopsis "Interact with GitLab API")
+    (description "Interact with GitLab API")
+    (license license:lgpl3+)))
