@@ -430,3 +430,70 @@ Corporation.  The engine is independent of any language, dictionary or corpus.
     (synopsis "")
     (description "")
     (license (license:non-copyleft "COPYING"))))
+
+(define-public uqm
+  (package
+    (name "uqm")
+    (version "0.7.0")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "mirror://sourceforge/sc2/UQM/0.7/uqm-"
+                                  version "-1-source.tgz"))
+              (sha256
+               (base32
+                "1rr8s25qsbqqbp3qsm2ndv11iqaxh72fc6fd8xdf80vb56piaq0k"))))
+    (build-system gnu-build-system)
+    (arguments
+     `(#:tests? #f; no tests
+       #:phases
+       (modify-phases %standard-phases
+         (delete 'configure)
+         (replace 'build
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             ;; Configuration can only happen interactively, so change default
+             ;; values instead.
+             (substitute* "build/unix/build.config"
+               (("/usr/local/games") (assoc-ref outputs "out")))
+             (substitute* "build.sh"
+               (("/bin/sh") (which "sh")))
+             (setenv "CFLAGS"
+                     (string-append
+                       "-I" (assoc-ref inputs "sdl-image") "/include/SDL"
+                       " -I" (assoc-ref inputs "glu") "/include"
+                       " -O3 -DNDEBUG"))
+             (chmod "build/unix/build_collect" #x755)
+             (setenv "MAKE_VERBOSE" "1")
+             (invoke (which "sh") "build.sh" "uqm")
+             #t))
+         (replace 'install
+           (lambda* (#:key outputs inputs #:allow-other-keys)
+             ;; Configuration can only happen interactively, so change default
+             ;; values instead.
+             (invoke (which "sh") "build/unix/build.sh" "uqm" "install")
+             (mkdir-p (string-append (assoc-ref outputs "out")
+                                     "/share/uqm/content/packages"))
+             (copy-file (assoc-ref inputs "uqm-content")
+                        (string-append (assoc-ref outputs "out")
+                                       "/share/uqm/content/packages/uqm-"
+                                       ,version "-content.uqm"))
+             #t)))))
+    (inputs
+     `(("libmikmod" ,libmikmod)
+       ("libvorbis" ,libvorbis)
+       ("glu" ,glu)
+       ("sdl" ,sdl)
+       ("sdl-image" ,sdl-image)
+       ("uqm-content"
+        ,(origin
+           (method url-fetch)
+           (uri (string-append "mirror://sourceforge/sc2/UQM/0.7/uqm-"
+                               version "-content.uqm"))
+           (sha256
+            (base32
+             "1gx39ns698hyczd4nx73mr0z86bbi4q3h8sw3pxjh1lzla5xpxmq"))))))
+    (native-inputs
+     `(("pkg-config" ,pkg-config)))
+    (home-page "http://sc2.sourceforge.net")
+    (synopsis "")
+    (description "")
+    (license license:gpl2+)))
