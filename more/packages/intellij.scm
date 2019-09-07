@@ -43,12 +43,9 @@
   #:use-module (gnu packages xml)
   #:use-module (more packages java))
 
-;(define intellij-community-2013-commit "8bc091c3131a888b5400c63a9e51eb0bc7fbe0fb")
-;; Take a random old commit that has the right files
-;(define intellij-community-2013-commit "f116b27261f9dea1c0f00b90ad09d58c6e2fa2f2")
-(define intellij-community-2013-commit "32cf812a36e0efd8d7859378b52c0ea3b1e3e321")
-(define intellij-community-2013-version (git-version "0.0.0" "0"
-                                                     intellij-community-2013-commit))
+(define intellij-community-130-commit "de6f73b5706c3c23c8f46bcf3761e48fa3e0f95b")
+(define intellij-community-130-version (git-version "130" "0"
+                                                     intellij-community-130-commit))
 
 ;; The release page on github is a mess
 (define intellij-community-version "182.5262.8")
@@ -78,14 +75,10 @@
                                     intellij-community-commit
                                     intellij-community-version
                                     "17qzhh2kw6sxwkyj7ng7hrpbcf2rjs2xjbsrg1bgkg90r5kb8sm4"))
-;(define intellij-community-2013-source (get-intellij-community-source
-;                                        intellij-community-2013-commit
-;                                        intellij-community-2013-version
-;                                        "0z5rq713lf7q2x0c0sb0r1ha2pszcyygddh7r12wyzf5p0iiy1im"))
-(define intellij-community-2013-source (get-intellij-community-source
-                                        intellij-community-2013-commit
-                                        intellij-community-2013-version
-                                        "1r9jrmbc634zlg3gvqmlqlhi0sf2sjgvgnc3an5wfz1w8izbk6ji"))
+(define intellij-community-130-source (get-intellij-community-source
+				       intellij-community-130-commit
+				       intellij-community-130-version
+				       "153sasksydpm0i8ppmg71fdh17ycnvdz3mny987vmq4jdm0a4djp"))
 
 (define (strip-intellij-variant variant-property base)
   (package
@@ -118,13 +111,13 @@
         (propagated-inputs (map-inputs (package-propagated-inputs base)))
         (inputs (map-inputs (package-inputs base)))))))
 
-(define-public (intellij-2013-package base)
-  (package-intellij-for-explicit-version intellij-community-2013-version
-                                         intellij-community-2013-source
-                                         'intellij-2013-variant
+(define-public (intellij-130-package base)
+  (package-intellij-for-explicit-version intellij-community-130-version
+                                         intellij-community-130-source
+                                         'intellij-130-variant
                                          base))
-(define-public (strip-2013-variant base)
-  (strip-intellij-variant 'intellij-2013-variant base))
+(define-public (strip-130-variant base)
+  (strip-intellij-variant 'intellij-130-variant base))
 
 (define-public java-intellij-compiler-instrumentation-util
   (package
@@ -152,7 +145,7 @@
     (description "")
     (license license:asl2.0)))
 
-(define-public java-jdom-for-intellij-2013
+(define-public java-jdom-for-intellij-130
   (package
     (inherit java-jdom)
     (version "0")
@@ -160,7 +153,7 @@
               (method url-fetch)
               (uri (string-append "https://github.com/JetBrains/"
                                   "intellij-community/raw/"
-                                  intellij-community-2013-commit
+                                  intellij-community-130-commit
                                   "/lib/src/jdom.zip"))
               (sha256
                (base32
@@ -174,7 +167,7 @@
     (native-inputs
      `(("unzip" ,unzip)))))
 
-(define-public java-jsr166e-for-intellij-2013
+(define-public java-jsr166e-for-intellij-130
   (package
     (name "java-jsr166e")
     (version "0")
@@ -182,7 +175,7 @@
               (method url-fetch)
               (uri (string-append "https://github.com/JetBrains/"
                                   "intellij-community/raw/"
-                                  intellij-community-2013-commit
+                                  intellij-community-130-commit
                                   "/lib/src/jsr166e_src.jar"))
               (sha256
                (base32
@@ -289,14 +282,14 @@
        ("java-trove4j-intellij" ,java-trove4j-intellij)
        ("java-w3c-svg" ,java-w3c-svg)))
     (properties
-     `((intellij-2013-variant . ,(delay java-intellij-platform-util-2013))))
+     `((intellij-130-variant . ,(delay java-intellij-platform-util-130))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-intellij-platform-util-2013
-  (let ((base (intellij-2013-package (strip-2013-variant java-intellij-platform-util))))
+(define-public java-intellij-platform-util-130
+  (let ((base (intellij-130-package (strip-130-variant java-intellij-platform-util))))
     (package
       (inherit base)
       (propagated-inputs
@@ -305,39 +298,40 @@
                  ("java-batik-1.7" ,java-batik-1.7)
                  ("java-cglib" ,java-cglib)
                  ("java-iq80-snappy" ,java-iq80-snappy)
-                 ("java-jdom" ,java-jdom-for-intellij-2013)
-                 ("java-jsr166e-for-intellij-2013" ,java-jsr166e-for-intellij-2013)
+                 ("java-jdom" ,java-jdom-for-intellij-130)
+                 ("java-jsr166e-for-intellij-130" ,java-jsr166e-for-intellij-130)
                  ("java-picocontainer-1" ,java-picocontainer-1)
                  ("java-xstream" ,java-xstream))))
       (inputs
        `(("java-eawtstub" ,java-eawtstub)))
       (arguments
-        (substitute-keyword-arguments (package-arguments base)
-          ((#:phases phases)
-           `(modify-phases ,phases
-              (delete 'remove-apple)
-              (add-before 'build 'fix-newer-jdk
-                (lambda _
-                  (substitute* "platform/util/src/com/intellij/ui/mac/foundation/Foundation.java"
-                    (("public static class NSRect extends Structure implements Structure.ByValue.*")
-                     "public static class NSRect extends Structure implements Structure.ByValue {
+       `(;#:jdk ,icedtea-7
+         ,@(substitute-keyword-arguments (package-arguments base)
+            ((#:phases phases)
+             `(modify-phases ,phases
+                (delete 'remove-apple)
+                (add-before 'build 'fix-newer-jdk
+                  (lambda _
+                    (substitute* "platform/util/src/com/intellij/ui/mac/foundation/Foundation.java"
+                      (("public static class NSRect extends Structure implements Structure.ByValue.*")
+                       "public static class NSRect extends Structure implements Structure.ByValue {
 @Override
 protected java.util.List<String> getFieldOrder() {
   return java.util.Arrays.asList(new String[]{\"origin\", \"size\"});
 }")
-                    (("public static class NSPoint extends Structure implements Structure.ByValue.*")
-                     "public static class NSPoint extends Structure implements Structure.ByValue {
+                      (("public static class NSPoint extends Structure implements Structure.ByValue.*")
+                       "public static class NSPoint extends Structure implements Structure.ByValue {
 @Override
 protected java.util.List<String> getFieldOrder() {
   return java.util.Arrays.asList(new String[]{\"x\", \"y\"});
 }")
-                    (("public static class NSSize extends Structure implements Structure.ByValue.*")
-                     "public static class NSSize extends Structure implements Structure.ByValue {
+                      (("public static class NSSize extends Structure implements Structure.ByValue.*")
+                       "public static class NSSize extends Structure implements Structure.ByValue {
 @Override
 protected java.util.List<String> getFieldOrder() {
   return java.util.Arrays.asList(new String[]{\"width\", \"height\"});
 }"))
-                  #t)))))))))
+                    #t))))))))))
 
 (define-public java-intellij-platform-extensions
   (package
@@ -379,15 +373,15 @@ protected java.util.List<String> getFieldOrder() {
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
        ("java-trove4j-intellij" ,java-trove4j-intellij)))
     (properties
-     `((intellij-2013-variant . ,(delay java-intellij-platform-core-api-2013))))
+     `((intellij-130-variant . ,(delay java-intellij-platform-core-api-130))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-intellij-platform-core-api-2013
-  (let ((base (intellij-2013-package
-                (strip-2013-variant java-intellij-platform-core-api))))
+(define-public java-intellij-platform-core-api-130
+  (let ((base (intellij-130-package
+                (strip-130-variant java-intellij-platform-core-api))))
     (package
       (inherit base)
       (propagated-inputs
@@ -437,15 +431,15 @@ protected java.util.List<String> getFieldOrder() {
        ("java-intellij-platform-boot" ,java-intellij-platform-boot)
        ("java-intellij-platform-core-api" ,java-intellij-platform-core-api)))
     (properties
-     `((intellij-2013-variant . ,(delay java-intellij-platform-core-impl-2013))))
+     `((intellij-130-variant . ,(delay java-intellij-platform-core-impl-130))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-intellij-platform-core-impl-2013
-  (let ((base (intellij-2013-package
-                (strip-2013-variant java-intellij-platform-core-impl))))
+(define-public java-intellij-platform-core-impl-130
+  (let ((base (intellij-130-package
+                (strip-130-variant java-intellij-platform-core-impl))))
     (package
       (inherit base)
       (propagated-inputs
@@ -517,15 +511,15 @@ protected java.util.List<String> getFieldOrder() {
        ("java-jetbrains-annotations" ,java-jetbrains-annotations)
        ("java-streamex" ,java-streamex)))
     (properties
-     `((intellij-2013-variant . ,(delay java-intellij-java-psi-impl-2013))))
+     `((intellij-130-variant . ,(delay java-intellij-java-psi-impl-130))))
     (home-page "https://github.com/JetBrains/intellij-community")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-intellij-java-psi-impl-2013
-  (let ((base (intellij-2013-package
-                (strip-2013-variant java-intellij-java-psi-impl))))
+(define-public java-intellij-java-psi-impl-130
+  (let ((base (intellij-130-package
+                (strip-130-variant java-intellij-java-psi-impl))))
     (package
       (inherit base)
       (arguments

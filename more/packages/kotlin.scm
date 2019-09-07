@@ -71,17 +71,17 @@
 (define-public kotlin-0
   (package
     (name "kotlin")
-    (version "0.4.424")
+    (version "0.6.717")
     (source (origin
               (method git-fetch)
               (uri (git-reference
                      (url "https://github.com/JetBrains/kotlin")
                      ;; build-0.4.424
-                     (commit "2f47e30a1a12347759dbb8707f5137178de65696")))
+                     (commit (string-append "build-" version))))
               (file-name (git-file-name name version))
               (sha256
                (base32
-                "0f60v3swyrkh41c4lhha64njivvsnr7p6yz7i1vjmvs697pjvqg2"))
+                "1a45yr5b0rc4girkva4d6x57iqzs174dw6wsdiwyllqkllp5k16y"))
               ;(patches
               ;  (search-patches "kotlin-Update-for-dependencies.patch"))
               (modules '((guix build utils)))
@@ -148,13 +148,13 @@
        ("java-asm-commons" ,java-asm-commons-7)
        ("java-former-dart-ast" ,java-former-dart-ast)
        ("java-guava" ,java-guava)
-       ("java-intellij-java-psi-api" ,(intellij-2013-package java-intellij-java-psi-api))
-       ("java-intellij-java-psi-impl" ,(intellij-2013-package java-intellij-java-psi-impl))
-       ("java-intellij-platform-core-api" ,(intellij-2013-package java-intellij-platform-core-api))
-       ("java-intellij-platform-core-impl" ,(intellij-2013-package java-intellij-platform-core-impl))
-       ("java-intellij-platform-extensions" ,(intellij-2013-package java-intellij-platform-extensions))
-       ("java-intellij-platform-util" ,(intellij-2013-package java-intellij-platform-util))
-       ("java-intellij-platform-util-rt" ,(intellij-2013-package java-intellij-platform-util-rt))
+       ("java-intellij-java-psi-api" ,(intellij-130-package java-intellij-java-psi-api))
+       ("java-intellij-java-psi-impl" ,(intellij-130-package java-intellij-java-psi-impl))
+       ("java-intellij-platform-core-api" ,(intellij-130-package java-intellij-platform-core-api))
+       ("java-intellij-platform-core-impl" ,(intellij-130-package java-intellij-platform-core-impl))
+       ("java-intellij-platform-extensions" ,(intellij-130-package java-intellij-platform-extensions))
+       ("java-intellij-platform-util" ,(intellij-130-package java-intellij-platform-util))
+       ("java-intellij-platform-util-rt" ,(intellij-130-package java-intellij-platform-util-rt))
        ("java-javax-inject" ,java-javax-inject)
        ("java-jline-2" ,java-jline-2)
        ("java-jsr305" ,java-jsr305)
