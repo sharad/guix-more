@@ -2,6 +2,9 @@ More packages for the Guix package manager! This repository contains
 recipes for packages that I am working on. They will eventually be sent
 upstream. When this is the case, they will vanish from this repo.
 
+This repository should only contain free software.  If you encounter non-free
+software, please open an issue, email me or ping me on IRC (roptat on freenode).
+
 How to use these packages?
 ==========================
 
@@ -35,11 +38,6 @@ Openstreetmap
 * _josm_: An openstreetmap editor
 * _imposm_: A script to import data from OSM to a postgis database
 * _tegola_: A program to produce vector tiles from a postgis database
-
-Non-free
---------
-
-* _compcert_: A certified C compiler
 
 Current work
 ============
