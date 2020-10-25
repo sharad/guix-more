@@ -20,6 +20,7 @@
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)
+  #:use-module (guix build-system ant)
   #:use-module (guix build-system cmake)
   #:use-module (guix build-system gnu)
   #:use-module (guix build-system trivial)
@@ -42,6 +43,7 @@
   #:use-module (gnu packages graphics)
   #:use-module (gnu packages gtk)
   #:use-module (gnu packages image)
+  #:use-module (gnu packages java)
   #:use-module (gnu packages lua)
   #:use-module (more packages lua)
   #:use-module (gnu packages llvm)
@@ -214,61 +216,6 @@ and anki.")
     (synopsis "")
     (description "")
     (license license:agpl3)))
-
-(define-public anki
-  (package
-    (name "anki")
-    ; the latest stable version requires qt4 webkit which we don't have because
-    ; of issues on arm and probably security reasons.
-    (version "2.1.0beta25")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://apps.ankiweb.net/downloads/beta/anki-"
-                                  version "-source.tgz"))
-              (sha256
-               (base32
-                "1p42b395k3kny5c17na3sw95mya3cw2hg3nxyj3b3mdhwdcy677r"))))
-    (build-system gnu-build-system)
-    (propagated-inputs
-     `(("python" ,python)
-       ("python-pyaudio" ,python-pyaudio)
-       ("python-pyqt" ,python-pyqt)
-       ("python-sip" ,python-sip)
-       ("python-decorator" ,python-decorator)))
-    (arguments
-     `(#:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (delete 'configure)
-         (delete 'build)
-         (replace 'install
-           (lambda* (#:key inputs outputs #:allow-other-keys)
-             (substitute* "anki/__init__.py"
-               (("< 6") "< 5"))
-             (substitute* "aqt/qt.py"
-               (("from PyQt5.QtWebEngineWidgets import QWebEnginePage") ""))
-             (let* ((output (assoc-ref outputs "out"))
-                    (bindir (string-append output "/bin"))
-                    (libdir (string-append output "/lib/python3.5/site-packages")))
-               (for-each
-                 (lambda (file)
-                   (mkdir-p (dirname (string-append libdir "/" file)))
-                   (copy-file file (string-append libdir "/" file)))
-                 (append (find-files "anki" ".*\\.py")
-                         (find-files "aqt" ".*\\.py")))
-               (mkdir-p bindir)
-               (with-output-to-file (string-append bindir "/anki")
-                 (lambda _
-                   (display
-                     (string-append
-                       "#!" (assoc-ref inputs "python") "/bin/python3\n"
-                       "import aqt\n"
-                       "aqt.run()\n"))))
-               (chmod (string-append bindir "/anki") #o755)))))))
-    (home-page "https://apps.ankiweb.net")
-    (synopsis "")
-    (description "")
-    (license license:gpl2)))
 
 (define-public emojicode
   (package
@@ -497,3 +444,85 @@ Corporation.  The engine is independent of any language, dictionary or corpus.
     (synopsis "")
     (description "")
     (license license:gpl2+)))
+
+(define-public java-arc-core
+  (package
+    (name "java-arc-core")
+    (version "110")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/Anuken/Arc")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1iyckj4y47bcw15vsr104gysc9idx0m301qsx817mdgfdbjp9hmi"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "arc-core.jar"
+       #:source-dir "arc-core/src/arc"
+       #:test-dir "arc-core/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-after 'build 'build-native
+           (lambda* (#:key inputs outputs #:allow-other-keys)
+             (let ((stb (assoc-ref inputs "stb_image.h"))
+                   (jdk (assoc-ref inputs "jdk"))
+                   (lib (string-append (assoc-ref outputs "out") "/lib")))
+               (copy-file stb "arc-core/csrc/stb_image.h")
+               (invoke "gcc" "-shared" "-O2" "-fPIC"
+                       ; symbols specify GLIBC_2.2.5 in memcpy_wrap.c
+                       ;(if (member ,(%current-system)
+                       ;            '("i686-linux" "armhf-linux" "i586-gnu"))
+                       ;  "-Wl,-wrap,memcpy"
+                       ;  "-Wl,-wrap,memcpy,-wrap,pow")
+                       "-Wl,--no-undefined"
+                       "-Iarc-core/csrc"
+                       (string-append "-I" jdk "/include")
+                       (string-append "-I" jdk "/include/linux")
+                       "arc-core/csrc/pix.c"
+                       "-lm"
+                       ;"natives/memcpy_wrap.c"
+                       "-o" "libarc.so")
+               (mkdir-p lib)
+               (install-file "libarc.so" lib)
+               (install-file "libarc.so" "build/classes/"))
+             #t))
+         (add-before 'build 'fix-native-loading
+           (lambda _
+             ;; Ensure the name of the library is the same, independently from
+             ;; the platform, as we don't perform a cross-build for every platform.
+             (substitute* "arc-core/src/arc/util/SharedLibraryLoader.java"
+               (("if\\(isLinux\\).*")
+                "if(isLinux) return \"lib\" + libraryName + \".so\";\n"))
+             #t))
+         (add-after 'build-native 'repack
+           (lambda _
+             (invoke "jar" "-cf" "build/jar/arc-core.jar" "-C" "build/classes"
+                     ".")
+             #t))
+         (add-before 'check 'fix-test-dir
+           (lambda _
+             (substitute* "build.xml"
+               (("\\}/java") "}"))
+             #t)))))
+    (native-inputs
+     `(("java-junit" ,java-junit)))
+    (inputs
+     `(("stb_image.h"
+        ,(origin (method url-fetch)
+                 (uri (string-append
+                        "https://raw.githubusercontent.com/nothings/stb/"
+                        ;; latest commit, since there are no releases
+                        "b42009b3b9d4ca35bc703f5310eedc74f584be58"
+                        "/stb_image.h"))
+                 (file-name "stb_image.h-b42009b")
+                 (sha256
+                  (base32
+                   "132nblax05sqk0f77qc6jl03s24dwwh2s87gjx6872pwgmqhsnwf"))))))
+    (home-page "https://github.com/Anuken/Arc")
+    (synopsis "Java game development framework based off of libGDX")
+    (description "This package contains a development framework for Java
+games based on libGDX.  This is mostly used by Mindustry.")
+    (license license:expat)))
