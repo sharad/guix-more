@@ -316,73 +316,73 @@ provers.")
     (description "")
     (license license:lgpl2.1+)))
 
-(define-public ocaml-bincat
-  (package
-    (name "ocaml-bincat")
-    (version "0.8.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/airbus-seclab/bincat/archive/v"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1ncwm1h428x1bs4sq7ql1isrkhw0angglsa9hnsvhhw2i1jsdk7j"))))
-    (build-system ocaml-build-system)
-    (arguments
-     `(#:tests? #f; disabled for now
-       #:validate-runpath? #f; disabled for now
-       #:make-flags
-       (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
-             "LDCONFIG=true"
-             (string-append "CFLAGS+=-I " (assoc-ref %build-inputs "ocaml")
-                            "/lib/ocaml"))
-       #:phases
-       (modify-phases %standard-phases
-         (delete 'configure)
-         (add-before 'build 'python-path
-           (lambda* (#:key outputs #:allow-other-keys)
-             (setenv "PYTHONPATH" (string-append (getenv "PYTHONPATH")
-                                                 ":../python:"
-                                                 (assoc-ref outputs "out")
-                                                 "/lib/python2.7/site-packages/"))
-             #t))
-         (add-before 'build 'fix-makefiles
-           (lambda _
-             (substitute* "ocaml/src/Makefile"
-               (("GITVERSION:=.*") "GITVERSION:=0.8.1\n"))
-             (substitute* "python/Makefile"
-               (("./setup.py install") "./setup.py install --prefix=$(PREFIX)"))
-             #t))
-         (add-before 'check 'fix-test
-           (lambda _
-             (setenv "PATH" (string-append (getenv "PATH") ":" (getcwd) "/ocaml/src"))
-             ;; Remove tests that require an armv8 compiler
-             (substitute* "test/Makefile"
-               (("eggloader_armv8 eggloader_armv7 eggloader_armv7thumb") ""))
-             (chmod "test/eggloader_x86" #o755)
-             #t))
-         (add-before 'install 'install-python-dir
-           (lambda* (#:key outputs #:allow-other-keys)
-             (mkdir-p (string-append (assoc-ref outputs "out")
-                                     "/lib/python2.7/site-packages/")))))))
-    (inputs
-     `(("c2newspeak" ,ocaml-c2newspeak)
-       ("zarith" ,ocaml-zarith)
-       ("menhir" ,ocaml-menhir)
-       ("ocamlgraph" ,ocaml-graph)
-       ("ocaml-cppo" ,ocaml-cppo)
-       ("ocaml-ppx-tools" ,ocaml-ppx-tools)
-       ("gmp" ,gmp)))
-    (native-inputs
-     `(("python" ,python-2)
-       ("pytest" ,python2-pytest)
-       ("sphinx" ,python2-sphinx)
-       ("nasm" ,nasm)))
-    (home-page "https://github.com/airbus-seclab/bincat")
-    (synopsis "")
-    (description "")
-    (license license:lgpl2.1+)))
+;(define-public ocaml-bincat
+;  (package
+;    (name "ocaml-bincat")
+;    (version "0.8.1")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/airbus-seclab/bincat/archive/v"
+;                                  version ".tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1ncwm1h428x1bs4sq7ql1isrkhw0angglsa9hnsvhhw2i1jsdk7j"))))
+;    (build-system ocaml-build-system)
+;    (arguments
+;     `(#:tests? #f; disabled for now
+;       #:validate-runpath? #f; disabled for now
+;       #:make-flags
+;       (list (string-append "PREFIX=" (assoc-ref %outputs "out"))
+;             "LDCONFIG=true"
+;             (string-append "CFLAGS+=-I " (assoc-ref %build-inputs "ocaml")
+;                            "/lib/ocaml"))
+;       #:phases
+;       (modify-phases %standard-phases
+;         (delete 'configure)
+;         (add-before 'build 'python-path
+;           (lambda* (#:key outputs #:allow-other-keys)
+;             (setenv "PYTHONPATH" (string-append (getenv "PYTHONPATH")
+;                                                 ":../python:"
+;                                                 (assoc-ref outputs "out")
+;                                                 "/lib/python2.7/site-packages/"))
+;             #t))
+;         (add-before 'build 'fix-makefiles
+;           (lambda _
+;             (substitute* "ocaml/src/Makefile"
+;               (("GITVERSION:=.*") "GITVERSION:=0.8.1\n"))
+;             (substitute* "python/Makefile"
+;               (("./setup.py install") "./setup.py install --prefix=$(PREFIX)"))
+;             #t))
+;         (add-before 'check 'fix-test
+;           (lambda _
+;             (setenv "PATH" (string-append (getenv "PATH") ":" (getcwd) "/ocaml/src"))
+;             ;; Remove tests that require an armv8 compiler
+;             (substitute* "test/Makefile"
+;               (("eggloader_armv8 eggloader_armv7 eggloader_armv7thumb") ""))
+;             (chmod "test/eggloader_x86" #o755)
+;             #t))
+;         (add-before 'install 'install-python-dir
+;           (lambda* (#:key outputs #:allow-other-keys)
+;             (mkdir-p (string-append (assoc-ref outputs "out")
+;                                     "/lib/python2.7/site-packages/")))))))
+;    (inputs
+;     `(("c2newspeak" ,ocaml-c2newspeak)
+;       ("zarith" ,ocaml-zarith)
+;       ("menhir" ,ocaml-menhir)
+;       ("ocamlgraph" ,ocaml-graph)
+;       ("ocaml-cppo" ,ocaml-cppo)
+;       ("ocaml-ppx-tools" ,ocaml-ppx-tools)
+;       ("gmp" ,gmp)))
+;    (native-inputs
+;     `(("python" ,python-2)
+;       ("pytest" ,python2-pytest)
+;       ("sphinx" ,python2-sphinx)
+;       ("nasm" ,nasm)))
+;    (home-page "https://github.com/airbus-seclab/bincat")
+;    (synopsis "")
+;    (description "")
+;    (license license:lgpl2.1+)))
 
 (define-public ocaml-ocplib-simplex
   (package
@@ -655,41 +655,42 @@ used from Javascript).")
     (license #f)))
 
 
-(define-public patoline
-  (package
-    (name "patoline")
-    (version "0.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/patoline/patoline/archive/"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "1qlxcf8k83lcyamyg19838j3f1js068skxgab94axv2gv4ylhhfb"))))
-    (build-system dune-build-system)
-    (arguments
-     `(#:test-target "."
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'set-dirs
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((out (assoc-ref outputs "out")))
-               (substitute* '("unicodelib/config.ml"
-                              "patconfig/patDefault.ml")
-                 (("/usr/local/share") (string-append out "/share"))))
-             #t)))))
-    (propagated-inputs
-     `(("camlzip" ,camlzip)
-       ("ocaml-earley" ,ocaml-earley)
-       ("ocaml-imagelib" ,ocaml-imagelib)
-       ("ocaml-sqlite3" ,ocaml-sqlite3)))
-    (inputs
-     `(("zlib" ,zlib)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:gpl2+)))
+; Require earley and sqlite3 to be up-to-date
+;(define-public patoline
+;  (package
+;    (name "patoline")
+;    (version "0.2")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append "https://github.com/patoline/patoline/archive/"
+;                                  version ".tar.gz"))
+;              (file-name (string-append name "-" version ".tar.gz"))
+;              (sha256
+;               (base32
+;                "1qlxcf8k83lcyamyg19838j3f1js068skxgab94axv2gv4ylhhfb"))))
+;    (build-system dune-build-system)
+;    (arguments
+;     `(#:test-target "."
+;       #:phases
+;       (modify-phases %standard-phases
+;         (add-before 'build 'set-dirs
+;           (lambda* (#:key outputs #:allow-other-keys)
+;             (let ((out (assoc-ref outputs "out")))
+;               (substitute* '("unicodelib/config.ml"
+;                              "patconfig/patDefault.ml")
+;                 (("/usr/local/share") (string-append out "/share"))))
+;             #t)))))
+;    (propagated-inputs
+;     `(("camlzip" ,camlzip)
+;       ("ocaml-earley" ,ocaml-earley)
+;       ("ocaml-imagelib" ,ocaml-imagelib)
+;       ("ocaml-sqlite3" ,ocaml-sqlite3)))
+;    (inputs
+;     `(("zlib" ,zlib)))
+;    (home-page "")
+;    (synopsis "")
+;    (description "")
+;    (license license:gpl2+)))
 
 (define-public coq-tlc
   (package
