@@ -473,7 +473,7 @@ It can also be used as a library.")
     (description "")
     (license license:asl2.0)))
 
-(define-public java-javaparser
+(define-public java-javaparser-3.9
   (package
     (name "java-javaparser")
     (version "3.9.0")
