@@ -208,14 +208,6 @@
    ;; XXX: NO LICENSE!
    (license #f)))
 
-(define-public go-golang-org-x-net-html
-  (package
-    (inherit go-golang-org-x-net-context)
-    (name "go-golang-org-x-net-html")
-    (arguments
-     `(#:import-path "golang.org/x/net/html"
-       #:unpack-path "golang.org/x/net"))))
-
 (define-public go-github.com-microcosm-cc-bluemonday
   (package
    (name "go-github.com-microcosm-cc-bluemonday")
@@ -343,7 +335,7 @@
       (propagated-inputs
        `(("go-github.com-unknwon-com" ,go-github.com-unknwon-com)
          ("go-github.com-go-macaron-inject" ,go-github.com-go-macaron-inject)
-         ("go-golang-org-x-crypto-pbkdf2" ,go-golang-org-x-crypto-pbkdf2)
+         ("go-golang-org-x-crypto" ,go-golang-org-x-crypto)
          ("go-gopkg-in-ini-v1" ,go-gopkg-in-ini-v1)))
       (home-page "https://gopkg.in/macaron.v1")
       (synopsis "")
@@ -500,8 +492,7 @@ values.")
     `(#:import-path "github.com/writeas/web-core/auth"
       #:unpack-path "github.com/writeas/web-core"))
    (propagated-inputs
-    `(("go-golang-org-x-crypto-bcrypt" ,go-golang-org-x-crypto-bcrypt)
-      ("go-golang-org-x-crypto-blowfish" ,go-golang-org-x-crypto-blowfish)
+    `(("go-golang-org-x-crypto" ,go-golang-org-x-crypto)
       ("go-github.com-nu7hatch-gouuid" ,go-github.com-nu7hatch-gouuid)))))
 
 (define-public go-github.com-writeas-web-core-bots
