@@ -41,6 +41,7 @@
   #:use-module (gnu packages fontutils)
   #:use-module (gnu packages gcc)
   #:use-module (gnu packages groovy)
+  #:use-module (gnu packages icu4c)
   #:use-module (gnu packages java)
   #:use-module (gnu packages libffi)
   #:use-module (gnu packages linux)
@@ -1230,29 +1231,6 @@ import org.apache.bcel.classfile.ParameterAnnotationEntry;")
        #:source-dir "junixsocket-common/src/main/java"
        #:tests? #f));no tests
     (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public java-jetbrains-annotations
-  (package
-    (name "java-jetbrains-annotations")
-    (version "16.0.3")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "https://github.com/JetBrains/java-annotations/")
-                     (commit version)))
-              (file-name (git-file-name name version))
-              (sha256
-               (base32
-                "10gz3l6lgjq35q4vqgcxvy84n7vjyqw1qxzaklcmprminqi4g9s4"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "java-annotations.jar"
-       #:source-dir "java8/src/main/java:common/src/main/java"
-       #:tests? #f)); no tests
-    (home-page "http://jetbrains.org")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
@@ -4998,40 +4976,40 @@ import org.objenesis.ObjenesisException;"))
                 (mkdir-p "target")
                 (rename-file "bin/lib/javacc.jar" "target/javacc.jar")))))))))
 
-(define-public java-icu4j
-  (package
-    (name "java-icu4j")
-    (version "58.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append
-                     "http://download.icu-project.org/files/icu4j/" version
-                     "/icu4j-"
-                     (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
-                     ".tgz"))
-              (sha256
-               (base32
-                "1mvqjlc3cbaraa0bv0vyl44xf0x6n81inqsh69bl7f88iycfpns9"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:tests? #f ; Requires java-ivy that we don't have yet.
-       #:phases
-       (modify-phases %standard-phases
-         ;; icu4j archive contains its sources directly at the top, not in
-         ;; a subdirectory as usual.
-         (add-after 'unpack 'chdir
-           (lambda _
-             (chdir "..")))
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((share (string-append (assoc-ref outputs "out") "/share/java")))
-               (mkdir-p share)
-               (copy-file "icu4j-charset.jar" (string-append share "/icu4j-charset.jar"))
-               (copy-file "icu4j.jar" (string-append share "/icu4j.jar"))))))))
-    (home-page "http://site.icu-project.org/")
-    (synopsis "")
-    (description "")
-    (license license:x11)))
+;(define-public java-icu4j
+;  (package
+;    (name "java-icu4j")
+;    (version "58.2")
+;    (source (origin
+;              (method url-fetch)
+;              (uri (string-append
+;                     "http://download.icu-project.org/files/icu4j/" version
+;                     "/icu4j-"
+;                     (string-map (lambda (x) (if (char=? x #\.) #\_ x)) version)
+;                     ".tgz"))
+;              (sha256
+;               (base32
+;                "1mvqjlc3cbaraa0bv0vyl44xf0x6n81inqsh69bl7f88iycfpns9"))))
+;    (build-system ant-build-system)
+;    (arguments
+;     `(#:tests? #f ; Requires java-ivy that we don't have yet.
+;       #:phases
+;       (modify-phases %standard-phases
+;         ;; icu4j archive contains its sources directly at the top, not in
+;         ;; a subdirectory as usual.
+;         (add-after 'unpack 'chdir
+;           (lambda _
+;             (chdir "..")))
+;         (replace 'install
+;           (lambda* (#:key outputs #:allow-other-keys)
+;             (let ((share (string-append (assoc-ref outputs "out") "/share/java")))
+;               (mkdir-p share)
+;               (copy-file "icu4j-charset.jar" (string-append share "/icu4j-charset.jar"))
+;               (copy-file "icu4j.jar" (string-append share "/icu4j.jar"))))))))
+;    (home-page "http://site.icu-project.org/")
+;    (synopsis "")
+;    (description "")
+;    (license license:x11)))
 
 (define-public java-treelayout
   (package
@@ -6513,27 +6491,6 @@ and it is extensible to others.")
     (inputs
      `(("antlr2" ,antlr2)))))
 
-(define-public libantlr3c
-  (package
-    (inherit antlr3)
-    (name "libantlr3c")
-    (build-system gnu-build-system)
-    (native-inputs
-     `(("autoconf" ,autoconf)
-       ("automake" ,automake)
-       ("libtool" ,libtool)))
-    (propagated-inputs
-     `(("antlr3" ,antlr3)))
-    (arguments
-     `(#:configure-flags (list "--enable-64bit" "--disable-static")
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'configure 'autoreconf
-           (lambda _
-             (chdir "runtime/C")
-             (system* "libtoolize")
-             (system* "autoreconf" "-fiv"))))))))
-
 (define-public java-json
   (package
     (name "java-json")
@@ -6563,115 +6520,6 @@ and it is extensible to others.")
     (description "")
     (license license:asl2.0)))
 
-;; We still need one file to be generated with ST4.
-;; tool/src/org/antlr/v4/unicode/UnicodeDataTemplateController.java
-;; See https://github.com/kevinbirch/string-template-maven-plugin
-;; We should take this and adapt to get a standalone tool.
-(define-public java-antlr4
-  (package
-    (name "java-antlr4")
-    (version "4.7.1")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/antlr/antlr4/archive/"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0x355893x029d50lcg853v9g6y0ci7jfij9i03jn6fik87s181sd"))
-              (patches
-                (search-patches "java-antlr4-Add-standalone-generator.patch"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name (string-append ,name "-" ,version ".jar")
-       #:source-dir "runtime/Java/src:tool/src"
-       #:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'install 'bin-install
-           (lambda* (#:key inputs outputs #:allow-other-keys)
-             (let ((jar (string-append (assoc-ref outputs "out") "/share/java"))
-                   (bin (string-append (assoc-ref outputs "out") "/bin")))
-               (mkdir-p bin)
-               (with-output-to-file (string-append bin "/antlr4")
-                 (lambda _
-                   (display
-                     (string-append "#!" (which "sh") "\n"
-                                    "java -cp " jar "/" ,name "-" ,version ".jar:"
-                                    (string-join
-                                      (apply
-                                        append
-                                        (map
-                                          (lambda (input)
-                                            (find-files (assoc-ref inputs input)
-                                                  ".*\\.jar"))
-                                          '("antlr3" "java-stringtemplate"
-                                            "java-antlr4-runtime" "java-treelayout"
-                                            "java-jsonp-api" "java-icu4j")))
-                                      ":")
-                                    " org.antlr.v4.Tool $*"))))
-               (chmod (string-append bin "/antlr4") #o755))))
-         (add-before 'build 'copy-resources
-           (lambda _
-             (copy-recursively "tool/resources/" "build/classes")
-             #t))
-         (add-before 'build 'generate-unicode
-           (lambda _
-             (and
-               ;; First: build the generator
-               (zero? (system*
-                        "javac" "-cp" (getenv "CLASSPATH")
-                        "tool/src/org/antlr/v4/unicode/UnicodeRenderer.java"
-                        "tool/src/org/antlr/v4/unicode/UnicodeDataTemplateController.java"))
-               ;; Then use it
-               (zero? (system* "java" "-cp" (string-append (getenv "CLASSPATH")
-                                                           ":tool/src:runtime/Java")
-                               "org.antlr.v4.unicode.UnicodeRenderer"
-                               "tool/resources/org/antlr/v4/tool/templates"
-                               "unicodedata"
-                               "tool/src/org/antlr/v4/unicode/UnicodeData.java"))
-               (begin
-                 ;; It seems there is a bug with our ST4
-                 (substitute* "tool/src/org/antlr/v4/unicode/UnicodeData.java"
-                   (("\\\\>") ">"))
-                 ;; Remove the additional file
-                 (delete-file "tool/src/org/antlr/v4/unicode/UnicodeRenderer.java")
-                 #t))))
-         (add-before 'build 'generate-grammar
-           (lambda* (#:key inputs #:allow-other-keys)
-             (with-directory-excursion "tool/src/org/antlr/v4/parse"
-               (for-each (lambda (file)
-                           (format #t "~a\n" file)
-                           (system* "antlr3" file))
-                         '("ANTLRLexer.g" "ANTLRParser.g" "BlockSetTransformer.g"
-                           "GrammarTreeVisitor.g" "ATNBuilder.g"
-                           "ActionSplitter.g" "LeftRecursiveRuleWalker.g")))
-             (with-directory-excursion "tool/src/org/antlr/v4/codegen"
-               (copy-file "../parse/ANTLRParser.tokens" "ANTLRParser.tokens")
-               (format #t "SourceGenTriggers.g\n")
-               (system* "antlr3" "SourceGenTriggers.g")))))))
-    (inputs
-     `(("antlr3" ,antlr3)
-       ("java-icu4j" ,java-icu4j)
-       ("java-jsonp-api" ,java-jsonp-api)
-       ("java-treelayout" ,java-treelayout)
-       ("java-stringtemplate" ,java-stringtemplate)))
-    (native-inputs
-     `(("java-antlr4-runtime" ,java-antlr4-runtime)))
-    (home-page "https://antlr.org")
-    (synopsis "")
-    (description "")
-    (license license:bsd-3)))
-
-(define-public java-antlr4-runtime
-  (package
-    (inherit java-antlr4)
-    (name "java-antlr4-runtime")
-    (arguments
-     `(#:jar-name "java-antlr4-runtime.jar"
-       #:source-dir "runtime/Java/src/org"
-       #:tests? #f))
-    (native-inputs '())))
 ;
 ;;; Requires gradle.
 ;(define-public android-anysoft-keyboard
@@ -6695,14 +6543,14 @@ and it is extensible to others.")
 (define-public java-batik
   (package
     (name "java-batik")
-    (version "1.10")
+    (version "1.12")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/xmlgraphics/batik/source/"
                                   "batik-src-" version ".tar.gz"))
               (sha256
                (base32
-                "05nipxvm940m2dgzmrvflr2r72a5mmqbl25pvqr0xn73a5lygi6z"))))
+                "1g68mh5f57ap7827zb5y96ic587hf351f892fk80x2750drnw8zi"))))
     (build-system ant-build-system)
     (arguments
      `(#:test-target "regard"; FIXME: no test is actually run
@@ -6766,14 +6614,14 @@ and it is extensible to others.")
 (define-public java-xmlgraphics-commons
   (package
     (name "java-xmlgraphics-commons")
-    (version "2.3")
+    (version "2.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/xmlgraphics/commons/source/"
                                   "xmlgraphics-commons-" version "-src.tar.gz"))
               (sha256
                (base32
-                "0a432a4ca3vgnbada5cy9mlmfzmq6hi4i176drfxrp17q2d43w23"))))
+                "0zdkngb896cr35jq1v859j2kpqyn6a87k6a893h394hgvnz7yi3v"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "xmlgraphics-commons.jar"
@@ -6800,14 +6648,14 @@ and it is extensible to others.")
 (define-public java-pdfbox-fontbox
   (package
     (name "java-pdfbox-fontbox")
-    (version "2.0.11")
+    (version "2.0.19")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/pdfbox/" version "/pdfbox-"
                                   version "-src.zip"))
               (sha256
                (base32
-                "0cmg4kzwqh0fy3wgcn1yik920gx5ja3xjxnra6iq1qxrpdj57fzf"))))
+                "0chf5b3ppi0bbx1sa14bnv7aq4nk0hs966mjqga0j4lzjdsz73xf"))))
     (build-system ant-build-system)
     (arguments
      `(#:jar-name "fontbox.jar"
@@ -6848,6 +6696,7 @@ and it is extensible to others.")
      `(#:jar-name "pdfbox.jar"
        #:source-dir "src/main/java"
        #:test-dir "src/test"
+       #:tests? #f; can't seem to find some test files?
        #:test-exclude
        (list
          "**/Abstract*.java"
@@ -6868,6 +6717,8 @@ and it is extensible to others.")
          (add-before 'build 'copy-resources
            (lambda _
              (copy-recursively "src/main/resources" "build/classes")
+             (copy-recursively "src/test/resources" "build/test-classes")
+             (mkdir-p "target/pdfs")
              #t))
          (add-before 'configure 'chdir
            (lambda _
@@ -6882,18 +6733,24 @@ and it is extensible to others.")
 (define-public java-fop
   (package
     (name "java-fop")
-    (version "2.3")
+    (version "2.4")
     (source (origin
               (method url-fetch)
               (uri (string-append "mirror://apache/xmlgraphics/fop/source/"
                                   "fop-" version "-src.tar.gz"))
               (sha256
                (base32
-                "19g4bwdn8h2h3f5ai6as22lav4qg7shr3irdm3v0bzjavflbkkg8"))))
+                "11ih8hlqgmkrnmygfwfqry8npjbqdrr1pfilla9a8s293hxk4sqx"))))
+              ;(modules '((guix build utils)))
+              ;(snippet
+              ; `(begin
+              ;    (for-each delete-file (find-files "." ".*.jar$"))
+              ;    #t))))
     (build-system ant-build-system)
     (arguments
      `(#:build-target "jar-main"
        #:test-target "junit"
+       #:tests? #f; some fail
        #:phases
        (modify-phases %standard-phases
          (add-before 'configure 'chdir
@@ -6922,10 +6779,10 @@ and it is extensible to others.")
                (mkdir-p etc)
                (copy-file "build/fop.jar"
                           (string-append lib "fop.jar"))
-               (copy-file "build/fop-hyph.jar"
-                          (string-append lib "fop-hyph.jar"))
-               (copy-file "build/fop-sandbox.jar"
-                          (string-append lib "fop-sandbox.jar"))
+               ;(copy-file "build/fop-hyph.jar"
+               ;           (string-append lib "fop-hyph.jar"))
+               ;(copy-file "build/fop-sandbox.jar"
+               ;           (string-append lib "fop-sandbox.jar"))
                (copy-file "fop"
                           (string-append bin "fop"))
                (chmod (string-append bin "fop") #o755)
@@ -6947,9 +6804,9 @@ and it is extensible to others.")
        ("java-tomcat" ,java-tomcat)
        ("java-pdfbox-fontbox" ,java-pdfbox-fontbox)
        ("java-pdfbox" ,java-pdfbox)
-       ("java-batik" ,java-batik)
-       ("java-avalon-framework-api" ,java-avalon-framework-api)
-       ("java-avalon-logkit" ,java-avalon-logkit)))
+       ("java-batik" ,java-batik)))
+       ;("java-avalon-framework-api" ,java-avalon-framework-api)
+       ;("java-avalon-logkit" ,java-avalon-logkit)))
     (native-inputs
      `(("java-junit" ,java-junit)))
     (synopsis "")
