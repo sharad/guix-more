@@ -236,7 +236,7 @@ for complex tasks.")
        ("lvm2" ,lvm2)
        ("mesa" ,mesa)
        ("python" ,python-2)
-       ("qt" ,qt)
+       ("qt" ,qtbase)
        ("openssl" ,openssl)
        ("sdl" ,sdl)))
     (arguments

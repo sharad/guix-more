@@ -67,7 +67,7 @@
 
 (define-public python2-cooldict
   (package-with-python2 python-cooldict))
- 
+
 (define-public python-bintrees
   (package
     (name "python-bintrees")
@@ -92,7 +92,7 @@ drop in replacement for dicts in most cases.")
 
 (define-public python2-bintrees
   (package-with-python2 python-bintrees))
- 
+
 (define-public python2-dpkt
   (package
     (name "python2-dpkt")
@@ -228,6 +228,32 @@ object every time you need to send it.")
 
 (define-public python2-ana
   (package-with-python2 python-ana))
+
+(define-public python-plumbum
+  (package
+    (name "python-plumbum")
+    (version "1.6.5")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "plumbum" version))
+              (sha256
+               (base32
+                "1vjbl9qy9fkl3vwiiwpaafmyxfks2sc3b3dhkp4vdgk2pdcv1ayq"))))
+    (build-system python-build-system)
+    (native-inputs
+     `(("pytest" ,python-pytest)))
+    (home-page "https://plumbum.readthedocs.io/en/latest")
+    (synopsis "Shell script-like programs in Python")
+    (description
+      "Plumbum (Latin for lead, which was used to create pipes back in the day)
+is a small yet feature-rich library for shell script-like programs in Python.
+The motto of the library is “Never write shell scripts again”, and thus it
+attempts to mimic the shell syntax (“shell combinators”) where it makes sense,
+while keeping it all Pythonic and cross-platform.")
+    (license license:expat)))
+
+(define-public python2-plumbum
+  (package-with-python2 python-plumbum))
 
 (define-public python-cymruwhois
   (package
@@ -435,3 +461,24 @@ object every time you need to send it.")
     (synopsis "")
     (description "")
     (license license:agpl3+)))
+
+(define-public python-neovim
+  (package
+    (name "python-neovim")
+    (version "0.3.2")
+    (source (origin
+              (method url-fetch)
+              (uri (pypi-uri "pynvim" version))
+              (sha256
+               (base32
+                "01dybk4vs452pljn1q3il5z2sd313ki0lgiglc0xmjc6wp290r6g"))))
+    (build-system python-build-system)
+    (propagated-inputs
+     `(("python-greenlet" ,python-greenlet)
+       ("python-msgpack" ,python-msgpack)))
+    (arguments
+     `(#:tests? #f))
+    (home-page "https://github.com/neovim/pynvim")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))

@@ -40,6 +40,11 @@
   #:use-module (more packages python)
   #:use-module (more packages smt))
 
+(define python2-bitstring (package-with-python2 python-bitstring))
+(define python2-utils (package-with-python2 python-utils))
+(define python2-progressbar2 (package-with-python2 python-progressbar2))
+(define python2-cachetools (package-with-python2 python-cachetools))
+
 (define-public python-pyelftools
   (package
     (name "python-pyelftools")
