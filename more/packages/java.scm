@@ -8226,3 +8226,71 @@ logging framework for Java.")))
       (synopsis "")
       (description "")
       (license license:asl2.0))))
+
+(define-public java-jline3-terminal
+  (package
+    (name "java-jline3-terminal")
+    (version "3.19.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/jline/jline3")
+                     (commit (string-append "jline-parent-" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "16cfbkbj925c92xnwq5sbg7v57yh840g0mh95iyzkkajxirz9qn9"))
+              (snippet
+               ;; calls maven, and conflicts with ant
+               `(delete-file "build"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "jline3-terminal.jar"
+       #:source-dir "terminal/src/main/java"
+       #:test-dir "terminal/src/test"
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'copy-resources
+           (lambda _
+             (copy-recursively "terminal/src/main/resources/" "build/classes")
+             #t)))))
+    (native-inputs
+     `(("java-easymock" ,java-easymock)
+       ("java-junit" ,java-junit)))
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license #f)))
+
+(define-public java-jline3-reader
+  (package
+    (inherit java-jline3-terminal)
+    (name "java-jline3-reader")
+    (arguments
+     `(#:jar-name "jline3-reader.jar"
+       #:source-dir "reader/src/main/java"
+       #:test-dir "reader/src/test"))
+    (inputs
+     `(("java-jline3-terminal" ,java-jline3-terminal)))))
+
+(define-public java-concurrent-reference-hash-map
+  (package
+    (name "java-concurrent-reference-hash-map")
+    (version "1.0.0")
+    (source (origin
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/alexarchambault/concurrent-reference-hash-map")
+                     (commit (string-append "v" version))))
+              (file-name (git-file-name name version))
+              (sha256
+               (base32
+                "1x2pybyld2b6pp5f93l2ixxljk18vkw11s6pysfck7a30l9f7bzb"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "concurrent-reference-hash-map.jar"
+       #:tests? #f)); no tests
+    (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:lgpl2.1)))
