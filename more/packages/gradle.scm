@@ -517,7 +517,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
          ("java-guava-for-gradle" ,java-guava-for-gradle)
          ("java-javax-inject" ,java-javax-inject)
          ("java-jsr305" ,java-jsr305)
-         ("scala-official" ,scala-official))))))
+         ("scala" ,scala))))))
 
 (define-public gradle-scala
   (let ((base (gradle-subproject
@@ -541,7 +541,7 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
          ("java-guava-for-gradle" ,java-guava-for-gradle)
          ("java-javax-inject" ,java-javax-inject)
          ("java-jsr305" ,java-jsr305)
-         ("scala-official" ,scala-official))))))
+         ("scala" ,scala))))))
 
 (define-public gradle-ide
   (let ((base (gradle-subproject
