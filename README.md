@@ -1,78 +1,59 @@
 More packages for the Guix package manager! This repository contains
 recipes for packages that I am working on. They will eventually be sent
-upstream. When this is the case, they will vanish from this repo.
+upstream. When this is the case, they will vanish from this repository.
+Note that most of these packages are WIP and might not work very well, or might
+not even build. Your help is very welcome!
 
 This repository should only contain free software.  If you encounter non-free
-software, please open an issue, email me or ping me on IRC (roptat on freenode).
+software, please open an issue, email me or ping me on IRC (roptat on libera.chat).
 
 How to use these packages?
 ==========================
 
-```sh
-export GUIX_PACKAGE_PATH=$HOME/guix-more
+
+This is a Guix channel. You will first need to install
+[Guix](https://www.gnu.org/software/guix/download/) itself. Then, simply create
+a new `~/.config/guix/channels.scm` file with this content, or update the
+file with the additional channel if it already exists:
+
+```scheme
+(cons* (channel
+        (name 'guix-android)
+        (url "https://git.lepiller.eu/git/guix-more.git"))
+       %default-channels)
 ```
 
-That's it!
+Then run `guix pull` to pull the new channel.
 
-What is in there?
-=================
+### Important checks ###
 
-Binary analysis software
-------------------------
-
-* _angr_: A binary analysis tool
-
-Education
----------
-
-* _morji_: A spaced-repetition program
-
-Java
-----
-
-* _fop_: A print formatter driven by XSL formatting objects
-
-Openstreetmap
--------------
-
-* _josm_: An openstreetmap editor
-* _imposm_: A script to import data from OSM to a postgis database
-* _tegola_: A program to produce vector tiles from a postgis database
+Make sure your guix environment is set up properly. You need to have
+`~/.config/guix/current` as the **first** item in your `$PATH` or you're going
+to run into troubles. Additionally, after running `guix pull`, make sure you
+run `hash guix` in any open terminal to make sure bash's cache is cleared of
+the old guix binary location.
 
 Current work
 ============
 
-Using skia with icecat
-----------------------
+Adding Scala and SBT
+--------------------
 
-Currently working on this. I have skia, but it requires some tricks to actually
-have icecat build with it.
+Scala is not bootstrappable, so it will not go into Guix easily.  In this repo,
+I rebuild Scala using the official Scala binary, and manage to build SBT using
+it.  Note that I only packaged sbt-launcher, which is what you get when you
+download sbt from their website.  Its role is to download and execute the
+full version of sbt from the repositories.
 
-Adding gradle and scala/sbt
----------------------------
+Adding Gradle
+-------------
 
 Gradle is a build system used mostly by android applications. I have packages
-for 2/3 of gradle, but that's not enough. I'm currently blocked at a gradle
-subproject that requires scala and sbt. Scala is written in scala, so it's hard
-to bootstrap. I've packaged a binary version for now and building sbt (another
-dependency) is my next target.
+for 2/3 of gradle in the past, but the project evolved quickly since then, so
+I will have to restart from the beginning.
 
-Adding a maven-build-system
----------------------------
+Other Packages
+--------------
 
-Although the maven package is now in Guix proper, we do not have a maven-build-system
-yet. Such a build system requires maven and some plugins. I'm planning to build
-these plugins. They require a lot of new dependencies for which we can't use
-the maven-build-system either... Such a pain :/
-
-OCaml and Coq packages
-----------------------
-
-The more the better. They are being integrated.
-
-TODO
-====
-
-Eiffel studio -> eiffel -> AutoProof and Eve -> boogie.
-
-alt-ergo, CVC4
+As the name suggests, this channel contains more packages that I plan to upstream
+at some point, when I have time.
