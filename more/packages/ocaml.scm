@@ -422,35 +422,6 @@ provers.")
     ; lgpl2.1+ with linking exception
     (license license:lgpl2.1+)))
 
-(define-public frama-c
-  (package
-    (name "frama-c")
-    (version "20171101")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "http://frama-c.com/download/frama-c-Sulfur-"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "1vwjfqmm1r36gkybsy3a7m89q5zicf4rnz5vlsn9imnpjpl9gjw1"))))
-    (build-system ocaml-build-system)
-    (arguments
-     `(#:tests? #f; for now
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'configure 'export-shell
-           (lambda* (#:key inputs #:allow-other-keys)
-             (setenv "CONFIG_SHELL" (string-append (assoc-ref inputs "bash")
-                                                   "/bin/sh")))))))
-    (inputs
-     `(("gmp" ,gmp)
-       ("ocaml-graph" ,ocaml-graph)
-       ("ocaml-zarith" ,ocaml-zarith)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:lgpl2.1+)))
-
 (define-public coq-io
   (package
     (name "coq-io")

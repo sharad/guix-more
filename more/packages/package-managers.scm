@@ -41,36 +41,6 @@
   #:use-module (gnu packages xml)
   )
 
-(define-public libxmlb
-  (package
-    (name "libxmlb")
-    (version "0.1.11")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "https://github.com/hughsie/libxmlb")
-                     (commit version)))
-              (sha256
-               (base32
-                "1503v76w7543snqyjxykiqa5va62zb0ccn3jlw0gpdx8973v80mr"))))
-    (build-system meson-build-system)
-    (arguments
-     `(#:tests? #f))
-    (native-inputs
-     `(("cmake" ,cmake)
-       ("gobject-introspection" ,gobject-introspection); for g-ir-scanner
-       ("gtk-doc" ,gtk-doc)
-       ("pkg-config" ,pkg-config)))
-    (inputs
-     `(("glib" ,glib)
-       ("util-linux" ,util-linux)
-       )
-      )
-    (home-page "https://github.com/hughsie/libxmlb")
-    (synopsis "")
-    (description "")
-    (license license:lgpl2.1+)))
-
 (define-public libsoup-2.67.3
   (package
     (inherit libsoup)

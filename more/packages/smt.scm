@@ -79,37 +79,3 @@
     (synopsis "Claripy is a abstracted constraint-solving wrapper")
     (description "Claripy is a abstracted constraint-solving wrapper.")
     (license license:bsd-2)))
-
-(define-public why3
-  (package
-    (name "why3")
-    (version "0.88.3")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://gforge.inria.fr/frs/download.php/file"
-                                  "/37313/why3-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0limdqy9l5bjzwhdalcfdyh0b6laxgiphhvr4bby9p0030agssiy"))))
-    (build-system gnu-build-system)
-    (native-inputs
-     `(("ocaml" ,ocaml)))
-    (propagated-inputs
-     `(("menhir" ,ocaml-menhir)))
-    (arguments
-     `(#:tests? #f)) ;; Need Alt-Ergo
-       ;#:phases
-       ;(modify-phases %standard-phases
-       ;  (replace 'check
-       ;    (lambda _
-       ;      (zero? (system* "make" ;"test-ocaml-extraction"
-       ;                      "test-runstrat" "test-coq-tactic.opt"
-       ;                      "test-coq-tactic.byte" "test-session.opt"
-       ;                      "test-session.byte" "test-api-mlw.opt"
-       ;                      "test-api-mlw.byte" "test-api-mlw-tree.opt"
-       ;                      "test-mlw-tree.byte" "test-api-logic.opt"
-       ;                      "test-api-logic.byte")))))))
-    (home-page "http://why3.lri.fr")
-    (synopsis "")
-    (description "")
-    (license license:lgpl2.1)))

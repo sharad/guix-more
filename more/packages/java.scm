@@ -1424,40 +1424,6 @@ import org.junit.Assert.*;"))
      `(("java-brotli-dec" ,java-brotli-dec)
        ,@(package-inputs java-commons-compress)))))
 
-(define-public java-jmapviewer
-  (package
-    (name "java-jmapviewer")
-    (version "2.9")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://svn.openstreetmap.org/applications/viewer/jmapviewer/releases/"
-                                  version "/JMapViewer-" version "-Source.zip"))
-              (sha256
-               (base32
-                "06jilhvsx662raix58g8ccl56d1pmirwlys9px0mdg7j46wixk6l"))))
-    (build-system ant-build-system)
-    (native-inputs
-     `(("unzip" ,unzip)))
-    (arguments
-     `(#:build-target "pack"
-       #:tests? #f; No tests
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'clean
-           (lambda* _
-             (zero? (system* "ant" "clean"))))
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let ((dir (string-append (assoc-ref outputs "out") "/share/java/")))
-               (mkdir-p dir)
-               (copy-file "JMapViewer.jar" (string-append dir "JMapViewer.jar"))))))))
-    (home-page "https://wiki.openstreetmap.org/wiki/JMapViewer")
-    (synopsis "OSM map integration in Java")
-    (description "JMapViewer is a Java component which allows to easily
-integrate an OSM map view into your Java application.  It is maintained as
-an independent project by the JOSM team.")
-    (license license:gpl2)))
-
 (define-public java-zstd
   (package
     (name "java-zstd")
@@ -1500,31 +1466,6 @@ an independent project by the JOSM team.")
        #:source-dir "."
        #:tests? #f)); no tests
     (home-page "https://github.com/jboss/jboss-annotations-api_spec")
-    (synopsis "")
-    (description "")
-    (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
-
-(define-public java-jboss-transaction-api-spec
-  (package
-    (name "java-jboss-transaction-api-spec")
-    (version "1.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/jboss/jboss-transaction-api_spec/"
-                                  "archive/jboss-transaction-api_" version
-                                  "_spec-1.0.1.Final.tar.gz"))
-              (sha256
-               (base32
-                "0yhyjf9p21cjs84nz66bxnmzdxdr98kfpbyp5gr3js0hwl6zz7xb"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "java-jboss-transaction-api_spec.jar"
-       #:source-dir "src/main/java"
-       #:tests? #f)); no tests
-    (inputs
-     `(("java-cdi-api" ,java-cdi-api)
-       ("java-jboss-interceptors-api-spec" ,java-jboss-interceptors-api-spec)))
-    (home-page "https://github.com/jboss/jboss-transaction-api_spec")
     (synopsis "")
     (description "")
     (license (list license:gpl2 license:cddl1.0)))); either gpl2 only or cddl.
@@ -3116,8 +3057,8 @@ import org.objenesis.ObjenesisException;"))
        ("java-aspectj-weaver" ,java-aspectj-weaver)
        ("java-cglib" ,java-cglib)
        ("java-commons-logging-minimal" ,java-commons-logging-minimal)
+       ("java-commons-pool1" ,java-commons-pool1)
        ("java-commons-pool" ,java-commons-pool)
-       ("java-commons-pool2" ,java-commons-pool2)
        ("java-jamonapi-jamon-bootstrap" ,java-jamonapi-jamon-bootstrap)
        ("java-javax-inject" ,java-javax-inject)
        ("java-snakeyaml" ,java-snakeyaml)
@@ -4386,7 +4327,7 @@ import org.objenesis.ObjenesisException;"))
     (description "")
     (license license:asl2.0)))
 
-(define-public java-commons-pool
+(define-public java-commons-pool1
   (package
     (name "java-commons-pool")
     (version "1.6")
@@ -4415,85 +4356,6 @@ import org.objenesis.ObjenesisException;"))
     (synopsis "")
     (description "")
     (license license:asl2.0)))
-
-(define-public java-commons-pool2
-  (package
-    (name "java-commons-pool2")
-    (version "2.6.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "mirror://apache/commons/pool/source/"
-                                  "commons-pool2-" version "-src.tar.gz"))
-              (sha256
-               (base32
-                "1fi1hgqmq01bs6azbj3sfswxzadp2r8sjjfiq6ryilz1m50kvrv6"))))
-    (arguments
-     `(#:jar-name "common-pool.jar"
-       #:source-dir "src/main/java"
-       #:test-exclude
-       (list "**/PerformanceTest.java")))
-    (build-system ant-build-system)
-    (inputs
-     `(("java-cglib" ,java-cglib)))
-    (native-inputs
-     `(("java-junit" ,java-junit)
-       ("java-hamcrest-core" ,java-hamcrest-core)
-       ("java-asm" ,java-asm)
-       ("java-objenesis" ,java-objenesis)))
-    (home-page "https://commons.apache.org/proper/commons-pool")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public java-commons-dbcp2
-  (package
-    (name "java-commons-dbcp2")
-    (version "2.6.0")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "mirror://apache/commons/dbcp/source/"
-                                  "commons-dbcp2-" version "-src.tar.gz"))
-              (sha256
-               (base32
-                "0axbvcbnf2l70fc3ybrlp3siw2w4ka9mia2pnx4py8gz54cpw3rc"))))
-    (arguments
-     `(#:source-dir "src/main/java"
-       #:jar-name "java-commons-dbcp.jar"
-       #:tests? #f)); requires apache-geronimo
-    (inputs
-     `(("java-commons-pool2" ,java-commons-pool2)
-       ("java-commons-logging" ,java-commons-logging-minimal)
-       ("java-jboss-transaction-api-spec" ,java-jboss-transaction-api-spec)))
-    (native-inputs
-     `(("java-junit" ,java-junit)))
-    (build-system ant-build-system)
-    (home-page "https://commons.apache.org/proper/commons-dbcp")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public java-commons-dbcp
-  (package
-    (inherit java-commons-dbcp2)
-    (version "1.4")
-    (name "java-commons-dbcp")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "mirror://apache/commons/dbcp/source/"
-                                  "commons-dbcp-" version "-src.tar.gz"))
-              (sha256
-               (base32
-                "10zjdngdki7bfklikrsr3fq0cmapf4fwc0klzqhi3iwzwx30iwgm"))
-              (patches
-                (search-patches "java-commons-dbcp-fix-abstract.patch"))))
-    (arguments
-     `(#:source-dir "src/java"
-       #:jar-name "java-commons-dbcp.jar"
-       #:tests? #f)); FIXME: error in a test class
-    (inputs
-     `(("java-commons-pool" ,java-commons-pool)
-       ("java-commons-logging" ,java-commons-logging-minimal)
-       ("java-jboss-transaction-api-spec" ,java-jboss-transaction-api-spec)))))
 
 (define-public java-portlet-api
   (package
@@ -5844,64 +5706,6 @@ and it is extensible to others.")
     (description "")
     (license license:bsd-2)))
 
-(define-public java-jsonp-api
-  (package
-    (name "java-jsonp-api")
-    (version "1.1.3")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/eclipse-ee4j/jsonp/archive/"
-                                  version "-RELEASE.tar.gz"))
-              (file-name (string-append name "-" version))
-              (sha256
-               (base32
-                "15d7rp4xb482h8r0j3j83wa34bmz84q89s9n8ydfgz6l492syfhc"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "jsonp-api.jar"
-       #:tests? #f
-       #:source-dir "api/src/main/java"
-       #:test-dir "api/src/test"))
-    (home-page "https://javaee.github.io/jsonp/")
-    (synopsis "")
-    (description "")
-    (license (list license:gpl2
-                   license:epl2.0))))
-
-(define-public java-jsonp-impl
-  (package
-    (inherit java-jsonp-api)
-    (name "java-jsonp-impl")
-    (arguments
-     `(#:jar-name "jsonp-impl.jar"
-       #:tests? #f
-       #:source-dir "impl/src/main/java"
-       #:test-dir "impl/src/test"))
-    (propagated-inputs
-     `(("java-jsonp-api" ,java-jsonp-api)))))
-
-(define-public ant-junit
-  (package
-    (inherit ant)
-    (name "ant-junit")
-    (build-system ant-build-system)
-    (arguments
-     `(#:build-target "jars"
-       #:tests? #f; disabled for now
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'copy
-           (lambda* (#:key inputs #:allow-other-keys)
-             (for-each (lambda (file) (copy-file file "lib/optional/junit.jar"))
-                       (find-files (string-append (assoc-ref inputs "java-junit") "/share") ".*.jar"))
-             #t))
-         (replace 'install
-           (lambda* (#:key outputs #:allow-other-keys)
-             (install-file "build/lib/ant-junit.jar"
-                           (string-append (assoc-ref outputs "out") "/share/java")))))))
-    (inputs
-     `(("java-junit" ,java-junit)))))
-
 (define-public ant-commons-net
   (package
     (inherit ant)
@@ -6154,40 +5958,6 @@ and it is extensible to others.")
                (mkdir-p dir)
                (copy-file (string-append "batik-" ,version "/lib/batik-all.jar")
                           (string-append dir "batik-all.jar"))))))))))
-
-(define-public java-xmlgraphics-commons
-  (package
-    (name "java-xmlgraphics-commons")
-    (version "2.4")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "mirror://apache/xmlgraphics/commons/source/"
-                                  "xmlgraphics-commons-" version "-src.tar.gz"))
-              (sha256
-               (base32
-                "0zdkngb896cr35jq1v859j2kpqyn6a87k6a893h394hgvnz7yi3v"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "xmlgraphics-commons.jar"
-       #:source-dir "src/main/java"
-       #:test-dir "src/test"
-       #:tests? #f; FIXME: need commons-xml-resolver
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'copy-resources
-           (lambda _
-             (copy-recursively "src/main/resources" "build/classes")
-             #t)))))
-    (inputs
-     `(("java-commons-io" ,java-commons-io)
-       ("java-commons-logging-minimal" ,java-commons-logging-minimal)))
-    (native-inputs
-     `(("java-junit" ,java-junit)
-       ("java-mockito-1" ,java-mockito-1)))
-    (home-page "https://xmlgraphics.apache.org")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
 
 (define-public java-pdfbox-fontbox
   (package
@@ -6751,44 +6521,6 @@ be able to validate XML content.")))
     (description "This package provides the core component of the Log4j
 logging framework for Java.")))
 
-(define-public java-mockito
-  (package
-    (name "java-mockito")
-    (version "2.23.6")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/mockito/mockito/archive/v"
-                                  version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "08vw3fqymgpjww06q4zvc6247dj2a7y3hgxsfghxny5lklh12qml"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "mockito.jar"
-       #:source-dir "src/main/java"
-       #:tests? #f; Some compilation errors
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'use-system-asm
-           (lambda _
-             (substitute* "src/main/java/org/mockito/internal/creation/bytebuddy/InlineBytecodeGenerator.java"
-               (("net.bytebuddy.jar.asm") "org.objectweb.asm"))
-             #t)))))
-    (propagated-inputs
-     `(("java-asm" ,java-asm)
-       ("java-byte-buddy-agent" ,java-byte-buddy-agent)
-       ("java-byte-buddy-dep" ,java-byte-buddy-dep)
-       ("java-hamcrest-core" ,java-hamcrest-core)
-       ("java-junit" ,java-junit)
-       ("java-objenesis" ,java-objenesis)))
-    (native-inputs
-     `(("java-assertj" ,java-assertj)))
-    (home-page "https://mockito.org/")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
 (define-public java-protobuf
   (package
     (name "java-protobuf")
@@ -7331,37 +7063,6 @@ logging framework for Java.")))
     (native-inputs
      `(("java-hamcrest-core" ,java-hamcrest-core)
        ("java-junit" ,java-junit)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
-
-(define-public java-picocli
-  (package
-    (name "java-picocli")
-    (version "3.8.2")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://github.com/remkop/picocli/archive/v"
-                                  version ".tar.gz"))
-              (sha256
-               (base32
-                "0rbk4kccy8qd2gnrfk9455rp48ign82h9a5n98ry4ac1i1x2ffax"))))
-    (build-system ant-build-system)
-    (arguments
-     `(#:jar-name "picocli.jar"
-       #:source-dir "src/main/java"
-       ;; Require org.junit.contrib.java.lang.system.*
-       #:tests? #f
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'remove-groovy-dependency
-           (lambda _
-	     ;; Groovy depends on picocli, so remove a cyclic dependency here
-	     (delete-file-recursively "src/main/java/picocli/groovy")
-	     #t)))))
-    (native-inputs
-     `(("java-junit" ,java-junit)))
     (home-page "")
     (synopsis "")
     (description "")

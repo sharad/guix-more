@@ -655,18 +655,6 @@ and dynamic content, that supports a variety of markup languages.")
     (description "")
     (license license:asl2.0)))
 
-(define-public maven-plugin-annotations
-  (package
-    (inherit maven-plugin-tools-api)
-    (name "maven-plugin-annotations")
-    (arguments
-     `(#:jar-name "maven-plugin-annotations.jar"
-       #:tests? #f; no tests
-       #:source-dir "maven-plugin-annotations/src/main/java"))
-    (inputs
-     `(("maven-artifact" ,maven-artifact)))
-    (description "")))
-
 (define-public maven-plugin-tools-generators
   (package
     (inherit maven-plugin-tools-api)
