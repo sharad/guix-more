@@ -79,32 +79,6 @@
       "Perl-cairo is a collection of perl wrappers for cairo.")
     (license license:lgpl2.1+)))
 
-(define-public perl-pango
-  (package
-    (name "perl-pango")
-    (version "1.227")
-    (source (origin
-              (method url-fetch)
-              (uri (string-append "https://downloads.sourceforge.net/sourceforge"
-                                  "/gtk2-perl/Pango-" version ".tar.gz"))
-              (file-name (string-append name "-" version ".tar.gz"))
-              (sha256
-               (base32
-                "0wdcidnfnb6nm79fzfs39ivawj3x8m98a147fmcxgv1zvwia9c1l"))))
-    (build-system perl-build-system)
-    (native-inputs
-     `(("perl-extutils-depends" ,perl-extutils-depends)
-       ("perl-extutils-pkgconfig" ,perl-extutils-pkgconfig)))
-    (propagated-inputs
-     `(("perl-glib" ,perl-glib)
-       ("perl-cairo" ,perl-cairo)
-       ("pango" ,pango)))
-    (home-page "http://gtk2-perl.sourceforge.net")
-    (synopsis "Perl wrappers for pango")
-    (description
-      "Perl-pango is a collection of perl wrappers for pango.")
-    (license license:lgpl2.1+)))
-
 (define-public perl-gtk2
   (package
     (name "perl-gtk2")
