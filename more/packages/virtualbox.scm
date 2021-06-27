@@ -28,7 +28,7 @@
   #:use-module (gnu packages autotools)
   #:use-module (gnu packages base)
   #:use-module (gnu packages bison)
-  #:use-module (more packages cdrom)
+  #:use-module (gnu packages cdrom)
   #:use-module (gnu packages curl)
   #:use-module (gnu packages flex)
   #:use-module (gnu packages gettext)
