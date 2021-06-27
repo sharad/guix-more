@@ -26,11 +26,12 @@
   #:use-module (guix build-system gnu)
   #:use-module (gnu packages compression)
   #:use-module (gnu packages gd)
+  #:use-module (gnu packages glib)
+  #:use-module (gnu packages gtk)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages perl-compression)
   #:use-module (gnu packages web)
-  #:use-module (gnu packages xml)
-  #:use-module (more packages perl))
+  #:use-module (gnu packages xml))
 
 (define-public unrar
   (package
