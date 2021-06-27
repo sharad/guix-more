@@ -38,8 +38,7 @@
   #:use-module (gnu packages polkit)
   #:use-module (gnu packages sqlite)
   #:use-module (gnu packages valgrind)
-  #:use-module (gnu packages xml)
-  )
+  #:use-module (gnu packages xml))
 
 (define-public libsoup-2.67.3
   (package

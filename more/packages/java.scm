@@ -6221,7 +6221,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import java.util.Collection;") 
+import java.util.Collection;")
                (("^}") "public Part getPart(String name) throws IOException,
                        ServletException {
     return httpRequest.getPart(name);
@@ -6737,6 +6737,44 @@ logging framework for Java.")))
      `(("java-hamcrest-core" ,java-hamcrest-core)
        ("java-junit" ,java-junit)))
     (home-page "")
+    (synopsis "")
+    (description "")
+    (license license:asl2.0)))
+
+(define-public java-mockito
+  (package
+    (name "java-mockito")
+    (version "2.23.6")
+    (source (origin
+              (method url-fetch)
+              (uri (string-append "https://github.com/mockito/mockito/archive/v"
+                                  version ".tar.gz"))
+              (file-name (string-append name "-" version ".tar.gz"))
+              (sha256
+               (base32
+                "08vw3fqymgpjww06q4zvc6247dj2a7y3hgxsfghxny5lklh12qml"))))
+    (build-system ant-build-system)
+    (arguments
+     `(#:jar-name "mockito.jar"
+       #:source-dir "src/main/java"
+       #:tests? #f; Some compilation errors
+       #:phases
+       (modify-phases %standard-phases
+         (add-before 'build 'use-system-asm
+           (lambda _
+             (substitute* "src/main/java/org/mockito/internal/creation/bytebuddy/InlineBytecodeGenerator.java"
+               (("net.bytebuddy.jar.asm") "org.objectweb.asm"))
+             #t)))))
+    (propagated-inputs
+     `(("java-asm" ,java-asm)
+       ("java-byte-buddy-agent" ,java-byte-buddy-agent)
+       ("java-byte-buddy-dep" ,java-byte-buddy-dep)
+       ("java-hamcrest-core" ,java-hamcrest-core)
+       ("java-junit" ,java-junit)
+       ("java-objenesis" ,java-objenesis)))
+    (native-inputs
+     `(("java-assertj" ,java-assertj)))
+    (home-page "https://mockito.org/")
     (synopsis "")
     (description "")
     (license license:asl2.0)))
