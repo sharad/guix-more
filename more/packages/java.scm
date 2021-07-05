@@ -103,12 +103,14 @@ standards and recommendations.")
     (name "java-fastutil")
     (version "8.2.2")
     (source (origin
-              (method url-fetch)
-              (uri (string-append "http://fastutil.di.unimi.it/fastutil-"
-                                  version "-src.tar.gz"))
+              (method git-fetch)
+              (uri (git-reference
+                     (url "https://github.com/vigna/fastutil")
+                     (commit version)))
+              (file-name (git-file-name name version))
               (sha256
                (base32
-                "005d310p97qb2s74icl9avr7b6yqwn0wlbbyb5byzxf3189y3yh8"))))
+                "1jn2c70lran9b2zkyvw4axynbsdb2qscz3drjd0jvs1fjmxiwzjh"))))
     (build-system ant-build-system)
     (arguments
      `(#:tests? #f; no tests
