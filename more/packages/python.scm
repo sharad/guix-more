@@ -128,8 +128,8 @@ the basic TCP/IP protocols.")
                (base32
                 "1iw1nkyh8r55xqafl14lp7lih38b5fdqid05s6cp4zd62821v6d8"))))
     (build-system python-build-system)
-    (native-inputs
-     `(("nose" ,python2-nose)))
+    ;; (native-inputs
+    ;;  `(("nose" ,python2-nose)))
     (propagated-inputs
      `(("plumbum" ,python2-plumbum)
        ("progressbar" ,python2-progressbar)))
