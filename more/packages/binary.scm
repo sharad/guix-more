@@ -430,7 +430,7 @@ loaded by the OS's loader.")
      `(("pyelftools" ,python2-pyelftools)
        ;; ("cffi" ,python2-cffi)
        ("archinfo" ,python2-archinfo)
-       ("future" ,python2-future)
+       ;; ("future" ,python2-future)
        ("pyvex" ,python2-pyvex)
        ("pefile" ,python2-pefile)))
     (native-inputs
