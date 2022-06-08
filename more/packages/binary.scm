@@ -287,7 +287,8 @@ valgrind.org) for use with PyVEX.")
     (propagated-inputs
      `(("archinfo" ,python2-archinfo)
        ("pycparser" ,python2-pycparser)
-       ("cffi" ,python2-cffi)))
+       ;;("cffi" ,python2-cffi)
+       ))
     (native-inputs
      `(("python2-bitstring" ,python2-bitstring)))
     (arguments
@@ -427,7 +428,7 @@ loaded by the OS's loader.")
     (build-system python-build-system)
     (propagated-inputs
      `(("pyelftools" ,python2-pyelftools)
-       ("cffi" ,python2-cffi)
+       ;; ("cffi" ,python2-cffi)
        ("archinfo" ,python2-archinfo)
        ("future" ,python2-future)
        ("pyvex" ,python2-pyvex)
