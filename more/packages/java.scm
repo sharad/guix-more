@@ -3433,7 +3433,7 @@ import org.objenesis.ObjenesisException;"))
     (home-page "http://h2database.com")
     (synopsis "")
     (description "")
-    (license '(license:mpl2.0 license:epl1.0))))
+    (license (list license:mpl2.0 license:epl1.0))))
 
 (define-public java-apache-felix-utils
   (package
