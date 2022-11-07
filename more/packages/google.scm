@@ -59,7 +59,7 @@
     (home-page "https://chromium.googlesource.com/chromium/src")
     (synopsis "Google web browser")
     (description "Google web browser.")
-    (license "bsd-3")))
+    (license license:bsd-3)))
 
 (define-public skia
   (package
@@ -160,7 +160,7 @@
     (home-page "https://skia.org")
     (synopsis "Graphics library")
     (description "Graphics library.")
-    (license "bsd-3")))
+    (license license:bsd-3)))
 
 (define-public google-gn
   (package
