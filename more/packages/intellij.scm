@@ -40,7 +40,7 @@
   #:use-module (gnu packages maven)
   #:use-module (gnu packages perl)
   #:use-module (gnu packages web)
-  #:use-module (gnu packages xml)
+  #:use-module (gnu packages java-xml)
   #:use-module (more packages java))
 
 (define intellij-community-130-commit "de6f73b5706c3c23c8f46bcf3761e48fa3e0f95b")
