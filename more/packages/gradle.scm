@@ -30,7 +30,7 @@
   #:use-module (gnu packages maven)
   #:use-module (gnu packages web)
   #:use-module (gnu packages version-control)
-  #:use-module (gnu packages xml)
+  #:use-module (gnu packages java-xml)
   #:use-module (more packages java)
   #:use-module (more packages maven)
   #:use-module (more packages scala))
@@ -765,8 +765,8 @@ isSnapshot=false" ,(package-version base) ,(package-version base))))
                                    "gradle-resources-sftp,gradle-scala,"
                                    "gradle-signing,gradle-testing-base,"
                                    "gradle-testing-jvm,gradle-testing-native,"
-                                   "gradle-wrapper"))))
-                #t)))))))
+                                   "gradle-wrapper")))))
+                #t))))))
       (inputs
        `(("gradle-base-services" ,gradle-base-services)
          ("gradle-base-services-groovy" ,gradle-base-services-groovy)
@@ -1598,7 +1598,7 @@ org/sonatype/maven/polyglot
 org/sonatype/plexus/components/cipher
 org/sonatype/plexus/components/sec/dispatcher
 org/testng
-org/yaml/snakeyaml")))
+org/yaml/snakeyaml"))))
                (with-output-to-file "test-kit-relocated.txt"
                  (lambda _
                    (format #t "com/esotericsoftware/kryo
@@ -1643,7 +1643,7 @@ org/objenesis
                        "build/jar/gradle-runtime-api-info-"
                        ,(package-version base) ".jar")
                      "-C" "build/classes" ".")
-             #t)))))))))
+             #t))))))))
 
 (define-public gradle-announce
   (let ((base (gradle-subproject
