@@ -31,6 +31,7 @@
   #:use-module (gnu packages python)
   #:use-module (gnu packages ruby)
   #:use-module (gnu packages xml)
+  #:use-module (gnu packages image)
   #:use-module (guix packages)
   #:use-module (guix download)
   #:use-module (guix git-download)

@@ -59,6 +59,7 @@
   #:use-module (gnu packages tbb)
   #:use-module (more packages tcl)
   #:use-module (gnu packages tls)
+  #:use-module (gnu packages image)
   #:use-module (gnu packages xiph)
   #:use-module (gnu packages xml)
   #:use-module (gnu packages xorg))
