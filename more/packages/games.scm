@@ -163,60 +163,60 @@ and anki.")
     (description "")
     (license license:lgpl2.1)))
 
-(define-public khanat
-  (package
-    (name "khanat")
-    (version "3.0")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                     (url "https://git.khaganat.net/khaganat/mmorpg_khanat/khanat-opennel-code.git")
-                     ;(commit "0ca90c49a5e1e6f8865ef15517bd25e388a2db96")))
-                     (commit "302ee7e20ea93caded5d46637918ba0092f207fd")))
-              (sha256
-               (base32
-                ;"1rfrk43ya8mx576ycs4rln67kdrci37ryixk7abf1cqjdrz7a883"))))
-                "1w0bhspsgf3dg33xdyypc4rm935n6g5d7shid92jf4j6jb0cjahh"))))
-    (build-system cmake-build-system)
-    (inputs
-     `(("boost" ,boost)
-       ("cpptest" ,cpptest)
-       ("curl" ,curl)
-       ("giflib" ,giflib)
-       ("libfreetype" ,freetype)
-       ("libjpeg" ,libjpeg)
-       ("libpng" ,libpng)
-       ("libvorbis" ,libvorbis)
-       ("libxml2" ,libxml2)
-       ("lua" ,lua-5.1)
-       ("luabind" ,luabind)
-       ("mesa" ,mesa)
-       ("openal" ,openal)
-       ("openssl" ,openssl)
-       ("zlib" ,zlib)))
-    (arguments
-     `(#:out-of-source? #t
-       #:tests? #f
-       #:configure-flags (list "-DFINAL_VERSION=ON" "-DWITH_RYZOM_SERVER=OFF"
-                               "-DWITH_RYZOM_TOOLS=OFF" "-DWITH_NEL_TESTS=OFF"
-                               "-DWITH_RYZOM_CLIENT=ON" "-DWITH_NEL_TOOLS=OFF"
-                               "-DWITH_NEL_SAMPLES=OFF" "-DWITH_STATIC=OFF"
-                               "-DWITH_STATIC_EXTERNAL=OFF")
-       #:phases
-       (modify-phases %standard-phases
-         (add-before 'configure 'chdir
-           (lambda _
-             (chdir "code")))
-         (add-after 'install 'link-khanat
-           (lambda* (#:key outputs #:allow-other-keys)
-             (let* ((out (assoc-ref outputs "out"))
-                    (game (string-append out "/games/khanat_client"))
-                    (bin (string-append out "/bin/khanat_client")))
-             (symlink game bin)))))))
-    (home-page "https://khaganat.net/")
-    (synopsis "")
-    (description "")
-    (license license:agpl3)))
+;; (define-public khanat
+;;   (package
+;;     (name "khanat")
+;;     (version "3.0")
+;;     (source (origin
+;;               (method git-fetch)
+;;               (uri (git-reference
+;;                      (url "https://git.khaganat.net/khaganat/mmorpg_khanat/khanat-opennel-code.git")
+;;                      ;(commit "0ca90c49a5e1e6f8865ef15517bd25e388a2db96")))
+;;                      (commit "302ee7e20ea93caded5d46637918ba0092f207fd")))
+;;               (sha256
+;;                (base32
+;;                 ;"1rfrk43ya8mx576ycs4rln67kdrci37ryixk7abf1cqjdrz7a883"))))
+;;                 "1w0bhspsgf3dg33xdyypc4rm935n6g5d7shid92jf4j6jb0cjahh"))))
+;;     (build-system cmake-build-system)
+;;     (inputs
+;;      `(("boost" ,boost)
+;;        ("cpptest" ,cpptest)
+;;        ("curl" ,curl)
+;;        ("giflib" ,giflib)
+;;        ("libfreetype" ,freetype)
+;;        ("libjpeg" ,libjpeg)
+;;        ("libpng" ,libpng)
+;;        ("libvorbis" ,libvorbis)
+;;        ("libxml2" ,libxml2)
+;;        ("lua" ,lua-5.1)
+;;        ("luabind" ,luabind)
+;;        ("mesa" ,mesa)
+;;        ("openal" ,openal)
+;;        ("openssl" ,openssl)
+;;        ("zlib" ,zlib)))
+;;     (arguments
+;;      `(#:out-of-source? #t
+;;        #:tests? #f
+;;        #:configure-flags (list "-DFINAL_VERSION=ON" "-DWITH_RYZOM_SERVER=OFF"
+;;                                "-DWITH_RYZOM_TOOLS=OFF" "-DWITH_NEL_TESTS=OFF"
+;;                                "-DWITH_RYZOM_CLIENT=ON" "-DWITH_NEL_TOOLS=OFF"
+;;                                "-DWITH_NEL_SAMPLES=OFF" "-DWITH_STATIC=OFF"
+;;                                "-DWITH_STATIC_EXTERNAL=OFF")
+;;        #:phases
+;;        (modify-phases %standard-phases
+;;          (add-before 'configure 'chdir
+;;            (lambda _
+;;              (chdir "code")))
+;;          (add-after 'install 'link-khanat
+;;            (lambda* (#:key outputs #:allow-other-keys)
+;;              (let* ((out (assoc-ref outputs "out"))
+;;                     (game (string-append out "/games/khanat_client"))
+;;                     (bin (string-append out "/bin/khanat_client")))
+;;              (symlink game bin)))))))
+;;     (home-page "https://khaganat.net/")
+;;     (synopsis "")
+;;     (description "")
+;;     (license license:agpl3)))
 
 (define-public emojicode
   (package
