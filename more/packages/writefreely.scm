@@ -4,7 +4,7 @@
   #:use-module (guix build-system go)
   #:use-module (guix licenses)
   #:use-module (guix git-download)
-  #:use-module (gnu packages golang)
+  #:use-module (gnu packages golang-build)
   #:use-module (gnu packages syncthing))
 
 (define-public go-github.com-go-sql-driver-mysql
