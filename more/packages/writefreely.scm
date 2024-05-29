@@ -7,6 +7,7 @@
   #:use-module (gnu packages golang-build)
   #:use-module (gnu packages golang-check)
   #:use-module (gnu packages golang)
+  #:use-module (gnu packages golang-xyz)
   #:use-module (gnu packages syncthing))
 
 (define-public go-github.com-go-sql-driver-mysql
