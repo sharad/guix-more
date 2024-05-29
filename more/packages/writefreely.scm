@@ -4,6 +4,7 @@
   #:use-module (guix build-system go)
   #:use-module (guix licenses)
   #:use-module (guix git-download)
+  #:use-module (gnu packages golang-check)
   #:use-module (gnu packages golang-build)
   #:use-module (gnu packages syncthing))
 
