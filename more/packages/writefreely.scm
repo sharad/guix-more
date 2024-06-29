@@ -230,7 +230,7 @@
       ;; FIXME: one failure
       #:tests? #f))
    (propagated-inputs
-    `(("go-golang-org-x-net-html" ,go-golang-org-x-net-html)))
+    `(("go-golang-org-x-net" ,go-golang-org-x-net)))
    (synopsis "")
    (description "")
    (home-page "https://github.com/microcosm-cc/bluemonday")
