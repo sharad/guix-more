@@ -27,43 +27,43 @@
   #:use-module (gnu packages)
   #:use-module (gnu packages tex))
 
-(define-public texlive-generic-babel-french
-  (package
-    (name "texlive-generic-babel-french")
-    (version (number->string 66594))    ;70951
-    (source (origin
-              (method svn-fetch)
-              (uri (texlive-ref "generic" "babel-french"))
-              (file-name (string-append name "-" version "-checkout"))
-              (sha256
-               (base32
-                "1rymnl34w4k5izw56g48s90wki2qyq8nz1aj6ijax2bnznm55ngl"))))
-    (build-system texlive-build-system)
-    (arguments '(#:tex-directory "generic/babel-french"))
-    (home-page "https://www.ctan.org/pkg/babel-french")
-    (synopsis "Babel support for French")
-    (description
-     "This package provides the language definition file for support of
-French in @code{babel}.")
-    (license license:lppl1.3+)))
+;; (define-public texlive-generic-babel-french
+;;   (package
+;;     (name "texlive-generic-babel-french")
+;;     (version (number->string 66594))    ;70951
+;;     (source (origin
+;;               (method svn-fetch)
+;;               (uri (texlive-ref "generic" "babel-french"))
+;;               (file-name (string-append name "-" version "-checkout"))
+;;               (sha256
+;;                (base32
+;;                 "1rymnl34w4k5izw56g48s90wki2qyq8nz1aj6ijax2bnznm55ngl"))))
+;;     (build-system texlive-build-system)
+;;     (arguments '(#:tex-directory "generic/babel-french"))
+;;     (home-page "https://www.ctan.org/pkg/babel-french")
+;;     (synopsis "Babel support for French")
+;;     (description
+;;      "This package provides the language definition file for support of
+;; French in @code{babel}.")
+;;     (license license:lppl1.3+)))
 
-(define-public texlive-latex-sauerj
-  (package
-    (name "texlive-latex-sauerj")
-    (version (number->string 66594))    ;70951
-    (source (origin
-              (method svn-fetch)
-              (uri (texlive-ref "latex" "sauerj"))
-              (file-name (string-append name "-" version "-checkout"))
-              (sha256
-               (base32
-                "1rn3l0klhx1yhw37m20jj5aiss0qd7n30ivhss6x9ivsli938dk0"))))
-    (build-system texlive-build-system)
-    (arguments '(#:tex-directory "latex/sauerj"))
-    (home-page "")
-    (synopsis "")
-    (description "sauerj, parcolumns")
-    (license license:lppl1.3+)))
+;; (define-public texlive-latex-sauerj
+;;   (package
+;;     (name "texlive-latex-sauerj")
+;;     (version (number->string 66594))    ;70951
+;;     (source (origin
+;;               (method svn-fetch)
+;;               (uri (texlive-ref "latex" "sauerj"))
+;;               (file-name (string-append name "-" version "-checkout"))
+;;               (sha256
+;;                (base32
+;;                 "1rn3l0klhx1yhw37m20jj5aiss0qd7n30ivhss6x9ivsli938dk0"))))
+;;     (build-system texlive-build-system)
+;;     (arguments '(#:tex-directory "latex/sauerj"))
+;;     (home-page "")
+;;     (synopsis "")
+;;     (description "sauerj, parcolumns")
+;;     (license license:lppl1.3+)))
 
 (define-public biber-old
   (package
