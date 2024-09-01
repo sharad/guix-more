@@ -30,7 +30,7 @@
 (define-public texlive-generic-babel-french
   (package
     (name "texlive-generic-babel-french")
-    (version (number->string %texlive-revision))
+    (version (number->string 66594))    ;70951
     (source (origin
               (method svn-fetch)
               (uri (texlive-ref "generic" "babel-french"))
@@ -50,7 +50,7 @@ French in @code{babel}.")
 (define-public texlive-latex-sauerj
   (package
     (name "texlive-latex-sauerj")
-    (version (number->string %texlive-revision))
+    (version (number->string 66594))    ;70951
     (source (origin
               (method svn-fetch)
               (uri (texlive-ref "latex" "sauerj"))
