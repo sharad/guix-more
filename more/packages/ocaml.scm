@@ -196,7 +196,7 @@ provers.")
              #t)))))
     (native-inputs '())
     (inputs
-     `(("lablgtk" ,lablgtk)
+     `(;;("lablgtk" ,lablgtk)
        ("python" ,python-2)
        ("camlp5" ,camlp5)
        ("ocaml-num" ,ocaml-num)))))
