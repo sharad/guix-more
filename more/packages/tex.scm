@@ -65,10 +65,10 @@
 ;;     (description "sauerj, parcolumns")
 ;;     (license license:lppl1.3+)))
 
-(define-public biber-old
+(define-public texlive-biber-old
   (package
-    (inherit biber)
-    (name (package-name biber))
+    (inherit texlive-biber)
+    (name (package-name texlive-biber))
     (version "2.11")
     (source (origin
               (method git-fetch)
