@@ -28,47 +28,47 @@
   #:use-module (gnu packages ncurses)
   #:use-module (gnu packages ruby))
 
-(define-public ruby-pry-doc
-  (package
-    (name "ruby-pry-doc")
-    (version "0.13.4")
-    (source
-      (origin
-        (method url-fetch)
-        (uri (rubygems-uri "pry-doc" version))
-        (sha256
-          (base32
-            "036z1nsmrxnslf5xskbv6w59p4nb03bb0j3x23xw7v35sky5q0p7"))))
-    (build-system ruby-build-system)
-    (arguments
-     `(#:phases
-       (modify-phases %standard-phases
-         (add-before 'build 'fix-dependencies
-           (lambda _
-             (substitute* "Rakefile"
-               (("require 'latest_ruby'") ""))
-             #t)))))
-    (propagated-inputs
-      `(("ruby-pry" ,ruby-pry)
-        ("ruby-yard" ,ruby-yard)))
-    (native-inputs
-     `(("ruby-rspec" ,ruby-rspec)))
-    (synopsis
-      "Pry Doc is a Pry REPL plugin. It provides extended documentation support for the
-REPL by means of improving the `show-doc` and `show-source` commands. With help
-of the plugin the commands are be able to display the source code and the docs
-of Ruby methods and classes implemented in C.
-documentation
-")
-    (description
-      "Pry Doc is a Pry REPL plugin.  It provides extended documentation support for the
-REPL by means of improving the `show-doc` and `show-source` commands.  With help
-of the plugin the commands are be able to display the source code and the docs
-of Ruby methods and classes implemented in C.
-documentation
-")
-    (home-page "https://github.com/pry/pry-doc")
-    (license license:expat)))
+;; (define-public ruby-pry-doc
+;;   (package
+;;     (name "ruby-pry-doc")
+;;     (version "0.13.4")
+;;     (source
+;;       (origin
+;;         (method url-fetch)
+;;         (uri (rubygems-uri "pry-doc" version))
+;;         (sha256
+;;           (base32
+;;             "036z1nsmrxnslf5xskbv6w59p4nb03bb0j3x23xw7v35sky5q0p7"))))
+;;     (build-system ruby-build-system)
+;;     (arguments
+;;      `(#:phases
+;;        (modify-phases %standard-phases
+;;          (add-before 'build 'fix-dependencies
+;;            (lambda _
+;;              (substitute* "Rakefile"
+;;                (("require 'latest_ruby'") ""))
+;;              #t)))))
+;;     (propagated-inputs
+;;       `(("ruby-pry" ,ruby-pry)
+;;         ("ruby-yard" ,ruby-yard)))
+;;     (native-inputs
+;;      `(("ruby-rspec" ,ruby-rspec)))
+;;     (synopsis
+;;       "Pry Doc is a Pry REPL plugin. It provides extended documentation support for the
+;; REPL by means of improving the `show-doc` and `show-source` commands. With help
+;; of the plugin the commands are be able to display the source code and the docs
+;; of Ruby methods and classes implemented in C.
+;; documentation
+;; ")
+;;     (description
+;;       "Pry Doc is a Pry REPL plugin.  It provides extended documentation support for the
+;; REPL by means of improving the `show-doc` and `show-source` commands.  With help
+;; of the plugin the commands are be able to display the source code and the docs
+;; of Ruby methods and classes implemented in C.
+;; documentation
+;; ")
+;;     (home-page "https://github.com/pry/pry-doc")
+;;     (license license:expat)))
 
 (define-public ruby-trollop
   (package
