@@ -333,48 +333,48 @@ while keeping it all Pythonic and cross-platform.")
     (description "")
     (license license:gpl3+)))
 
-(define-public python-unittest2-fix
-  (package
-    (inherit python-unittest2)
-    (version "1.1.0")
-    (source (origin
-          (method url-fetch)
-          (uri (pypi-uri "unittest2" version))
-          (sha256
-           (base32
-        "0y855kmx7a8rnf81d3lh5lyxai1908xjp0laf4glwa4c8472m212"))))
-    (arguments
-      `(#:phases
-    (modify-phases %standard-phases
-      (add-before 'check 'disable-failures
-        (lambda _
-          (substitute* "unittest2/test/test_result.py"
-        (("testGet") "dontTestGet"))
-          (substitute* "unittest2/test/test_loader.py"
-        (("test_loadTestsFromNames__relative_malformed_name") "dontTest")
-        (("test_loadTestsFromName__relative_malformed_name") "dontTest2")))))))
-    (propagated-inputs
-      `(("traceback2" ,python-traceback2)
-    ("six" ,python-six)
-    ("argparse" ,python-argparse)))))
+;; (define-public python-unittest2-fix
+;;   (package
+;;     (inherit python-unittest2)
+;;     (version "1.1.0")
+;;     (source (origin
+;;           (method url-fetch)
+;;           (uri (pypi-uri "unittest2" version))
+;;           (sha256
+;;            (base32
+;;         "0y855kmx7a8rnf81d3lh5lyxai1908xjp0laf4glwa4c8472m212"))))
+;;     (arguments
+;;       `(#:phases
+;;     (modify-phases %standard-phases
+;;       (add-before 'check 'disable-failures
+;;         (lambda _
+;;           (substitute* "unittest2/test/test_result.py"
+;;         (("testGet") "dontTestGet"))
+;;           (substitute* "unittest2/test/test_loader.py"
+;;         (("test_loadTestsFromNames__relative_malformed_name") "dontTest")
+;;         (("test_loadTestsFromName__relative_malformed_name") "dontTest2")))))))
+;;     (propagated-inputs
+;;       `(("traceback2" ,python-traceback2)
+;;     ("six" ,python-six)
+;;     ("argparse" ,python-argparse)))))
 
-(define-public python-funcsigs
-  (package
-    (name "python-funcsigs")
-    (version "1.0.2")
-    (source (origin
-          (method url-fetch)
-          (uri (pypi-uri "funcsigs" version))
-          (sha256
-           (base32
-        "0l4g5818ffyfmfs1a924811azhjj8ax9xd1cffr1mzd3ycn0zfx7"))))
-    (build-system python-build-system)
-    (native-inputs
-      `(("unittest2" ,python-unittest2-fix)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:asl2.0)))
+;; (define-public python-funcsigs
+;;   (package
+;;     (name "python-funcsigs")
+;;     (version "1.0.2")
+;;     (source (origin
+;;           (method url-fetch)
+;;           (uri (pypi-uri "funcsigs" version))
+;;           (sha256
+;;            (base32
+;;         "0l4g5818ffyfmfs1a924811azhjj8ax9xd1cffr1mzd3ycn0zfx7"))))
+;;     (build-system python-build-system)
+;;     (native-inputs
+;;       `(("unittest2" ,python-unittest2-fix)))
+;;     (home-page "")
+;;     (synopsis "")
+;;     (description "")
+;;     (license license:asl2.0)))
 
 (define-public python-ripe-atlas-cousteau
   (package
