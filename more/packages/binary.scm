@@ -444,40 +444,40 @@ imports and provides an abstraction of process memory the same way as if it was
 loaded by the OS's loader.")
     (license license:bsd-2)))
 
-(define-public python2-angr
-  (package
-    (name "python2-angr")
-    (version "7.7.12.16")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "angr" version))
-              (sha256
-               (base32
-                "177z45ki580dphmrpsv2ln1249n8jcjf7mjl8ymjcki5yzan26yy"))))
-    (build-system python-build-system)
-    (arguments
-     `(#:python ,python-2
-       ;; Tests require pygit 0.1
-       #:tests? #f))
-    (propagated-inputs
-     `(("python2-bitstring" ,python2-bitstring)
-       ("python2-cle" ,python2-cle)
-       ("python2-capstone" ,python2-capstone)
-       ("python2-six" ,python2-six)
-       ("python2-utils" ,python2-utils)
-       ("python2-mulpyplexer" ,python2-mulpyplexer)
-       ("python2-rpyc" ,python2-rpyc)
-       ;; ("python2-enum34" ,python2-enum34)
-       ;; ("python2-networkx" ,python2-networkx)
-       ;; ("python2-futures" ,python2-futures)
-       ("python2-progressbar" ,python2-progressbar2)
-       ("python2-simuvex" ,python2-simuvex)))
-    (home-page "https://github.com/angr/angr")
-    (synopsis "Angr is a python framework for analyzing binaries")
-    (description "angr is a python framework for analyzing binaries.  It
-focuses on both static and dynamic symbolic (\"concolic\") analysis, making it
-applicable to a variety of tasks.")
-    (license license:bsd-2)))
+;; (define-public python2-angr
+;;   (package
+;;     (name "python2-angr")
+;;     (version "7.7.12.16")
+;;     (source (origin
+;;               (method url-fetch)
+;;               (uri (pypi-uri "angr" version))
+;;               (sha256
+;;                (base32
+;;                 "177z45ki580dphmrpsv2ln1249n8jcjf7mjl8ymjcki5yzan26yy"))))
+;;     (build-system python-build-system)
+;;     (arguments
+;;      `(#:python ,python-2
+;;        ;; Tests require pygit 0.1
+;;        #:tests? #f))
+;;     (propagated-inputs
+;;      `(("python2-bitstring" ,python2-bitstring)
+;;        ("python2-cle" ,python2-cle)
+;;        ("python2-capstone" ,python2-capstone)
+;;        ("python2-six" ,python2-six)
+;;        ("python2-utils" ,python2-utils)
+;;        ("python2-mulpyplexer" ,python2-mulpyplexer)
+;;        ("python2-rpyc" ,python2-rpyc)
+;;        ;; ("python2-enum34" ,python2-enum34)
+;;        ;; ("python2-networkx" ,python2-networkx)
+;;        ;; ("python2-futures" ,python2-futures)
+;;        ("python2-progressbar" ,python2-progressbar2)
+;;        ("python2-simuvex" ,python2-simuvex)))
+;;     (home-page "https://github.com/angr/angr")
+;;     (synopsis "Angr is a python framework for analyzing binaries")
+;;     (description "angr is a python framework for analyzing binaries.  It
+;; focuses on both static and dynamic symbolic (\"concolic\") analysis, making it
+;; applicable to a variety of tasks.")
+;;     (license license:bsd-2)))
 
 (define-public sandsifter
   (package
