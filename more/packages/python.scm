@@ -376,69 +376,69 @@ while keeping it all Pythonic and cross-platform.")
 ;;     (description "")
 ;;     (license license:asl2.0)))
 
-(define-public python-ripe-atlas-cousteau
-  (package
-    (name "python-ripe-atlas-cousteau")
-    (version "1.4.1")
-    (source (origin
-          (method url-fetch)
-          (uri (pypi-uri "ripe.atlas.cousteau" version))
-          (sha256
-           (base32
-        "1964qllddqqh1sz9psmmb84ahqdy499vavm9wdn0k2v7q6y0vm0p"))))
-    (build-system python-build-system)
-    (propagated-inputs
-      `(("websocket-client" ,python-websocket-client)
-        ("socketIO-client" ,python-socketio-client)
-        ("dateutil" ,python-dateutil)
-        ("jsonschema" ,python-jsonschema)
-        ("requests" ,python-requests)))
-    (native-inputs
-      `(("mock" ,python-mock)
-        ("nose" ,python-nose)
-        ("funcsigs" ,python-funcsigs)
-        ("coverage" ,python-coverage)))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:gpl3+)))
+;; (define-public python-ripe-atlas-cousteau
+;;   (package
+;;     (name "python-ripe-atlas-cousteau")
+;;     (version "1.4.1")
+;;     (source (origin
+;;           (method url-fetch)
+;;           (uri (pypi-uri "ripe.atlas.cousteau" version))
+;;           (sha256
+;;            (base32
+;;         "1964qllddqqh1sz9psmmb84ahqdy499vavm9wdn0k2v7q6y0vm0p"))))
+;;     (build-system python-build-system)
+;;     (propagated-inputs
+;;       `(("websocket-client" ,python-websocket-client)
+;;         ("socketIO-client" ,python-socketio-client)
+;;         ("dateutil" ,python-dateutil)
+;;         ("jsonschema" ,python-jsonschema)
+;;         ("requests" ,python-requests)))
+;;     (native-inputs
+;;       `(("mock" ,python-mock)
+;;         ("nose" ,python-nose)
+;;         ("funcsigs" ,python-funcsigs)
+;;         ("coverage" ,python-coverage)))
+;;     (home-page "")
+;;     (synopsis "")
+;;     (description "")
+;;     (license license:gpl3+)))
 
-(define-public python-ripe-atlas-tools
-  (package
-    (name "python-ripe-atlas-tools")
-    (version "2.2.3")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "ripe.atlas.tools" version))
-              (sha256
-               (base32
-                "1afcf56fyvsxb0i15v43804rqnn0xdp33achds84axnd1rl1375g"))))
-    (build-system python-build-system)
-    (propagated-inputs
-     `(("pyopenssl" ,python-pyopenssl)
-       ("sagan" ,python-ripe-atlas-sagan)
-       ("cousteau" ,python-ripe-atlas-cousteau)
-       ("pyaml" ,python-pyaml)
-       ("ipy" ,python-ipy)
-       ("tzlocal" ,python-tzlocal)))
-    (native-inputs
-     `(("mock" ,python-mock)
-       ("coverage" ,python-coverage)))
-    (arguments
-      `(#:tests? #f; tests can't load dependencies
-        #:phases
-        (modify-phases %standard-phases
-          (add-before 'check 'update-dependency
-            (lambda _
-              ;; Change dependency version to match what we have in guix
-              (substitute* "setup.py"
-                (("==1.2") "==1.2.2")
-                (("==1.4") "==1.4.1"))
-              #t)))))
-    (home-page "")
-    (synopsis "")
-    (description "")
-    (license license:gpl3+)))
+;; (define-public python-ripe-atlas-tools
+;;   (package
+;;     (name "python-ripe-atlas-tools")
+;;     (version "2.2.3")
+;;     (source (origin
+;;               (method url-fetch)
+;;               (uri (pypi-uri "ripe.atlas.tools" version))
+;;               (sha256
+;;                (base32
+;;                 "1afcf56fyvsxb0i15v43804rqnn0xdp33achds84axnd1rl1375g"))))
+;;     (build-system python-build-system)
+;;     (propagated-inputs
+;;      `(("pyopenssl" ,python-pyopenssl)
+;;        ("sagan" ,python-ripe-atlas-sagan)
+;;        ("cousteau" ,python-ripe-atlas-cousteau)
+;;        ("pyaml" ,python-pyaml)
+;;        ("ipy" ,python-ipy)
+;;        ("tzlocal" ,python-tzlocal)))
+;;     (native-inputs
+;;      `(("mock" ,python-mock)
+;;        ("coverage" ,python-coverage)))
+;;     (arguments
+;;       `(#:tests? #f; tests can't load dependencies
+;;         #:phases
+;;         (modify-phases %standard-phases
+;;           (add-before 'check 'update-dependency
+;;             (lambda _
+;;               ;; Change dependency version to match what we have in guix
+;;               (substitute* "setup.py"
+;;                 (("==1.2") "==1.2.2")
+;;                 (("==1.4") "==1.4.1"))
+;;               #t)))))
+;;     (home-page "")
+;;     (synopsis "")
+;;     (description "")
+;;     (license license:gpl3+)))
 
 (define-public transmon
   (package
