@@ -287,7 +287,7 @@ valgrind.org) for use with PyVEX.")
     (inputs `(("angr-vex" ,angr-vex)))
     (propagated-inputs
      `(("archinfo" ,python2-archinfo)
-       ("pycparser" ,python2-pycparser)
+       ;; ("pycparser" ,python2-pycparser)
        ;;("cffi" ,python2-cffi)
        ))
     (native-inputs
