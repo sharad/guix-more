@@ -128,8 +128,8 @@ the basic TCP/IP protocols.")
                (base32
                 "1iw1nkyh8r55xqafl14lp7lih38b5fdqid05s6cp4zd62821v6d8"))))
     (build-system python-build-system)
-    ;; (native-inputs
-    ;;  `(("nose" ,python2-nose)))
+    (native-inputs
+     `(("nose" ,python-nose2)))
     (propagated-inputs
      `(("plumbum" ,python2-plumbum)
        ("progressbar" ,python2-progressbar)))
@@ -215,7 +215,7 @@ automatically enable features like auto-resizing when the system supports it.")
               (file-name (string-append name "-" version))))
     (build-system python-build-system)
     (native-inputs
-     `(("nose" ,python-nose)))
+     `(("nose" ,python-nose2)))
     (home-page "https://github.com/zardus/ana")
     (synopsis "Provide easy distributed data storage for python objects")
     (description "ANA is a project to provide easy distributed data storage for
@@ -267,7 +267,7 @@ while keeping it all Pythonic and cross-platform.")
         "0m7jgpglkjd0lsyw64lfw6qxdm0fg0f54145f79kq4rk1vjqbh5n"))))
     (build-system python-build-system)
     (native-inputs
-     `(("python-nose" ,python-nose)))
+     `(("python-nose2" ,python-nose2)))
     (home-page "")
     (synopsis "")
     (description "")
@@ -287,7 +287,7 @@ while keeping it all Pythonic and cross-platform.")
     (propagated-inputs
      `(("cryptography" ,python-cryptography)
        ("dateutil" ,python-dateutil)
-       ("python-nose" ,python-nose)
+       ("python-nose2" ,python-nose2)
        ("pytz" ,python-pytz)))
     (home-page "")
     (synopsis "")
@@ -310,7 +310,7 @@ while keeping it all Pythonic and cross-platform.")
         ("requests" ,python-requests)))
     (native-inputs
       `(("coverage" ,python-coverage)
-    ("nose" ,python-nose)))
+    ("nose" ,python-nose2)))
     (arguments '(#:tests? #f)); requires network
     (home-page "")
     (synopsis "")
@@ -395,7 +395,7 @@ while keeping it all Pythonic and cross-platform.")
 ;;         ("requests" ,python-requests)))
 ;;     (native-inputs
 ;;       `(("mock" ,python-mock)
-;;         ("nose" ,python-nose)
+;;         ("nose" ,python-nose2)
 ;;         ("funcsigs" ,python-funcsigs)
 ;;         ("coverage" ,python-coverage)))
 ;;     (home-page "")
