@@ -89,7 +89,7 @@
        ("glew" ,glew)
        ("sdl2" ,sdl2)
        ("irrlicht" ,irrlicht)
-       ("ogre" ,ogre)
+       ;; ("ogre" ,ogre)
        ("epoxy" ,libepoxy)
        ("expat" ,expat)
        ("libxml2" ,libxml2)
