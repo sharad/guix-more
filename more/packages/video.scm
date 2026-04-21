@@ -80,7 +80,7 @@
        ("pulseaudio" ,pulseaudio)
        ("libx11" ,libx11)
        ("freetype" ,freetype)
-       ("wxwidgets-gtk2" ,wxwidgets-gtk2)))
+       ("wxwidgets" ,wxwidgets)))
     (native-inputs
      `(("intltool" ,intltool)
        ("pkg-config" ,pkg-config)))
